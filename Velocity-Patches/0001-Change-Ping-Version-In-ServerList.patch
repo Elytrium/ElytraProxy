@@ -1,19 +1,19 @@
-From bd65a51638b5a527d8c1f140ff41cb7c3483d552 Mon Sep 17 00:00:00 2001
-From: mdxd44 <ogurec332@mail.ru>
-Date: Tue, 13 Apr 2021 12:56:28 +0900
+From 3fc6551b7a0751ccc1290dc221d653444270de56 Mon Sep 17 00:00:00 2001
+From: banklazhan222 <ogurec332@mail.ru>
+Date: Sun, 9 May 2021 06:59:23 +0900
 Subject: [PATCH] Change Ping Version In ServerList
 
 
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/StatusSessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/StatusSessionHandler.java
-index d17a419d..6819f312 100644
+index 792c5b45..41af8a1d 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/StatusSessionHandler.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/StatusSessionHandler.java
-@@ -76,7 +76,7 @@ public class StatusSessionHandler implements MinecraftSessionHandler {
+@@ -77,7 +77,7 @@ public class StatusSessionHandler implements MinecraftSessionHandler {
      VelocityConfiguration configuration = server.getConfiguration();
      return new ServerPing(
          new ServerPing.Version(version.getProtocol(),
 -            "Velocity " + ProtocolVersion.SUPPORTED_VERSION_STRING),
-+            "ElytraProxy 0.1"),
++            "ElytraProxy"),
          new ServerPing.Players(server.getPlayerCount(), configuration.getShowMaxPlayers(),
              ImmutableList.of()),
          configuration.getMotd(),
