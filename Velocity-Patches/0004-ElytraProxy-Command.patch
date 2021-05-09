@@ -1,0 +1,184 @@
+From fbf6eefe61ab8ce67490a745d5df68a6b7425e5e Mon Sep 17 00:00:00 2001
+From: banklazhan222 <ogurec332@mail.ru>
+Date: Mon, 10 May 2021 04:02:14 +0900
+Subject: [PATCH] ElytraProxy Command
+
+
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/VelocityCommand.java b/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/VelocityCommand.java
+index 6eaf7d69..88f42a67 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/VelocityCommand.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/VelocityCommand.java
+@@ -87,8 +87,6 @@ public class VelocityCommand implements SimpleCommand {
+    */
+   public VelocityCommand(VelocityServer server) {
+     this.commands = ImmutableMap.<String, SubCommand>builder()
+-        .put("version", new Info(server))
+-        .put("plugins", new Plugins(server))
+         .put("reload", new Reload(server))
+         .put("dump", new Dump(server))
+         .build();
+@@ -99,7 +97,7 @@ public class VelocityCommand implements SimpleCommand {
+         .filter(e -> e.getValue().hasPermission(source, new String[0]))
+         .map(Map.Entry::getKey)
+         .collect(Collectors.joining("|"));
+-    String commandText = "/velocity <" + availableCommands + ">";
++    String commandText = "/elytraproxy <" + availableCommands + ">";
+     source.sendMessage(Identity.nil(), Component.text(commandText, NamedTextColor.RED));
+   }
+ 
+@@ -200,133 +198,7 @@ public class VelocityCommand implements SimpleCommand {
+ 
+     @Override
+     public boolean hasPermission(final CommandSource source, final String @NonNull [] args) {
+-      return source.getPermissionValue("velocity.command.reload") == Tristate.TRUE;
+-    }
+-  }
+-
+-  private static class Info implements SubCommand {
+-
+-    private static final TextColor VELOCITY_COLOR = TextColor.fromHexString("#09add3");
+-    private final ProxyServer server;
+-
+-    private Info(ProxyServer server) {
+-      this.server = server;
+-    }
+-
+-    @Override
+-    public void execute(CommandSource source, String @NonNull [] args) {
+-      if (args.length != 0) {
+-        source.sendMessage(Identity.nil(), Component.text("/velocity version", NamedTextColor.RED));
+-        return;
+-      }
+-
+-      ProxyVersion version = server.getVersion();
+-
+-      TextComponent velocity = Component.text().content(version.getName() + " ")
+-          .decoration(TextDecoration.BOLD, true)
+-          .color(VELOCITY_COLOR)
+-          .append(Component.text(version.getVersion()).decoration(TextDecoration.BOLD, false))
+-          .build();
+-      TextComponent copyright = Component
+-          .text("Copyright 2018-2021 " + version.getVendor() + ". " + version.getName()
+-              + " is licensed under the terms of the GNU General Public License v3.");
+-      source.sendMessage(Identity.nil(), velocity);
+-      source.sendMessage(Identity.nil(), copyright);
+-
+-      if (version.getName().equals("Velocity")) {
+-        TextComponent velocityWebsite = Component.text()
+-            .content("Visit the ")
+-            .append(Component.text().content("Velocity website")
+-                .color(NamedTextColor.GREEN)
+-                .clickEvent(
+-                    ClickEvent.openUrl("https://www.velocitypowered.com"))
+-                .build())
+-            .append(Component.text(" or the "))
+-            .append(Component.text().content("Velocity GitHub")
+-                .color(NamedTextColor.GREEN)
+-                .clickEvent(ClickEvent.openUrl(
+-                    "https://github.com/VelocityPowered/Velocity"))
+-                .build())
+-            .build();
+-        source.sendMessage(Identity.nil(), velocityWebsite);
+-      }
+-    }
+-
+-    @Override
+-    public boolean hasPermission(final CommandSource source, final String @NonNull [] args) {
+-      return source.getPermissionValue("velocity.command.info") != Tristate.FALSE;
+-    }
+-  }
+-
+-  private static class Plugins implements SubCommand {
+-
+-    private final ProxyServer server;
+-
+-    private Plugins(ProxyServer server) {
+-      this.server = server;
+-    }
+-
+-    @Override
+-    public void execute(CommandSource source, String @NonNull [] args) {
+-      if (args.length != 0) {
+-        source.sendMessage(Identity.nil(), Component.text("/velocity plugins", NamedTextColor.RED));
+-        return;
+-      }
+-
+-      List<PluginContainer> plugins = ImmutableList.copyOf(server.getPluginManager().getPlugins());
+-      int pluginCount = plugins.size();
+-
+-      if (pluginCount == 0) {
+-        source.sendMessage(Identity.nil(), Component.text(
+-            "No plugins installed.", NamedTextColor.YELLOW));
+-        return;
+-      }
+-
+-      TextComponent.Builder output = Component.text().content("Plugins: ")
+-          .color(NamedTextColor.YELLOW);
+-      for (int i = 0; i < pluginCount; i++) {
+-        PluginContainer plugin = plugins.get(i);
+-        output.append(componentForPlugin(plugin.getDescription()));
+-        if (i + 1 < pluginCount) {
+-          output.append(Component.text(", "));
+-        }
+-      }
+-
+-      source.sendMessage(Identity.nil(), output.build());
+-    }
+-
+-    private TextComponent componentForPlugin(PluginDescription description) {
+-      String pluginInfo = description.getName().orElse(description.getId())
+-          + description.getVersion().map(v -> " " + v).orElse("");
+-
+-      TextComponent.Builder hoverText = Component.text().content(pluginInfo);
+-
+-      description.getUrl().ifPresent(url -> {
+-        hoverText.append(Component.newline());
+-        hoverText.append(Component.text("Website: " + url));
+-      });
+-      if (!description.getAuthors().isEmpty()) {
+-        hoverText.append(Component.newline());
+-        if (description.getAuthors().size() == 1) {
+-          hoverText.append(Component.text("Author: " + description.getAuthors().get(0)));
+-        } else {
+-          hoverText.append(Component.text("Authors: " + Joiner.on(", ")
+-              .join(description.getAuthors())));
+-        }
+-      }
+-      description.getDescription().ifPresent(pdesc -> {
+-        hoverText.append(Component.newline());
+-        hoverText.append(Component.newline());
+-        hoverText.append(Component.text(pdesc));
+-      });
+-
+-      return Component.text(description.getId(), NamedTextColor.GRAY)
+-          .hoverEvent(HoverEvent.showText(hoverText.build()));
+-    }
+-
+-    @Override
+-    public boolean hasPermission(final CommandSource source, final String @NonNull [] args) {
+-      return source.getPermissionValue("velocity.command.plugins") == Tristate.TRUE;
++      return source.getPermissionValue("elytraproxy.command.reload") == Tristate.TRUE;
+     }
+   }
+ 
+@@ -342,7 +214,7 @@ public class VelocityCommand implements SimpleCommand {
+     @Override
+     public void execute(CommandSource source, String @NonNull [] args) {
+       if (args.length != 0) {
+-        source.sendMessage(Identity.nil(), Component.text("/velocity dump", NamedTextColor.RED));
++        source.sendMessage(Identity.nil(), Component.text("/elytraproxy dump", NamedTextColor.RED));
+         return;
+       }
+ 
+@@ -462,7 +334,7 @@ public class VelocityCommand implements SimpleCommand {
+ 
+     @Override
+     public boolean hasPermission(final CommandSource source, final String @NonNull [] args) {
+-      return source.getPermissionValue("velocity.command.plugins") == Tristate.TRUE;
++      return source.getPermissionValue("elytraproxy.command.plugins") == Tristate.TRUE;
+     }
+   }
+ }
+-- 
+2.24.1.windows.2
+
