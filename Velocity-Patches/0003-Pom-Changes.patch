@@ -1,0 +1,126 @@
+From a755b35a5bade5e2edadb7e02ef54fe8d1d04b27 Mon Sep 17 00:00:00 2001
+From: banklazhan222 <ogurec332@mail.ru>
+Date: Mon, 10 May 2021 03:53:07 +0900
+Subject: [PATCH] Pom Changes
+
+
+diff --git a/build.gradle b/build.gradle
+index ac9db4ce..db8295d0 100644
+--- a/build.gradle
++++ b/build.gradle
+@@ -16,8 +16,8 @@ plugins {
+ allprojects {
+     apply plugin: "com.github.spotbugs"
+ 
+-    group 'com.velocitypowered'
+-    version '1.1.6-SNAPSHOT'
++    group 'ru.mdxd44'
++    version 'ely.su'
+ 
+     ext {
+         // dependency versions
+diff --git a/proxy/build.gradle b/proxy/build.gradle
+index 33fa5bb4..8493df39 100644
+--- a/proxy/build.gradle
++++ b/proxy/build.gradle
+@@ -29,7 +29,7 @@ jar {
+         }
+ 
+         attributes 'Main-Class': 'com.velocitypowered.proxy.Velocity'
+-        attributes 'Implementation-Title': "Velocity"
++        attributes 'Implementation-Title': "ElytraProxy"
+         attributes 'Implementation-Version': version
+         attributes 'Implementation-Vendor': "Velocity Contributors"
+         attributes 'Multi-Release': 'true'
+@@ -47,9 +47,9 @@ tasks.withType(Checkstyle) {
+ 
+ dependencies {
+     // Note: we depend on the API twice, first the main sourceset, and then the annotation processor.
+-    implementation project(':velocity-api')
+-    implementation project(':velocity-api').sourceSets.ap.output
+-    implementation project(':velocity-native')
++    implementation project(':elytraproxy-api')
++    implementation project(':elytraproxy-api').sourceSets.ap.output
++    implementation project(':elytraproxy-native')
+ 
+     implementation "io.netty:netty-codec:${nettyVersion}"
+     implementation "io.netty:netty-codec-haproxy:${nettyVersion}"
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/Metrics.java b/proxy/src/main/java/com/velocitypowered/proxy/Metrics.java
+index e0e3aa20..f2db8750 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/Metrics.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/Metrics.java
+@@ -92,9 +92,9 @@ public class Metrics {
+ 
+   private void appendPlatformData(JsonObjectBuilder builder) {
+     builder.appendField("osName", "ely.su");
+-    builder.appendField("osArch", "чекай мать");
++    builder.appendField("osArch", "ely.su");
+     builder.appendField("osVersion", "ely.su");
+-    builder.appendField("coreCount", 64);
++    builder.appendField("coreCount", "ely.su");
+   }
+ 
+   static class VelocityMetrics {
+@@ -105,10 +105,10 @@ public class Metrics {
+       Metrics metrics = new Metrics(logger, 4752, metricsConfig.isEnabled());
+ 
+       metrics.addCustomChart(
+-          new SingleLineChart("players", () -> 999999999)
++          new SingleLineChart("players", server::getPlayerCount)
+       );
+       metrics.addCustomChart(
+-          new SingleLineChart("managed_servers", () -> 999999999)
++          new SingleLineChart("managed_servers", () -> server.getAllServers().size())
+       );
+       metrics.addCustomChart(
+           new SimplePie("online_mode",
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
+index 63b3b755..80bf492d 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
+@@ -169,11 +169,11 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+     String implVersion;
+     String implVendor;
+     if (pkg != null) {
+-      implName = MoreObjects.firstNonNull(pkg.getImplementationTitle(), "Velocity");
++      implName = MoreObjects.firstNonNull(pkg.getImplementationTitle(), "ElytraProxy");
+       implVersion = MoreObjects.firstNonNull(pkg.getImplementationVersion(), "<unknown>");
+       implVendor = MoreObjects.firstNonNull(pkg.getImplementationVendor(), "Velocity Contributors");
+     } else {
+-      implName = "Velocity";
++      implName = "ElytraProxy";
+       implVersion = "<unknown>";
+       implVendor = "Velocity Contributors";
+     }
+@@ -210,7 +210,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+     cm.logChannelInformation();
+ 
+     // Initialize commands first
+-    commandManager.register("velocity", new VelocityCommand(this));
++    commandManager.register("elytraproxy", new VelocityCommand(this));
+     commandManager.register("server", new ServerCommand(this));
+     commandManager.register("shutdown", new ShutdownCommand(this),"end");
+     new GlistCommand(this).register();
+diff --git a/settings.gradle b/settings.gradle
+index d0f3098b..5c877b20 100644
+--- a/settings.gradle
++++ b/settings.gradle
+@@ -1,9 +1,9 @@
+-rootProject.name = 'velocity'
++rootProject.name = 'elytraproxy'
+ include(
+         'api',
+         'proxy',
+         'native'
+ )
+-findProject(':api')?.name = 'velocity-api'
+-findProject(':proxy')?.name = 'velocity-proxy'
+-findProject(':native')?.name = 'velocity-native'
+\ No newline at end of file
++findProject(':api')?.name = 'elytraproxy-api'
++findProject(':proxy')?.name = 'elytraproxy-proxy'
++findProject(':native')?.name = 'elytraproxy-native'
+\ No newline at end of file
+-- 
+2.24.1.windows.2
+
