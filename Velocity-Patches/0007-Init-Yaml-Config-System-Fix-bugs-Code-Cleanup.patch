@@ -1,0 +1,807 @@
+From e8ce042f010436f9f1a9b9ecb72db74cdf764e5d Mon Sep 17 00:00:00 2001
+From: Petr Ilin <hevav@hevav.dev>
+Date: Sat, 22 May 2021 14:37:12 +0900
+Subject: [PATCH] Init Yaml Config System, Fix bugs, Code Cleanup
+
+
+diff --git a/proxy/build.gradle b/proxy/build.gradle
+index 9f87b2ef..fb75015d 100644
+--- a/proxy/build.gradle
++++ b/proxy/build.gradle
+@@ -10,7 +10,7 @@ apply from: '../gradle/checkstyle.gradle'
+ apply plugin: 'com.github.johnrengelman.shadow'
+ 
+ license {
+-    matching(includes: ['**/elytraproxy/**']) {
++    matching(includes: ['**/elytrium/**']) {
+         header = project.rootProject.file('HEADER_ELYTRAPROXY.txt')
+     }
+     header = project.rootProject.file('HEADER.txt')
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/Metrics.java b/proxy/src/main/java/com/velocitypowered/proxy/Metrics.java
+index f2db8750..4e2c25cf 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/Metrics.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/Metrics.java
+@@ -24,8 +24,6 @@ import java.io.IOException;
+ import java.nio.file.Paths;
+ import java.util.HashMap;
+ import java.util.Map;
+-import java.util.regex.Matcher;
+-import java.util.regex.Pattern;
+ 
+ import org.apache.logging.log4j.LogManager;
+ import org.apache.logging.log4j.Logger;
+@@ -91,10 +89,10 @@ public class Metrics {
+   }
+ 
+   private void appendPlatformData(JsonObjectBuilder builder) {
+-    builder.appendField("osName", "ely.su");
+-    builder.appendField("osArch", "ely.su");
+-    builder.appendField("osVersion", "ely.su");
+-    builder.appendField("coreCount", "ely.su");
++    builder.appendField("osName", "ElytraProxy Fork");
++    builder.appendField("osArch", "ElytraProxy Fork");
++    builder.appendField("osVersion", "ElytraProxy Fork");
++    builder.appendField("coreCount", "ElytraProxy Fork");
+   }
+ 
+   static class VelocityMetrics {
+@@ -112,17 +110,17 @@ public class Metrics {
+       );
+       metrics.addCustomChart(
+           new SimplePie("online_mode",
+-              () -> "ely.su")
++              () -> "ElytraProxy Fork")
+       );
+       metrics.addCustomChart(new SimplePie("velocity_version",
+-          () -> "ely.su"));
++          () -> "ElytraProxy Fork"));
+ 
+       metrics.addCustomChart(new DrilldownPie("java_version", () -> {
+         Map<String, Map<String, Integer>> map = new HashMap<>();
+-        String javaVersion = "ely.su";
++        String javaVersion = "ElytraProxy Fork";
+         Map<String, Integer> entry = new HashMap<>();
+         entry.put(javaVersion, 1);
+-        String release = "ely.su";
++        String release = "ElytraProxy Fork";
+         map.put(release, entry);
+ 
+         return map;
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
+index deae364b..a5697a1c 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
+@@ -39,7 +39,6 @@ import com.velocitypowered.api.util.bossbar.BossBar;
+ import com.velocitypowered.api.util.bossbar.BossBarColor;
+ import com.velocitypowered.api.util.bossbar.BossBarOverlay;
+ import com.velocitypowered.proxy.command.VelocityCommandManager;
+-import com.velocitypowered.proxy.command.builtin.ElytraProxyCommand;
+ import com.velocitypowered.proxy.command.builtin.GlistCommand;
+ import com.velocitypowered.proxy.command.builtin.ServerCommand;
+ import com.velocitypowered.proxy.command.builtin.ShutdownCommand;
+@@ -101,10 +100,7 @@ import org.checkerframework.checker.nullness.qual.EnsuresNonNull;
+ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
+ import org.checkerframework.checker.nullness.qual.NonNull;
+ import org.checkerframework.checker.nullness.qual.Nullable;
+-import ru.mdxd44.elytraproxy.ElytraProxy;
+-import ru.mdxd44.elytraproxy.commands.AlertCommand;
+-import ru.mdxd44.elytraproxy.commands.FindCommand;
+-import ru.mdxd44.elytraproxy.commands.SendCommand;
++import ru.elytrium.elytraproxy.ElytraProxy;
+ 
+ public class VelocityServer implements ProxyServer, ForwardingAudience {
+ 
+@@ -214,11 +210,8 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+     cm.logChannelInformation();
+ 
+     // Initialize commands first
+-    commandManager.register("elytraproxy", new ElytraProxyCommand(this));
++    //commandManager.register("elytraproxy", new ElytraProxyCommand(this)); - Init in ElytraProxy
+     commandManager.register("server", new ServerCommand(this));
+-    commandManager.register("alert", new AlertCommand(this));
+-    commandManager.register("find", new FindCommand(this));
+-    commandManager.register("send", new SendCommand(this));
+     commandManager.register("shutdown", new ShutdownCommand(this),"end");
+     new GlistCommand(this).register();
+ 
+@@ -258,8 +251,10 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+     try {
+       Path configPath = Paths.get("velocity.toml");
+       configuration = VelocityConfiguration.read(configPath);
++      // ElytraProxy Start - Init ElytraProxy
+       ElytraProxy elytraproxy = ElytraProxy.getInstance();
+-      elytraproxy.finishLoad();
++      elytraproxy.finishLoad(this);
++      // ElytraProxy End
+ 
+       if (!configuration.validate()) {
+         logger.error("Your configuration is invalid. Velocity will not start up until the errors "
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftConnection.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftConnection.java
+index 8436789b..e37343e5 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftConnection.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftConnection.java
+@@ -55,8 +55,6 @@ import io.netty.channel.EventLoop;
+ import io.netty.handler.codec.haproxy.HAProxyMessage;
+ import io.netty.handler.timeout.ReadTimeoutException;
+ import io.netty.util.ReferenceCountUtil;
+-
+-import java.io.IOException;
+ import java.net.InetSocketAddress;
+ import java.net.SocketAddress;
+ import java.security.GeneralSecurityException;
+@@ -167,9 +165,9 @@ public class MinecraftConnection extends ChannelInboundHandlerAdapter {
+         try {
+           // ElytraProxy Start - Try to fix long message while player disconnect unexpectedly
+           if (cause instanceof ReadTimeoutException) {
+-            sessionHandler.exception(cause);
+-          } else {
+             logger.info("{} предположительно вышел с сервера закрыв майнкрафт.", association);
++          } else {
++            sessionHandler.exception(cause);
+           }
+           // ElytraProxy End
+         } catch (Exception ex) {
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
+index ef936950..54adce01 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
+@@ -51,14 +51,11 @@ import com.velocitypowered.proxy.protocol.packet.ServerLogin;
+ import com.velocitypowered.proxy.protocol.packet.ServerLoginSuccess;
+ import com.velocitypowered.proxy.protocol.packet.SetCompression;
+ import io.netty.buffer.ByteBuf;
+-
+-import java.net.InetAddress;
+ import java.net.InetSocketAddress;
+ import java.security.GeneralSecurityException;
+ import java.security.KeyPair;
+ import java.security.MessageDigest;
+ import java.util.Arrays;
+-import java.util.Locale;
+ import java.util.Optional;
+ import java.util.UUID;
+ import java.util.concurrent.CompletableFuture;
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/ElytraProxy.java b/proxy/src/main/java/ru/elytrium/elytraproxy/ElytraProxy.java
+new file mode 100644
+index 00000000..b6c65b7d
+--- /dev/null
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/ElytraProxy.java
+@@ -0,0 +1,87 @@
++/*
++ * Copyright (C) 2021 mdxd44 <banklazhan222>, hevav <Petr Ilin>
++ *
++ * This program is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation, either version 3 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
++ */
++
++package ru.elytrium.elytraproxy;
++
++import com.google.common.io.ByteStreams;
++
++import com.velocitypowered.proxy.VelocityServer;
++
++import java.io.File;
++import java.io.FileInputStream;
++import java.io.FileOutputStream;
++import java.io.IOException;
++import java.io.InputStream;
++import java.io.OutputStream;
++import java.nio.file.Paths;
++
++import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
++import org.apache.logging.log4j.LogManager;
++import org.apache.logging.log4j.Logger;
++import org.yaml.snakeyaml.Yaml;
++import ru.elytrium.elytraproxy.commands.AlertCommand;
++import ru.elytrium.elytraproxy.commands.ElytraProxyCommand;
++import ru.elytrium.elytraproxy.commands.FindCommand;
++import ru.elytrium.elytraproxy.commands.SendCommand;
++import ru.elytrium.elytraproxy.config.BaseConfig;
++
++@SuppressFBWarnings({"RV_RETURN_VALUE_IGNORED", "OBL_UNSATISFIED_OBLIGATION_EXCEPTION_EDGE"}) // temp
++public class ElytraProxy {
++  private static final Logger logger = LogManager.getLogger(ElytraProxy.class);
++  private static final ElytraProxy instance = new ElytraProxy();
++  private BaseConfig config;
++
++  public ElytraProxy() {
++    logger.info("ElytraProxy beta 0.1");
++  }
++
++  /**
++   * Инциализирует процессы и завершает запуск антибота.
++   */
++  public void finishLoad(VelocityServer server) {
++    File configFile = Paths.get("elytraproxy.yml").toFile();
++    if (!configFile.exists()) {
++      try {
++        configFile.createNewFile();
++        try (InputStream is = getClass().getResourceAsStream("default-elytraproxy.yml");
++             OutputStream os = new FileOutputStream(configFile)) {
++          ByteStreams.copy(is, os);
++        }
++
++        Yaml yaml = new Yaml();
++        config = yaml.load(new FileInputStream(configFile));
++      } catch (IOException e) {
++        logger.error(e);
++        logger.error("Невозможно обратиться к конфиг-файлу elytraproxy.yml. Выключение...");
++        server.shutdown();
++      }
++    }
++
++    server.getCommandManager().register("elytraproxy", new ElytraProxyCommand(server));
++    server.getCommandManager().register("alert", new AlertCommand(server, config.getPrefix()));
++    server.getCommandManager().register("find", new FindCommand(server, config.getPrefix()));
++    server.getCommandManager().register("send", new SendCommand(server, config.getPrefix()));
++  }
++
++  public static ElytraProxy getInstance() {
++    return instance;
++  }
++
++  public BaseConfig getConfig() {
++    return config;
++  }
++}
+diff --git a/proxy/src/main/java/ru/mdxd44/elytraproxy/commands/AlertCommand.java b/proxy/src/main/java/ru/elytrium/elytraproxy/commands/AlertCommand.java
+similarity index 77%
+rename from proxy/src/main/java/ru/mdxd44/elytraproxy/commands/AlertCommand.java
+rename to proxy/src/main/java/ru/elytrium/elytraproxy/commands/AlertCommand.java
+index 35dfd042..a1e863fa 100644
+--- a/proxy/src/main/java/ru/mdxd44/elytraproxy/commands/AlertCommand.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/commands/AlertCommand.java
+@@ -15,21 +15,24 @@
+  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+  */
+ 
+-package ru.mdxd44.elytraproxy.commands;
++package ru.elytrium.elytraproxy.commands;
+ 
+ import com.velocitypowered.api.command.CommandSource;
+ import com.velocitypowered.api.command.SimpleCommand;
+ import com.velocitypowered.api.proxy.Player;
+ import com.velocitypowered.api.proxy.ProxyServer;
++
+ import net.kyori.adventure.text.Component;
+ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+ 
+ public class AlertCommand implements SimpleCommand {
+ 
+   private final ProxyServer server;
++  private final String prefix;
+ 
+-  public AlertCommand(ProxyServer server) {
++  public AlertCommand(ProxyServer server, String prefix) {
+     this.server = server;
++    this.prefix = prefix;
+   }
+ 
+   @Override
+@@ -38,13 +41,17 @@ public class AlertCommand implements SimpleCommand {
+     final String[] args = invocation.arguments();
+ 
+     if (args.length == 0) {
+-      source.sendMessage(Component.translatable("§5§l[Elytrium] §fУкажите сообщение."));
++      source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize(
++              prefix
++                          + " §fУкажите сообщение."));
+     } else {
+       String message = String.join(" ", args);
+       Component component = LegacyComponentSerializer.legacyAmpersand().deserialize(
+-              "§5§l[Elytrium]§f " + message);
++              prefix + message);
+       if (server.getAllPlayers().size() == 0) {
+-        source.sendMessage(Component.translatable("§5§l[Elytrium] §fНа сервере никого нет."));
++        source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize(
++                prefix
++                            + " §fНа сервере никого нет."));
+       } else if (server.getAllPlayers().size() >= 1) {
+         for (Player player : server.getAllPlayers()) {
+           server.sendMessage(player, component);
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/ElytraProxyCommand.java b/proxy/src/main/java/ru/elytrium/elytraproxy/commands/ElytraProxyCommand.java
+similarity index 85%
+rename from proxy/src/main/java/com/velocitypowered/proxy/command/builtin/ElytraProxyCommand.java
+rename to proxy/src/main/java/ru/elytrium/elytraproxy/commands/ElytraProxyCommand.java
+index 8abdba10..d3d899b9 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/ElytraProxyCommand.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/commands/ElytraProxyCommand.java
+@@ -15,47 +15,26 @@
+  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+  */
+ 
+-package com.velocitypowered.proxy.command.builtin;
++package ru.elytrium.elytraproxy.commands;
+ 
+ import com.google.common.collect.ImmutableList;
+ import com.google.common.collect.ImmutableMap;
+ 
+-import com.google.common.collect.ImmutableSet;
+-import com.google.common.util.concurrent.MoreExecutors;
+-import com.google.gson.JsonArray;
+-import com.google.gson.JsonObject;
+-import com.google.gson.JsonParseException;
+-import com.google.gson.JsonSyntaxException;
+ import com.velocitypowered.api.command.CommandSource;
+ import com.velocitypowered.api.command.SimpleCommand;
+ import com.velocitypowered.api.permission.Tristate;
+-import com.velocitypowered.api.proxy.ProxyServer;
+-import com.velocitypowered.api.proxy.server.RegisteredServer;
+ import com.velocitypowered.proxy.VelocityServer;
+-import com.velocitypowered.proxy.util.InformationUtils;
+ 
+-import java.net.ConnectException;
+-import java.net.UnknownHostException;
+-import java.nio.charset.StandardCharsets;
+ import java.util.Arrays;
+-import java.util.Collection;
+ import java.util.List;
+ import java.util.Locale;
+ import java.util.Map;
+-import java.util.concurrent.ExecutionException;
+-import java.util.stream.Collectors;
+ 
+ import net.kyori.adventure.identity.Identity;
+ import net.kyori.adventure.text.Component;
+-import net.kyori.adventure.text.TextComponent;
+-import net.kyori.adventure.text.event.ClickEvent;
+ import net.kyori.adventure.text.format.NamedTextColor;
+ import org.apache.logging.log4j.LogManager;
+ import org.apache.logging.log4j.Logger;
+-import org.asynchttpclient.AsyncHttpClient;
+-import org.asynchttpclient.BoundRequestBuilder;
+-import org.asynchttpclient.ListenableFuture;
+-import org.asynchttpclient.Response;
+ import org.checkerframework.checker.nullness.qual.NonNull;
+ 
+ public class ElytraProxyCommand implements SimpleCommand {
+diff --git a/proxy/src/main/java/ru/mdxd44/elytraproxy/commands/FindCommand.java b/proxy/src/main/java/ru/elytrium/elytraproxy/commands/FindCommand.java
+similarity index 71%
+rename from proxy/src/main/java/ru/mdxd44/elytraproxy/commands/FindCommand.java
+rename to proxy/src/main/java/ru/elytrium/elytraproxy/commands/FindCommand.java
+index b7bef4cd..3a7da6e9 100644
+--- a/proxy/src/main/java/ru/mdxd44/elytraproxy/commands/FindCommand.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/commands/FindCommand.java
+@@ -15,23 +15,26 @@
+  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+  */
+ 
+-package ru.mdxd44.elytraproxy.commands;
++package ru.elytrium.elytraproxy.commands;
+ 
+ import com.velocitypowered.api.command.CommandSource;
+ import com.velocitypowered.api.command.SimpleCommand;
+ import com.velocitypowered.api.proxy.Player;
+ import com.velocitypowered.api.proxy.ProxyServer;
+ import com.velocitypowered.api.proxy.ServerConnection;
++
+ import java.util.Optional;
+-import net.kyori.adventure.text.Component;
++
+ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+ 
+ public class FindCommand implements SimpleCommand {
+ 
+   private final ProxyServer server;
++  private final String prefix;
+ 
+-  public FindCommand(ProxyServer server) {
++  public FindCommand(ProxyServer server, String prefix) {
+     this.server = server;
++    this.prefix = prefix;
+   }
+ 
+   @Override
+@@ -40,18 +43,24 @@ public class FindCommand implements SimpleCommand {
+     final String[] args = invocation.arguments();
+ 
+     if (args.length == 0) {
+-      source.sendMessage(Component.translatable("§5§l[Elytrium] §fУкажите ник игрока."));
++      source.sendMessage(LegacyComponentSerializer.legacySection().deserialize(
++              prefix
++                          + " §fУкажите ник игрока."));
+     } else {
+       Optional<Player> player = server.getPlayer(args[0]);
+       if (!player.isPresent()) {
+-        source.sendMessage(Component.translatable("§5§l[Elytrium] §fДанный игрок §cне онлайн§f."));
++        source.sendMessage(LegacyComponentSerializer.legacySection().deserialize(
++                prefix
++                            + " §fДанный игрок §cне онлайн§f."));
+       } else {
+         Player pl = player.get();
+         Optional<ServerConnection> server = pl.getCurrentServer();
+         server.ifPresent(srv ->
+-            pl.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize("§fИгрок §6"
+-            + pl.getUsername() + " §fсейчас на сервере §6"
+-            + srv.getServerInfo().getName())));
++            pl.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize(
++            prefix
++                        + " §fИгрок §6"
++                          + pl.getUsername() + " §fсейчас на сервере §6"
++                            + srv.getServerInfo().getName())));
+       }
+     }
+   }
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/MessageCommand.java b/proxy/src/main/java/ru/elytrium/elytraproxy/commands/MessageCommand.java
+new file mode 100644
+index 00000000..ca656942
+--- /dev/null
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/commands/MessageCommand.java
+@@ -0,0 +1,105 @@
++/*
++ * Copyright (C) 2021 mdxd44 <banklazhan222>, hevav <Petr Ilin>
++ *
++ * This program is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation, either version 3 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
++ */
++
++package ru.elytrium.elytraproxy.commands;
++
++import com.google.common.collect.ImmutableList;
++
++import com.velocitypowered.api.command.CommandSource;
++import com.velocitypowered.api.command.SimpleCommand;
++import com.velocitypowered.api.proxy.Player;
++import com.velocitypowered.api.proxy.ProxyServer;
++import com.velocitypowered.api.proxy.ServerConnection;
++
++import java.util.Arrays;
++import java.util.List;
++import java.util.Optional;
++import java.util.stream.Collectors;
++
++import net.kyori.adventure.text.Component;
++import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
++
++public class MessageCommand implements SimpleCommand {
++
++  private final ProxyServer server;
++  private final String prefix;
++
++  public MessageCommand(ProxyServer server, String prefix) {
++    this.server = server;
++    this.prefix = prefix;
++  }
++
++  @Override
++  public List<String> suggest(final Invocation invocation) {
++    final CommandSource source = invocation.source();
++
++    if (source instanceof Player) {
++      Optional<ServerConnection> serverConnection = ((Player) source).getCurrentServer();
++      if (serverConnection.isPresent()) {
++        return serverConnection.get()
++                  .getServer()
++                  .getPlayersConnected()
++                  .stream()
++                  .map(Player::getUsername)
++                  .collect(Collectors.toList());
++      }
++    }
++    return ImmutableList.of();
++  }
++
++  @Override
++  public void execute(final Invocation invocation) {
++    final CommandSource source = invocation.source();
++    final String[] args = invocation.arguments();
++
++    if (args.length == 0) {
++      source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize(
++                prefix
++                            + " §cУкажите имя игрока, которому вы хотите отправить сообщение"));
++      return;
++    }
++
++    if (args.length == 1) {
++      source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize(
++                prefix
++                            + " §cУкажите сообщение, которое вы хотите отправить игроку"));
++      return;
++    }
++
++    Optional<Player> playerOptional = server.getPlayer(args[0]);
++    if (playerOptional.isPresent()) {
++      Player player = playerOptional.get();
++      String message = String.join(" ", Arrays.copyOfRange(args, 1, args.length - 1));
++      String author = (source instanceof Player) ? ((Player) source).getUsername() : "Консоль";
++
++      Component component = LegacyComponentSerializer.legacyAmpersand().deserialize(
++              prefix
++                            + " §d§l[" + author + "->" + player.getUsername() + "] " + message);
++
++      player.sendMessage(component);
++    } else {
++      source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize(
++                prefix
++                            + " §cИгрок не найден, или находится вне сети"));
++    }
++  }
++
++  @Override
++  public boolean hasPermission(final Invocation invocation) {
++    return true;
++  }
++}
+diff --git a/proxy/src/main/java/ru/mdxd44/elytraproxy/commands/SendCommand.java b/proxy/src/main/java/ru/elytrium/elytraproxy/commands/SendCommand.java
+similarity index 64%
+rename from proxy/src/main/java/ru/mdxd44/elytraproxy/commands/SendCommand.java
+rename to proxy/src/main/java/ru/elytrium/elytraproxy/commands/SendCommand.java
+index 6ebe5444..f05d6706 100644
+--- a/proxy/src/main/java/ru/mdxd44/elytraproxy/commands/SendCommand.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/commands/SendCommand.java
+@@ -15,23 +15,27 @@
+  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+  */
+ 
+-package ru.mdxd44.elytraproxy.commands;
++package ru.elytrium.elytraproxy.commands;
+ 
+ import com.velocitypowered.api.command.CommandSource;
+ import com.velocitypowered.api.command.SimpleCommand;
+ import com.velocitypowered.api.proxy.Player;
+ import com.velocitypowered.api.proxy.ProxyServer;
+ import com.velocitypowered.api.proxy.server.RegisteredServer;
++
+ import java.util.Collection;
++
+ import net.kyori.adventure.text.Component;
+ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+ 
+ public class SendCommand implements SimpleCommand {
+ 
+   private final ProxyServer server;
++  private final String prefix;
+ 
+-  public SendCommand(ProxyServer server) {
++  public SendCommand(ProxyServer server, String prefix) {
+     this.server = server;
++    this.prefix = prefix;
+   }
+ 
+   @Override
+@@ -40,22 +44,25 @@ public class SendCommand implements SimpleCommand {
+     final String[] args = invocation.arguments();
+ 
+     if (args.length != 2) {
+-      source.sendMessage(Component.translatable(
+-            "§5§l[Elytrium] §сНедостаточно §fаргументов в команде."
+-            + " Используйте: §6/send <server|player|all|current> <target>"));
++      source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize(
++            prefix
++                        + " §cНедостаточно §fаргументов в команде."
++                          + " Используйте: §6/send <server|player|all|current> <target>"));
+       return;
+     }
+ 
+     RegisteredServer target = server.getServer(args[1]).orElse(null);
+     if (target == null) {
+-      source.sendMessage(Component.translatable(
+-            "§5§l[Elytrium] §fУказанного сервера §cне существует§f."));
++      source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize(
++            prefix
++                        + " §fУказанного сервера §cне существует§f."));
+       return;
+     }
+ 
+-    Component summoned = LegacyComponentSerializer.legacyAmpersand()
+-            .deserialize("§5§l[Elytrium] §fВы были перемещены на сервер §6"
+-            + target.getServerInfo().getName() + " §fадминистратором §6{1}");
++    Component summoned = LegacyComponentSerializer.legacyAmpersand().deserialize(
++            prefix
++                        + " §fВы были перемещены на сервер §6"
++                          + target.getServerInfo().getName() + " §fадминистратором §6" + source);
+ 
+     switch (args[0].toLowerCase()) {
+       case "all":
+@@ -66,17 +73,19 @@ public class SendCommand implements SimpleCommand {
+         break;
+       case "current":
+         if (!(source instanceof Player)) {
+-          source.sendMessage(Component.translatable(
+-                  "§5§l[Elytrium] §fИз консоли данную команду выполнить §cневозможно§f."));
++          source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize(
++              prefix
++                          + " §fИз консоли данную команду выполнить §cневозможно§f."));
+           break;
+         }
+         Player player = (Player) source;
+-        Collection<Player> players = player.getCurrentServer().get()
+-            .getServer().getPlayersConnected();
++        player.getCurrentServer().ifPresent(serverConnection -> {
++        Collection<Player> players = serverConnection.getServer().getPlayersConnected();
+         for (Player p : players) {
+           p.createConnectionRequest(target).connect();
+           p.sendMessage(summoned);
+         }
++        });
+         break;
+       default:
+         player = server.getPlayer(args[0]).orElse(null);
+@@ -84,8 +93,9 @@ public class SendCommand implements SimpleCommand {
+           player.createConnectionRequest(target).connect();
+           player.sendMessage(summoned);
+         } else {
+-          source.sendMessage(Component.translatable(
+-            "§5§l[Elytrium] §fДанный игрок §cне онлайн§f."));
++          source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize(
++              prefix
++                          + " §fДанный игрок §cне онлайн§f."));
+         }
+         break;
+     }
+diff --git a/proxy/src/main/java/ru/mdxd44/elytraproxy/ElytraProxy.java b/proxy/src/main/java/ru/elytrium/elytraproxy/config/BaseConfig.java
+similarity index 52%
+rename from proxy/src/main/java/ru/mdxd44/elytraproxy/ElytraProxy.java
+rename to proxy/src/main/java/ru/elytrium/elytraproxy/config/BaseConfig.java
+index 5ee5adfa..c0616398 100644
+--- a/proxy/src/main/java/ru/mdxd44/elytraproxy/ElytraProxy.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/config/BaseConfig.java
+@@ -15,31 +15,20 @@
+  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+  */
+ 
+-package ru.mdxd44.elytraproxy;
++package ru.elytrium.elytraproxy.config;
+ 
+-import org.apache.logging.log4j.LogManager;
+-import org.apache.logging.log4j.Logger;
++import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+ 
+-public class ElytraProxy {
+-  private static final Logger logger = LogManager.getLogger(ElytraProxy.class);
+-  private boolean first = true;
+-  private static final ElytraProxy instance = new ElytraProxy();
++@SuppressFBWarnings("UWF_UNWRITTEN_FIELD") // temp
++public class BaseConfig {
++  String prefix;
++  Messages messages;
+ 
+-  public ElytraProxy() {
+-    logger.info("ElytraProxy beta 0.1");
++  public String getPrefix() {
++    return prefix;
+   }
+ 
+-  /**
+-   * Инциализирует процессы и завершает запуск антибота.
+-   */
+-  public void finishLoad() {
+-    if (!first) {
+-      return;
+-    }
+-    first = false;
+-  }
+-
+-  public static ElytraProxy getInstance() {
+-    return instance;
++  public Messages getMessages() {
++    return messages;
+   }
+ }
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/config/CommandMessages.java b/proxy/src/main/java/ru/elytrium/elytraproxy/config/CommandMessages.java
+new file mode 100644
+index 00000000..732e90c0
+--- /dev/null
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/config/CommandMessages.java
+@@ -0,0 +1,38 @@
++/*
++ * Copyright (C) 2021 mdxd44 <banklazhan222>, hevav <Petr Ilin>
++ *
++ * This program is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation, either version 3 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
++ */
++
++package ru.elytrium.elytraproxy.config;
++
++import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
++
++@SuppressFBWarnings("UUF_UNUSED_FIELD") // temp
++public class CommandMessages {
++  String alreadyConnected;
++  String alreadyConnectedProxy;
++  String alreadyConnecting;
++  String cantConnect;
++  String connectingServerError;
++  String connectedServerError;
++  String internalServerConnectionError;
++  String loggingInTooFast;
++  String onlineModeOnly;
++  String playerConnectionError;
++  String modernForwardingNeedsNewClient;
++  String modernForwardingFailed;
++  String movedToNewServer;
++  String noAvailableServers;
++}
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/config/ErrorMessages.java b/proxy/src/main/java/ru/elytrium/elytraproxy/config/ErrorMessages.java
+new file mode 100644
+index 00000000..b500deaf
+--- /dev/null
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/config/ErrorMessages.java
+@@ -0,0 +1,21 @@
++/*
++ * Copyright (C) 2021 mdxd44 <banklazhan222>, hevav <Petr Ilin>
++ *
++ * This program is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation, either version 3 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
++ */
++
++package ru.elytrium.elytraproxy.config;
++
++public class ErrorMessages {
++}
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/config/Messages.java b/proxy/src/main/java/ru/elytrium/elytraproxy/config/Messages.java
+new file mode 100644
+index 00000000..6175a700
+--- /dev/null
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/config/Messages.java
+@@ -0,0 +1,27 @@
++/*
++ * Copyright (C) 2021 mdxd44 <banklazhan222>, hevav <Petr Ilin>
++ *
++ * This program is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation, either version 3 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
++ */
++
++package ru.elytrium.elytraproxy.config;
++
++import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
++
++@SuppressFBWarnings("UUF_UNUSED_FIELD") // temp
++public class Messages {
++  CommandMessages command;
++  ErrorMessages error;
++}
++
+-- 
+2.24.1.windows.2
+
