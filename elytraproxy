@@ -17,12 +17,17 @@ case "$1" in
         scripts/edit.sh || exit 1
     ;;
     *)
+        echo "ElytraProxy build tool command. This provides a variety of commands to control the ElytraProxy"
+        echo "build. View below for details of the available commands."
+        echo "Original build script provide by WaterfallMC."
+        echo ""
         echo "Commands:"
         echo "  * rb, rbp, rebuild | Rebuilds the patches"
         echo "  * p, patch         | Applies all the patches to Velocity"
         echo "  * m, up, merge     | Utility to aid in merging upstream"
         echo "  * b, build         | Builds the project"
-        echo "                     | The bootstrap artifact can be found in ElytriumProxy/proxy/build/libs"
-        echo "  * e, edit          | Runs git rebase -i for ElytriumProxy, allowing patches to be easily modified"
+        echo "                     | The bootstrap artifact can be found in ElytraProxy-Build/proxy/build/libs"
+        echo "                     | Main artifact has the '-all' suffix in name"
+        echo "  * e, edit          | Runs git rebase -i for ElytraProxy, allowing patches to be easily modified"
     ;;
 esac
