@@ -1,0 +1,1259 @@
+From afec083bbc6e9cd51b84f1677aef2d858199514f Mon Sep 17 00:00:00 2001
+From: Petr Ilin <hevav@hevav.dev>
+Date: Mon, 24 May 2021 04:19:59 +0900
+Subject: [PATCH] Init Skins System, Many Config Options, Fix bugs, Code
+ Cleanup
+
+
+diff --git a/.gitignore b/.gitignore
+index fbdf3cea..2ffb4fd0 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -84,7 +84,7 @@ logs/
+ server-icon.png
+ /bin/
+ run/
+-plugins/
++#plugins/
+ 
+ ### Natives stuff ###
+ native/mbedtls
+diff --git a/proxy/build.gradle b/proxy/build.gradle
+index fb75015d..aaef1279 100644
+--- a/proxy/build.gradle
++++ b/proxy/build.gradle
+@@ -10,9 +10,12 @@ apply from: '../gradle/checkstyle.gradle'
+ apply plugin: 'com.github.johnrengelman.shadow'
+ 
+ license {
+-    matching(includes: ['**/elytrium/**']) {
++    matching(includes: ['**/elytraproxy/**', '**/elytraproxy/config/**', '**/default-elytraproxy.yml']) {
+         header = project.rootProject.file('HEADER_ELYTRAPROXY.txt')
+     }
++    matching(includes: ['**/ru/elytrium/elytraproxy/commands/ElytraProxyCommand.java']) {
++        header = project.rootProject.file('HEADER.txt')
++    }
+     header = project.rootProject.file('HEADER.txt')
+ }
+ 
+@@ -46,6 +49,7 @@ shadowJar {
+ 
+ tasks.withType(Checkstyle) {
+     exclude('**/com/velocitypowered/proxy/protocol/packet/*.java')
++    exclude('**/ru/elytrium/elytraproxy/config/**/*.java')
+ }
+ 
+ dependencies {
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
+index 54adce01..b42997e3 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
+@@ -25,6 +25,7 @@ import static com.velocitypowered.proxy.util.EncryptionUtils.decryptRsa;
+ import static com.velocitypowered.proxy.util.EncryptionUtils.generateServerId;
+ 
+ import com.google.common.base.Preconditions;
++import com.google.common.collect.ImmutableMap;
+ import com.velocitypowered.api.event.connection.DisconnectEvent;
+ import com.velocitypowered.api.event.connection.DisconnectEvent.LoginStatus;
+ import com.velocitypowered.api.event.connection.LoginEvent;
+@@ -56,6 +57,7 @@ import java.security.GeneralSecurityException;
+ import java.security.KeyPair;
+ import java.security.MessageDigest;
+ import java.util.Arrays;
++import java.util.List;
+ import java.util.Optional;
+ import java.util.UUID;
+ import java.util.concurrent.CompletableFuture;
+@@ -67,6 +69,9 @@ import org.apache.logging.log4j.Logger;
+ import org.asynchttpclient.ListenableFuture;
+ import org.asynchttpclient.Response;
+ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
++import ru.elytrium.elytraproxy.ElytraProxy;
++import ru.elytrium.elytraproxy.config.plugins.AntibotConfig;
++import ru.elytrium.elytraproxy.plugins.skins.SkinSetup;
+ 
+ public class LoginSessionHandler implements MinecraftSessionHandler {
+ 
+@@ -75,6 +80,7 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+       "https://sessionserver.mojang.com/session/minecraft/hasJoined?username=%s&serverId=%s";
+ 
+   private final VelocityServer server;
++  private final ElytraProxy elytraProxy;
+   private final MinecraftConnection mcConnection;
+   private final InitialInboundConnection inbound;
+   private @MonotonicNonNull ServerLogin login;
+@@ -86,6 +92,7 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+     this.server = Preconditions.checkNotNull(server, "server");
+     this.mcConnection = Preconditions.checkNotNull(mcConnection, "mcConnection");
+     this.inbound = Preconditions.checkNotNull(inbound, "inbound");
++    this.elytraProxy = ElytraProxy.getInstance();
+   }
+ 
+   @Override
+@@ -242,18 +249,37 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+         return CompletableFuture.completedFuture(null);
+       }
+ 
+-      // ElytraProxy Start - Block popular minecraft botters
+-      if (player.getUsername().toLowerCase().contains("dropbot")
+-              || player.getUsername().toLowerCase().contains("mcspam")
+-              || player.getUsername().toLowerCase().contains("mcdrop")
+-              || player.getUsername().toLowerCase().contains("mcrage")
+-              || player.getUsername().toLowerCase().contains("mcstorm")) {
+-        player.disconnect0(Component.text("§cВ вашем нике содержатся запрещённые фразы."
+-                + "\n§cЕсли вы считаете что это ошибка,"
+-                + " свяжитесь с администрацией. (ely.su/discord)"),
+-                true);
+-        logger.info("Firewaled bot {}", player.getUsername());
+-        return CompletableFuture.completedFuture(null);
++      // ElytraProxy Start - Block popular minecraft botters, Skins system
++      AntibotConfig antibotConfig = elytraProxy.getConfig().getPlugins().antibot;
++
++      if (antibotConfig.enable) {
++        String formattedNickname = player.getUsername().toLowerCase();
++
++        if (antibotConfig.bannedNicknames.stream().anyMatch(formattedNickname::contains)) {
++          player.disconnect0(
++                  Component.text(
++                          "§cВ вашем нике содержатся запрещённые фразы."
++                          + "\n§cЕсли вы считаете что это ошибка,"
++                          + " свяжитесь с администрацией. (ely.su/discord)"),
++                          true
++          );
++          logger.info("Firewaled bot {}", player.getUsername());
++          return CompletableFuture.completedFuture(null);
++        }
++      }
++
++      SkinSetup setup = elytraProxy
++              .getDatabase()
++              .getItem(
++                      "skins",
++                      ImmutableMap.of("uuid", player.getUniqueId()),
++                      SkinSetup.class
++              );
++      if (setup != null) {
++        List<GameProfile.Property> playerProfile = player.getGameProfileProperties();
++        playerProfile.add(new GameProfile.Property("textures", setup.texture, setup.signature));
++        player.setGameProfileProperties(playerProfile);
++
+       }
+       // ElytraProxy End
+ 
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/ElytraProxy.java b/proxy/src/main/java/ru/elytrium/elytraproxy/ElytraProxy.java
+index b6c65b7d..1ada4f66 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/ElytraProxy.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/ElytraProxy.java
+@@ -17,10 +17,12 @@
+ 
+ package ru.elytrium.elytraproxy;
+ 
++import com.google.common.collect.ImmutableMap;
+ import com.google.common.io.ByteStreams;
+ 
++import com.velocitypowered.api.command.CommandManager;
+ import com.velocitypowered.proxy.VelocityServer;
+-
++import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+ import java.io.File;
+ import java.io.FileInputStream;
+ import java.io.FileOutputStream;
+@@ -28,8 +30,8 @@ import java.io.IOException;
+ import java.io.InputStream;
+ import java.io.OutputStream;
+ import java.nio.file.Paths;
++import java.sql.SQLException;
+ 
+-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+ import org.apache.logging.log4j.LogManager;
+ import org.apache.logging.log4j.Logger;
+ import org.yaml.snakeyaml.Yaml;
+@@ -38,43 +40,97 @@ import ru.elytrium.elytraproxy.commands.ElytraProxyCommand;
+ import ru.elytrium.elytraproxy.commands.FindCommand;
+ import ru.elytrium.elytraproxy.commands.SendCommand;
+ import ru.elytrium.elytraproxy.config.BaseConfig;
++import ru.elytrium.elytraproxy.config.database.MysqlConfig;
++import ru.elytrium.elytraproxy.database.Database;
++import ru.elytrium.elytraproxy.database.MySqlDatabase;
+ 
+-@SuppressFBWarnings({"RV_RETURN_VALUE_IGNORED", "OBL_UNSATISFIED_OBLIGATION_EXCEPTION_EDGE"}) // temp
++@SuppressFBWarnings({"RV_RETURN_VALUE_IGNORED",
++        "OBL_UNSATISFIED_OBLIGATION_EXCEPTION_EDGE"}) // temp
+ public class ElytraProxy {
+   private static final Logger logger = LogManager.getLogger(ElytraProxy.class);
+   private static final ElytraProxy instance = new ElytraProxy();
+-  private BaseConfig config;
++  private BaseConfig config = new BaseConfig();
++  private Database database;
+ 
+   public ElytraProxy() {
+     logger.info("ElytraProxy beta 0.1");
+   }
+ 
+   /**
++   * Initializes processes and completes launch of antibot.
+    * Инциализирует процессы и завершает запуск антибота.
+    */
+   public void finishLoad(VelocityServer server) {
++    loadConfig(server);
++    initDatabase(server);
++    registerCommand(server);
++  }
++
++  /**
++   * Loads elytraproxy.yml config file.
++   * Загружает конфиг-файл elytraproxy.yml.
++   */
++  @SuppressFBWarnings(value = "RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE",
++          justification = "ByteStreams.copy checks for null")
++  public void loadConfig(VelocityServer server) {
+     File configFile = Paths.get("elytraproxy.yml").toFile();
+-    if (!configFile.exists()) {
+-      try {
+-        configFile.createNewFile();
++
++    try {
++      if (configFile.createNewFile()) {
+         try (InputStream is = getClass().getResourceAsStream("default-elytraproxy.yml");
+              OutputStream os = new FileOutputStream(configFile)) {
++
+           ByteStreams.copy(is, os);
+         }
+ 
+         Yaml yaml = new Yaml();
+         config = yaml.load(new FileInputStream(configFile));
+-      } catch (IOException e) {
+-        logger.error(e);
+-        logger.error("Невозможно обратиться к конфиг-файлу elytraproxy.yml. Выключение...");
+-        server.shutdown();
+       }
++    } catch (IOException | NullPointerException e) {
++      logger.error(e);
++      logger.error("Unable to read/load/save your elytraproxy.yml. The server will shut down.");
++      logger.error("Невозможно обратиться к конфиг-файлу elytraproxy.yml. Выключение...");
++      server.shutdown();
++    }
++  }
++
++  /**
++   * Initializes database, creates missing tables.
++   * Инициализирует базу данных, создает отсутствующие таблицы.
++   */
++  public void initDatabase(VelocityServer server) {
++    try {
++      MysqlConfig config = getConfig().getMySql();
++      database = new MySqlDatabase(config.hostname, config.database, config.user, config.password);
++
++      database.makeTable("skins", ImmutableMap.of(
++              "uuid", "VARCHAR(36)",
++              "texture", "VARCHAR(256)",
++              "signature", "VARCHAR(256)"
++      ));
++    } catch (SQLException e) {
++      logger.error(e);
++      logger.error(getConfig().getMessages().error.mysqlLoadFailed);
++      server.shutdown();
+     }
++  }
+ 
+-    server.getCommandManager().register("elytraproxy", new ElytraProxyCommand(server));
+-    server.getCommandManager().register("alert", new AlertCommand(server, config.getPrefix()));
+-    server.getCommandManager().register("find", new FindCommand(server, config.getPrefix()));
+-    server.getCommandManager().register("send", new SendCommand(server, config.getPrefix()));
++  /**
++   * Initializes ElytraProxy commands.
++   * Инициализирует команды ElytraProxy.
++   */
++  public void registerCommand(VelocityServer server) {
++    CommandManager manager = server.getCommandManager();
++
++    manager.unregister("elytraproxy");
++    manager.unregister("alert");
++    manager.unregister("find");
++    manager.unregister("send");
++
++    manager.register("elytraproxy", new ElytraProxyCommand(server, this));
++    manager.register("alert", new AlertCommand(server, config.getPrefix()));
++    manager.register("find", new FindCommand(server, config.getPrefix()));
++    manager.register("send", new SendCommand(server, config.getPrefix()));
+   }
+ 
+   public static ElytraProxy getInstance() {
+@@ -84,4 +140,8 @@ public class ElytraProxy {
+   public BaseConfig getConfig() {
+     return config;
+   }
++
++  public Database getDatabase() {
++    return database;
++  }
+ }
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/AlertCommand.java b/proxy/src/main/java/ru/elytrium/elytraproxy/commands/AlertCommand.java
+index a1e863fa..5cec16ca 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/AlertCommand.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/commands/AlertCommand.java
+@@ -41,17 +41,22 @@ public class AlertCommand implements SimpleCommand {
+     final String[] args = invocation.arguments();
+ 
+     if (args.length == 0) {
+-      source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize(
+-              prefix
+-                          + " §fУкажите сообщение."));
++      source.sendMessage(
++              LegacyComponentSerializer
++                      .legacyAmpersand()
++                      .deserialize(prefix + " §fУкажите сообщение.")
++      );
+     } else {
+       String message = String.join(" ", args);
+-      Component component = LegacyComponentSerializer.legacyAmpersand().deserialize(
+-              prefix + message);
++      Component component = LegacyComponentSerializer
++              .legacyAmpersand()
++              .deserialize(prefix + message);
+       if (server.getAllPlayers().size() == 0) {
+-        source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize(
+-                prefix
+-                            + " §fНа сервере никого нет."));
++        source.sendMessage(
++                LegacyComponentSerializer
++                        .legacyAmpersand()
++                        .deserialize(prefix + " §fНа сервере никого нет.")
++        );
+       } else if (server.getAllPlayers().size() >= 1) {
+         for (Player player : server.getAllPlayers()) {
+           server.sendMessage(player, component);
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/ElytraProxyCommand.java b/proxy/src/main/java/ru/elytrium/elytraproxy/commands/ElytraProxyCommand.java
+index d3d899b9..0e3c0b3a 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/ElytraProxyCommand.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/commands/ElytraProxyCommand.java
+@@ -36,6 +36,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
+ import org.apache.logging.log4j.LogManager;
+ import org.apache.logging.log4j.Logger;
+ import org.checkerframework.checker.nullness.qual.NonNull;
++import ru.elytrium.elytraproxy.ElytraProxy;
+ 
+ public class ElytraProxyCommand implements SimpleCommand {
+ 
+@@ -57,9 +58,9 @@ public class ElytraProxyCommand implements SimpleCommand {
+    *
+    * @param server the Velocity server
+    */
+-  public ElytraProxyCommand(VelocityServer server) {
++  public ElytraProxyCommand(VelocityServer server, ElytraProxy elytraProxy) {
+     this.commands = ImmutableMap.<String, SubCommand>builder()
+-        .put("reload", new Reload(server))
++        .put("reload", new Reload(server, elytraProxy))
+         .build();
+   }
+ 
+@@ -139,9 +140,11 @@ public class ElytraProxyCommand implements SimpleCommand {
+ 
+     private static final Logger logger = LogManager.getLogger(Reload.class);
+     private final VelocityServer server;
++    private final ElytraProxy elytraProxy;
+ 
+-    private Reload(VelocityServer server) {
++    private Reload(VelocityServer server, ElytraProxy elytraProxy) {
+       this.server = server;
++      this.elytraProxy = elytraProxy;
+     }
+ 
+     @Override
+@@ -161,6 +164,8 @@ public class ElytraProxyCommand implements SimpleCommand {
+             "Unable to reload your configuration. Check the console for more details.",
+             NamedTextColor.RED));
+       }
++
++      elytraProxy.finishLoad(server);
+     }
+ 
+     @Override
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/FindCommand.java b/proxy/src/main/java/ru/elytrium/elytraproxy/commands/FindCommand.java
+index 3a7da6e9..b3f79171 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/FindCommand.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/commands/FindCommand.java
+@@ -23,7 +23,9 @@ import com.velocitypowered.api.proxy.Player;
+ import com.velocitypowered.api.proxy.ProxyServer;
+ import com.velocitypowered.api.proxy.ServerConnection;
+ 
++import java.util.List;
+ import java.util.Optional;
++import java.util.stream.Collectors;
+ 
+ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+ 
+@@ -37,6 +39,24 @@ public class FindCommand implements SimpleCommand {
+     this.prefix = prefix;
+   }
+ 
++  @Override
++  public List<String> suggest(final SimpleCommand.Invocation invocation) {
++    final String[] args = invocation.arguments();
++
++    if (args.length == 0) {
++      return server.getAllPlayers()
++              .stream()
++              .map(Player::getUsername)
++              .collect(Collectors.toList());
++    } else {
++      return server.getAllPlayers()
++              .stream()
++              .map(Player::getUsername)
++              .filter(s -> s.startsWith(args[0]))
++              .collect(Collectors.toList());
++    }
++  }
++
+   @Override
+   public void execute(final SimpleCommand.Invocation invocation) {
+     final CommandSource source = invocation.source();
+@@ -45,22 +65,27 @@ public class FindCommand implements SimpleCommand {
+     if (args.length == 0) {
+       source.sendMessage(LegacyComponentSerializer.legacySection().deserialize(
+               prefix
+-                          + " §fУкажите ник игрока."));
++                      + " §fУкажите ник игрока."));
+     } else {
+       Optional<Player> player = server.getPlayer(args[0]);
+-      if (!player.isPresent()) {
+-        source.sendMessage(LegacyComponentSerializer.legacySection().deserialize(
+-                prefix
+-                            + " §fДанный игрок §cне онлайн§f."));
+-      } else {
++      if (player.isPresent()) {
+         Player pl = player.get();
+         Optional<ServerConnection> server = pl.getCurrentServer();
+         server.ifPresent(srv ->
+-            pl.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize(
+-            prefix
+-                        + " §fИгрок §6"
+-                          + pl.getUsername() + " §fсейчас на сервере §6"
+-                            + srv.getServerInfo().getName())));
++                source.sendMessage(
++                        LegacyComponentSerializer
++                                .legacyAmpersand()
++                                .deserialize(prefix
++                                        + " §fИгрок §6" + pl.getUsername()
++                                        + " §fсейчас на сервере §6" + srv.getServerInfo().getName())
++                )
++        );
++      } else {
++        source.sendMessage(
++                LegacyComponentSerializer
++                        .legacySection()
++                        .deserialize(prefix + " §fДанный игрок §cне онлайн§f.")
++        );
+       }
+     }
+   }
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/MessageCommand.java b/proxy/src/main/java/ru/elytrium/elytraproxy/commands/MessageCommand.java
+index ca656942..261a8c9f 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/MessageCommand.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/commands/MessageCommand.java
+@@ -51,11 +51,11 @@ public class MessageCommand implements SimpleCommand {
+       Optional<ServerConnection> serverConnection = ((Player) source).getCurrentServer();
+       if (serverConnection.isPresent()) {
+         return serverConnection.get()
+-                  .getServer()
+-                  .getPlayersConnected()
+-                  .stream()
+-                  .map(Player::getUsername)
+-                  .collect(Collectors.toList());
++                .getServer()
++                .getPlayersConnected()
++                .stream()
++                .map(Player::getUsername)
++                .collect(Collectors.toList());
+       }
+     }
+     return ImmutableList.of();
+@@ -69,14 +69,14 @@ public class MessageCommand implements SimpleCommand {
+     if (args.length == 0) {
+       source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize(
+                 prefix
+-                            + " §cУкажите имя игрока, которому вы хотите отправить сообщение"));
++                        + " §cУкажите имя игрока, которому вы хотите отправить сообщение"));
+       return;
+     }
+ 
+     if (args.length == 1) {
+       source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize(
+                 prefix
+-                            + " §cУкажите сообщение, которое вы хотите отправить игроку"));
++                        + " §cУкажите сообщение, которое вы хотите отправить игроку"));
+       return;
+     }
+ 
+@@ -88,13 +88,13 @@ public class MessageCommand implements SimpleCommand {
+ 
+       Component component = LegacyComponentSerializer.legacyAmpersand().deserialize(
+               prefix
+-                            + " §d§l[" + author + "->" + player.getUsername() + "] " + message);
++                      + " §d§l[" + author + "->" + player.getUsername() + "] " + message);
+ 
+       player.sendMessage(component);
+     } else {
+       source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize(
+                 prefix
+-                            + " §cИгрок не найден, или находится вне сети"));
++                        + " §cИгрок не найден, или находится вне сети"));
+     }
+   }
+ 
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/SendCommand.java b/proxy/src/main/java/ru/elytrium/elytraproxy/commands/SendCommand.java
+index f05d6706..10efffff 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/SendCommand.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/commands/SendCommand.java
+@@ -46,8 +46,8 @@ public class SendCommand implements SimpleCommand {
+     if (args.length != 2) {
+       source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize(
+             prefix
+-                        + " §cНедостаточно §fаргументов в команде."
+-                          + " Используйте: §6/send <server|player|all|current> <target>"));
++                    + " §cНедостаточно §fаргументов в команде."
++                    + " Используйте: §6/send <server|player|all|current> <target>"));
+       return;
+     }
+ 
+@@ -55,14 +55,14 @@ public class SendCommand implements SimpleCommand {
+     if (target == null) {
+       source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize(
+             prefix
+-                        + " §fУказанного сервера §cне существует§f."));
++                    + " §fУказанного сервера §cне существует§f."));
+       return;
+     }
+ 
+     Component summoned = LegacyComponentSerializer.legacyAmpersand().deserialize(
+             prefix
+-                        + " §fВы были перемещены на сервер §6"
+-                          + target.getServerInfo().getName() + " §fадминистратором §6" + source);
++                    + " §fВы были перемещены на сервер §6"
++                    + target.getServerInfo().getName() + " §fадминистратором §6" + source);
+ 
+     switch (args[0].toLowerCase()) {
+       case "all":
+@@ -75,16 +75,16 @@ public class SendCommand implements SimpleCommand {
+         if (!(source instanceof Player)) {
+           source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize(
+               prefix
+-                          + " §fИз консоли данную команду выполнить §cневозможно§f."));
++                      + " §fИз консоли данную команду выполнить §cневозможно§f."));
+           break;
+         }
+         Player player = (Player) source;
+         player.getCurrentServer().ifPresent(serverConnection -> {
+-        Collection<Player> players = serverConnection.getServer().getPlayersConnected();
+-        for (Player p : players) {
+-          p.createConnectionRequest(target).connect();
+-          p.sendMessage(summoned);
+-        }
++          Collection<Player> players = serverConnection.getServer().getPlayersConnected();
++          for (Player p : players) {
++            p.createConnectionRequest(target).connect();
++            p.sendMessage(summoned);
++          }
+         });
+         break;
+       default:
+@@ -95,7 +95,7 @@ public class SendCommand implements SimpleCommand {
+         } else {
+           source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize(
+               prefix
+-                          + " §fДанный игрок §cне онлайн§f."));
++                      + " §fДанный игрок §cне онлайн§f."));
+         }
+         break;
+     }
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/config/BaseConfig.java b/proxy/src/main/java/ru/elytrium/elytraproxy/config/BaseConfig.java
+index c0616398..b1ac10aa 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/config/BaseConfig.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/config/BaseConfig.java
+@@ -18,11 +18,16 @@
+ package ru.elytrium.elytraproxy.config;
+ 
+ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
++import ru.elytrium.elytraproxy.config.database.MysqlConfig;
++import ru.elytrium.elytraproxy.config.messages.Messages;
++import ru.elytrium.elytraproxy.config.plugins.PluginsConfig;
+ 
+ @SuppressFBWarnings("UWF_UNWRITTEN_FIELD") // temp
+ public class BaseConfig {
+-  String prefix;
+-  Messages messages;
++  String prefix = "§5§l[Elytrium]";
++  Messages messages = new Messages();
++  MysqlConfig mysql = new MysqlConfig();
++  PluginsConfig plugins = new PluginsConfig();
+ 
+   public String getPrefix() {
+     return prefix;
+@@ -31,4 +36,13 @@ public class BaseConfig {
+   public Messages getMessages() {
+     return messages;
+   }
++
++  public MysqlConfig getMySql() {
++    return mysql;
++  }
++
++  public PluginsConfig getPlugins() {
++    return plugins;
++  }
++
+ }
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/config/database/MysqlConfig.java b/proxy/src/main/java/ru/elytrium/elytraproxy/config/database/MysqlConfig.java
+new file mode 100644
+index 00000000..6a5d3843
+--- /dev/null
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/config/database/MysqlConfig.java
+@@ -0,0 +1,25 @@
++/*
++ * Copyright (C) 2021 mdxd44 <banklazhan222>, hevav <Petr Ilin>
++ *
++ * This program is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation, either version 3 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
++ */
++
++package ru.elytrium.elytraproxy.config.database;
++
++public class MysqlConfig {
++    public String hostname;
++    public String user;
++    public String password;
++    public String database;
++}
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/config/messages/CommandMessages.java b/proxy/src/main/java/ru/elytrium/elytraproxy/config/messages/CommandMessages.java
+new file mode 100644
+index 00000000..3cfe4939
+--- /dev/null
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/config/messages/CommandMessages.java
+@@ -0,0 +1,42 @@
++/*
++ * Copyright (C) 2021 mdxd44 <banklazhan222>, hevav <Petr Ilin>
++ *
++ * This program is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation, either version 3 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
++ */
++
++package ru.elytrium.elytraproxy.config.messages;
++
++import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
++
++@SuppressFBWarnings("UUF_UNUSED_FIELD") // temp
++public class CommandMessages {
++    public String genericError = "Во время выполнения этой команды произошла ошибка.";
++    public String commandDoesNotExist = "Этой команды не существует.";
++    public String serverDoesNotExist = "Указанный сервер {0} не существует.";
++    public String serverTooMany = "Настроено слишком много серверов. Для просмотра всех доступных серверов, используйте автозаполнение клавишей Tab.";
++    public String serverAvailable = "Доступные серверы: ";
++    public String serverTooltipPlayerOnline = "{0} игрок онлайн";
++    public String serverTooltipPlayersOnline = "{0} игрок(а, ов) онлайн";
++    public String serverTooltipCurrentServer = "Подключен к этому серверу";
++    public String serverTooltipOfferConnectServer = "Кликните, чтобы присоединиться к этому серверу";
++    public String glistPlayerPlural = "{0} игрок(а, ов) подключены к прокси на данный момент.";
++    public String glistViewAll = "Чтобы просмотреть всех игроков на серверах, используйте /glist all.";
++    public String reloadFailure = "Не удалось перезагрузить конфигурацию Velocity. Проверьте консоль для подробностей.";
++    public String versionCopyright = "Copyright 2018-2021 {0}. {1} лицензирована на условиях GNU General Public License v3.";
++    public String noPlugins = "Ни одного плагина не установлено.";
++    public String pluginsList = "Плагины: {0}";
++    public String pluginTooltipWebsite = "Вебсайт: {0}";
++    public String pluginTooltipAuthor = "Автор: {0}";
++    public String pluginTooltipAuthors = "Авторы: {0}";
++}
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/config/messages/ErrorMessages.java b/proxy/src/main/java/ru/elytrium/elytraproxy/config/messages/ErrorMessages.java
+new file mode 100644
+index 00000000..a5eefce2
+--- /dev/null
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/config/messages/ErrorMessages.java
+@@ -0,0 +1,40 @@
++/*
++ * Copyright (C) 2021 mdxd44 <banklazhan222>, hevav <Petr Ilin>
++ *
++ * This program is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation, either version 3 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
++ */
++
++package ru.elytrium.elytraproxy.config.messages;
++
++import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
++
++@SuppressFBWarnings("UUF_UNUSED_FIELD")
++public class ErrorMessages {
++    public String alreadyConnected = "Вы уже подключены к этому серверу!";
++    public String alreadyConnectedProxy = "Игрок с таким ником уже играет на сервере!";
++    public String alreadyConnecting = "Вы уже подключаетесь к серверу!";
++    public String cantConnect = "Не удалось подключиться к серверу {0}: {1}";
++    public String connectingServerError = "Не удалось подключить вас к серверу {0}. Пожалуйста, попробуйте снова через некоторое время.";
++    public String connectedServerError = "С вашим подключением к серверу {0} возникла проблема.";
++    public String internalServerConnectionError = "На сервере произошла внутренняя ошибка подключения.";
++    public String loggingInTooFast = "Вы входите слишком быстро, попробуйте снова через некоторое время.";
++    public String onlineModeOnly = "Вы не вошли в свой аккаунт Minecraft. Если вы уверены, что вошли в аккаунт, попробуйте перезапустить свой клиент Minecraft.";
++    public String playerConnectionError = "В вашем подключении произошла внутренняя ошибка.";
++    public String modernForwardingNeedsNewClient = "Этот сервер совместим только с Minecraft 1.13 и выше.";
++    public String modernForwardingFailed = "Ваш сервер не посылал запрос на переадресацию на прокси-сервер. Убедитесь, что сервер настроен на переадресацию Velocity.";
++    public String movedToNewServer = "Вы были кикнуты с сервера {0}: {1}";
++    public String noAvailableServers = "Нет серверов, доступных для подключения. Попробуйте позже или свяжитесь с администратором.";
++    public String configLoadFailed = "Невозможно обратиться к конфиг-файлу elytraproxy.yml. Выключение...";
++    public String mysqlLoadFailed = "Ошибка при инициализации базы данных. Выключение...";
++}
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/config/Messages.java b/proxy/src/main/java/ru/elytrium/elytraproxy/config/messages/Messages.java
+similarity index 84%
+rename from proxy/src/main/java/ru/elytrium/elytraproxy/config/Messages.java
+rename to proxy/src/main/java/ru/elytrium/elytraproxy/config/messages/Messages.java
+index 6175a700..5ee62495 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/config/Messages.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/config/messages/Messages.java
+@@ -15,13 +15,13 @@
+  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+  */
+ 
+-package ru.elytrium.elytraproxy.config;
++package ru.elytrium.elytraproxy.config.messages;
+ 
+ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+ 
+ @SuppressFBWarnings("UUF_UNUSED_FIELD") // temp
+ public class Messages {
+-  CommandMessages command;
+-  ErrorMessages error;
++  public CommandMessages command = new CommandMessages();
++  public ErrorMessages error = new ErrorMessages();
+ }
+ 
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/config/CommandMessages.java b/proxy/src/main/java/ru/elytrium/elytraproxy/config/plugins/AntibotConfig.java
+similarity index 62%
+rename from proxy/src/main/java/ru/elytrium/elytraproxy/config/CommandMessages.java
+rename to proxy/src/main/java/ru/elytrium/elytraproxy/config/plugins/AntibotConfig.java
+index 732e90c0..be510203 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/config/CommandMessages.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/config/plugins/AntibotConfig.java
+@@ -15,24 +15,22 @@
+  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+  */
+ 
+-package ru.elytrium.elytraproxy.config;
++package ru.elytrium.elytraproxy.config.plugins;
+ 
+ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+ 
++import java.util.Arrays;
++import java.util.List;
++
+ @SuppressFBWarnings("UUF_UNUSED_FIELD") // temp
+-public class CommandMessages {
+-  String alreadyConnected;
+-  String alreadyConnectedProxy;
+-  String alreadyConnecting;
+-  String cantConnect;
+-  String connectingServerError;
+-  String connectedServerError;
+-  String internalServerConnectionError;
+-  String loggingInTooFast;
+-  String onlineModeOnly;
+-  String playerConnectionError;
+-  String modernForwardingNeedsNewClient;
+-  String modernForwardingFailed;
+-  String movedToNewServer;
+-  String noAvailableServers;
++public class AntibotConfig {
++    public boolean enable = true;
++    public List<String> bannedNicknames = Arrays.asList(
++            "dropbot",
++            "mcspam",
++            "mcdrop",
++            "mcrage",
++            "mcstorm"
++    );
++    public String table = "antibot";
+ }
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/config/plugins/AuthConfig.java b/proxy/src/main/java/ru/elytrium/elytraproxy/config/plugins/AuthConfig.java
+new file mode 100644
+index 00000000..e1b7ef6e
+--- /dev/null
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/config/plugins/AuthConfig.java
+@@ -0,0 +1,27 @@
++/*
++ * Copyright (C) 2021 mdxd44 <banklazhan222>, hevav <Petr Ilin>
++ *
++ * This program is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation, either version 3 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
++ */
++
++package ru.elytrium.elytraproxy.config.plugins;
++
++import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
++
++@SuppressFBWarnings("UUF_UNUSED_FIELD") // temp
++public class AuthConfig {
++    public boolean enable = true;
++    public boolean onlineModeRequiresLogin = false;
++    public String table = "auth";
++}
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/config/plugins/PluginsConfig.java b/proxy/src/main/java/ru/elytrium/elytraproxy/config/plugins/PluginsConfig.java
+new file mode 100644
+index 00000000..0110405c
+--- /dev/null
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/config/plugins/PluginsConfig.java
+@@ -0,0 +1,26 @@
++/*
++ * Copyright (C) 2021 mdxd44 <banklazhan222>, hevav <Petr Ilin>
++ *
++ * This program is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation, either version 3 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
++ */
++
++package ru.elytrium.elytraproxy.config.plugins;
++
++import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
++
++@SuppressFBWarnings("UUF_UNUSED_FIELD") // temp
++public class PluginsConfig {
++    public AntibotConfig antibot = new AntibotConfig();
++    public AuthConfig auth = new AuthConfig();
++}
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/database/Database.java b/proxy/src/main/java/ru/elytrium/elytraproxy/database/Database.java
+new file mode 100644
+index 00000000..07ae9aa1
+--- /dev/null
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/database/Database.java
+@@ -0,0 +1,46 @@
++/*
++ * Copyright (C) 2021 mdxd44 <banklazhan222>, hevav <Petr Ilin>
++ *
++ * This program is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation, either version 3 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
++ */
++
++package ru.elytrium.elytraproxy.database;
++
++import java.util.List;
++import java.util.Map;
++
++public abstract class Database {
++
++  public abstract void query(String query);
++
++  public abstract void makeTable(String table, Map<String, String> keys);
++
++  public abstract void insertMap(String table, Map<String, Object> toInsert, boolean update);
++
++  public abstract void updateMap(String table,
++                                 Map<String, Object> whereUpdate,
++                                 Map<String, Object> toUpdate);
++
++  public abstract void deleteMap(String table, Map<String, Object> whereDelete);
++
++  public abstract <T> void insert(String table, T toInsert, Class<T> type, boolean update);
++
++  public abstract <T> T getItem(String table, Map<String, Object> where, Class<T> type);
++
++  public abstract <T> List<T> getItems(String table, Class<T> type);
++
++  public abstract <T> T queryResult(String query, Class<T> type);
++
++  public abstract <T> List<T> queryResultList(String query, Class<T> type);
++}
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/database/MySqlDatabase.java b/proxy/src/main/java/ru/elytrium/elytraproxy/database/MySqlDatabase.java
+new file mode 100644
+index 00000000..d6fdf8cf
+--- /dev/null
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/database/MySqlDatabase.java
+@@ -0,0 +1,232 @@
++/*
++ * Copyright (C) 2021 mdxd44 <banklazhan222>, hevav <Petr Ilin>
++ *
++ * This program is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation, either version 3 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
++ */
++
++package ru.elytrium.elytraproxy.database;
++
++import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
++
++import java.lang.reflect.Field;
++import java.lang.reflect.InvocationTargetException;
++import java.sql.Connection;
++import java.sql.DriverManager;
++import java.sql.ResultSet;
++import java.sql.SQLException;
++import java.sql.Statement;
++import java.util.ArrayList;
++import java.util.HashMap;
++import java.util.List;
++import java.util.Map;
++import java.util.stream.Collectors;
++import java.util.stream.Stream;
++
++public class MySqlDatabase extends Database {
++  private final Connection connection;
++
++  /**
++   * Initializes and connects to MySQL Database.
++   * @param host Hostname to connect, with port
++   * @param database Database name
++   * @param user Username
++   * @param password Password of user
++   * @throws SQLException Throws if connection was unsuccessful
++   */
++  public MySqlDatabase(String host,
++                       String database,
++                       String user,
++                       String password) throws SQLException {
++    String url = "jdbc:mysql://" + host + "/" + database
++            + "?autoReconnect=true&cmaxReconnets=5&initialTimeout=1&useSSL=false";
++
++    this.connection = DriverManager.getConnection(url, user, password);
++  }
++
++  @Override
++  @SuppressFBWarnings(value = "OBL_UNSATISFIED_OBLIGATION_EXCEPTION_EDGE",
++                      justification = "We don't need completion of query here")
++  public void query(String query) {
++    try {
++      Statement statement = connection.createStatement();
++      statement.execute(query);
++      statement.close();
++    } catch (SQLException exception) {
++      exception.printStackTrace();
++    }
++  }
++
++  @Override
++  public void makeTable(String table, Map<String, String> keys) {
++    query("CREATE TABLE " + table + " ("
++            + keyFromStream(keys.entrySet().stream().map(e -> e.getKey() + " " + e.getValue()))
++        + ")");
++  }
++
++  @Override
++  public void insertMap(String table, Map<String, Object> toInsert, boolean update) {
++    String keyString = keyFromStream(toInsert.keySet().stream().map(s -> s));
++    String valueString = keyFromStream(toInsert.values().stream());
++
++    String request = "INSERT INTO %s (%s) VALUES(%s)";
++    if (update) {
++      request += " ON DUPLICATE KEY UPDATE";
++    }
++
++    query(String.format(request, table, keyString, valueString));
++  }
++
++  @Override
++  public void updateMap(String table,
++                        Map<String, Object> whereUpdate,
++                        Map<String, Object> toUpdate) {
++    String where = entryFromStream(whereUpdate.entrySet().stream(), " AND ");
++    String set = entryFromStream(toUpdate.entrySet().stream(), ", ");
++
++    query(String.format("UPDATE %s SET %s WHERE %s", table, set, where));
++  }
++
++  @Override
++  public void deleteMap(String table, Map<String, Object> whereDelete) {
++    String entryString = entryFromStream(whereDelete.entrySet().stream(), " AND ");
++    query(String.format("DELETE FROM %s WHERE %s", table, entryString));
++  }
++
++  @Override
++  public <T> void insert(String table, T toInsert, Class<T> type, boolean update) {
++    try {
++      insertMap(table, serializeToMap(toInsert, type), update);
++    } catch (SQLException
++            | InstantiationException
++            | IllegalAccessException
++            | InvocationTargetException
++            | NoSuchMethodException e) {
++      e.printStackTrace();
++    }
++  }
++
++  @Override
++  public <T> T getItem(String table, Map<String, Object> where, Class<T> type) {
++    String entryString = entryFromStream(where.entrySet().stream(), " AND ");
++    return queryResult(String.format("SELECT * FROM %s WHERE %s", table, entryString), type);
++  }
++
++  @Override
++  public <T> List<T> getItems(String table, Class<T> type) {
++    return queryResultList(String.format("SELECT * FROM %s", table), type);
++  }
++
++  @Override
++  public <T> T queryResult(String query, Class<T> type) {
++    try {
++      Statement statement = connection.createStatement();
++      ResultSet set = statement.executeQuery(query);
++
++      if (set != null && set.next()) {
++        T result = serializeFromSet(set, type);
++        statement.close();
++        return result;
++      } else {
++        statement.close();
++        return null;
++      }
++    } catch (SQLException
++            | InstantiationException
++            | IllegalAccessException
++            | InvocationTargetException
++            | NoSuchMethodException e) {
++
++      e.printStackTrace();
++    }
++
++    return null;
++  }
++
++  @Override
++  public <T> List<T> queryResultList(String query, Class<T> type) {
++    try {
++      Statement statement = connection.createStatement();
++      ResultSet set = statement.executeQuery(query);
++
++      List<T> resultList = new ArrayList<>();
++
++      while (set != null && set.next()) {
++        T result = serializeFromSet(set, type);
++        resultList.add(result);
++      }
++
++      statement.close();
++      return resultList;
++    } catch (SQLException
++            | InstantiationException
++            | IllegalAccessException
++            | InvocationTargetException
++            | NoSuchMethodException e) {
++
++      e.printStackTrace();
++    }
++
++    return null;
++  }
++
++  private <T> Map<String, Object> serializeToMap(T from, Class<T> type)
++          throws NoSuchMethodException,
++          IllegalAccessException,
++          InvocationTargetException,
++          InstantiationException,
++          SQLException {
++
++    Map<String, Object> map = new HashMap<>();
++
++    for (Field field : type.getFields()) {
++      String fieldName = field.getName();
++      Object fieldValue = field.get(from);
++
++      map.put(fieldName, fieldValue);
++    }
++
++    return map;
++  }
++
++  private <T> T serializeFromSet(ResultSet set, Class<T> type)
++          throws NoSuchMethodException,
++          IllegalAccessException,
++          InvocationTargetException,
++          InstantiationException,
++          SQLException {
++
++    T result = type.getConstructor().newInstance();
++
++    for (Field field : type.getFields()) {
++      String fieldName = field.getName();
++      Object fieldValue = set.getObject(fieldName, field.getType());
++
++      field.set(result, fieldValue);
++    }
++
++    return result;
++  }
++
++  private String keyFromStream(Stream<Object> stream) {
++    return stream
++            .map(Object::toString)
++            .collect(Collectors.joining(", "));
++  }
++
++  private String entryFromStream(Stream<Map.Entry<String, Object>> stream, String delimiter) {
++    return stream
++            .map(entry -> entry.getKey() + " = " + entry.getValue())
++            .collect(Collectors.joining(delimiter));
++  }
++}
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/config/ErrorMessages.java b/proxy/src/main/java/ru/elytrium/elytraproxy/plugins/skins/SkinSetup.java
+similarity index 83%
+rename from proxy/src/main/java/ru/elytrium/elytraproxy/config/ErrorMessages.java
+rename to proxy/src/main/java/ru/elytrium/elytraproxy/plugins/skins/SkinSetup.java
+index b500deaf..417f77c2 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/config/ErrorMessages.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/plugins/skins/SkinSetup.java
+@@ -15,7 +15,10 @@
+  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+  */
+ 
+-package ru.elytrium.elytraproxy.config;
++package ru.elytrium.elytraproxy.plugins.skins;
+ 
+-public class ErrorMessages {
++public class SkinSetup {
++  public String uuid;
++  public String texture;
++  public String signature;
+ }
+diff --git a/proxy/src/main/resources/default-elytraproxy.yml b/proxy/src/main/resources/default-elytraproxy.yml
+new file mode 100644
+index 00000000..5410c0d3
+--- /dev/null
++++ b/proxy/src/main/resources/default-elytraproxy.yml
+@@ -0,0 +1,74 @@
++#
++# Copyright (C) 2021 mdxd44 <banklazhan222>, hevav <Petr Ilin>
++#
++# This program is free software: you can redistribute it and/or modify
++# it under the terms of the GNU General Public License as published by
++# the Free Software Foundation, either version 3 of the License, or
++# (at your option) any later version.
++#
++# This program is distributed in the hope that it will be useful,
++# but WITHOUT ANY WARRANTY; without even the implied warranty of
++# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++# GNU General Public License for more details.
++#
++# You should have received a copy of the GNU General Public License
++# along with this program.  If not, see <https://www.gnu.org/licenses/>.
++#
++
++prefix: "§5§l[Elytrium]"
++messages:
++  error:
++    alreadyConnected: "Вы уже подключены к этому серверу\!"
++    alreadyConnectedProxy: "Игрок с таким ником уже играет на сервере\!"
++    alreadyConnecting: "Вы уже подключаетесь к серверу\!"
++    cantConnect: "Не удалось подключиться к серверу {0}\: {1}"
++    connectingServerError: "Не удалось подключить вас к серверу {0}. Пожалуйста, попробуйте снова через некоторое время."
++    connectedServerError: "С вашим подключением к серверу {0} возникла проблема."
++    internalServerConnectionError: "На сервере произошла внутренняя ошибка подключения."
++    loggingInTooFast: "Вы входите слишком быстро, попробуйте снова через некоторое время."
++    onlineModeOnly: "Вы не вошли в свой аккаунт Minecraft. Если вы уверены, что вошли в аккаунт, попробуйте перезапустить свой клиент Minecraft."
++    playerConnectionError: "В вашем подключении произошла внутренняя ошибка."
++    modernForwardingNeedsNewClient: "Этот сервер совместим только с Minecraft 1.13 и выше."
++    modernForwardingFailed: "Ваш сервер не посылал запрос на переадресацию на прокси-сервер. Убедитесь, что сервер настроен на переадресацию Velocity."
++    movedToNewServer: "Вы были кикнуты с сервера {0}\: {1}"
++    noAvailableServers: "Нет серверов, доступных для подключения. Попробуйте позже или свяжитесь с администратором."
++    configLoadFailed: "Невозможно обратиться к конфиг-файлу elytraproxy.yml. Выключение..."
++    mysqlLoadFailed: "Ошибка при инициализации базы данных. Выключение..."
++  command:
++    genericError: "Во время выполнения этой команды произошла ошибка."
++    commandDoesNotExist: "Этой команды не существует."
++    serverDoesNotExist: "Указанный сервер {0} не существует."
++    serverTooMany: "Настроено слишком много серверов. Для просмотра всех доступных серверов, используйте автозаполнение клавишей Tab."
++    serverAvailable: "Доступные серверы\:"
++    serverTooltipPlayerOnline: "{0} игрок онлайн"
++    serverTooltipPlayersOnline: "{0} игрок(а, ов) онлайн"
++    serverTooltipCurrentServer: "Подключен к этому серверу"
++    serverTooltipOfferConnectServer: "Кликните, чтобы присоединиться к этому серверу"
++    glistPlayerPlural: "{0} игрок(а, ов) подключены к прокси на данный момент."
++    glistViewAll: "Чтобы просмотреть всех игроков на серверах, используйте /glist all."
++    reloadFailure: "Не удалось перезагрузить конфигурацию Velocity. Проверьте консоль для подробностей."
++    versionCopyright: "Copyright 2018-2021 {0}. {1} лицензирована на условиях GNU General Public License v3."
++    noPlugins: "Ни одного плагина не установлено."
++    pluginsList: "Плагины\: {0}"
++    pluginTooltipWebsite: "Вебсайт\: {0}"
++    pluginTooltipAuthor: "Автор\: {0}"
++    pluginTooltipAuthors: "Авторы\: {0}"
++mysql:
++  hostname: "localhost:3306"
++  user: "root"
++  password: ""
++  database: "elytraproxy"
++plugins:
++  auth:
++    enable: true
++    onlineModeRequiresLogin: false
++    table: auth
++  antibot:
++    enable: true
++    bannedNicknames:
++      - dropbot
++      - mcspam
++      - mcdrop
++      - mcrage
++      - mcstorm
++    table: antibot
+\ No newline at end of file
+-- 
+2.24.1.windows.2
+
