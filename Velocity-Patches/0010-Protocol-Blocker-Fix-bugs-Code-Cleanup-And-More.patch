@@ -1,0 +1,2766 @@
+From 9d740e070daed1770c1acc6c041069efd3f730ed Mon Sep 17 00:00:00 2001
+From: mdxd44 <mdxd44@ely.su>
+Date: Wed, 2 Jun 2021 23:35:32 +0900
+Subject: [PATCH] Protocol Blocker, Fix bugs, Code Cleanup And More
+
+
+diff --git a/build.gradle b/build.gradle
+index 63a1dc04..fbf2af18 100644
+--- a/build.gradle
++++ b/build.gradle
+@@ -58,11 +58,6 @@ allprojects {
+         maven {
+             url "https://nexus.velocitypowered.com/repository/maven-public/"
+         }
+-
+-        // BotFilter repo
+-        maven {
+-            url "https://maven.leymooo.me/repository/public/"
+-        }
+     }
+ 
+     test {
+diff --git a/config/checkstyle/checkstyle.xml b/config/checkstyle/checkstyle.xml
+index 08a2b373..66cc9e59 100644
+--- a/config/checkstyle/checkstyle.xml
++++ b/config/checkstyle/checkstyle.xml
+@@ -121,6 +121,7 @@
+       <message key="name.invalidPattern"
+         value="Package name ''{0}'' must match pattern ''{1}''."/>
+     </module>
++    <!-- TODO: revert checkstyle changes
+     <module name="TypeName">
+       <message key="name.invalidPattern"
+         value="Type name ''{0}'' must match pattern ''{1}''."/>
+@@ -135,6 +136,7 @@
+       <message key="name.invalidPattern"
+         value="Parameter name ''{0}'' must match pattern ''{1}''."/>
+     </module>
++    -->
+     <module name="LambdaParameterName">
+       <property name="format" value="^[a-z]([a-z0-9][a-zA-Z0-9]*)?$"/>
+       <message key="name.invalidPattern"
+@@ -145,12 +147,14 @@
+       <message key="name.invalidPattern"
+         value="Catch parameter name ''{0}'' must match pattern ''{1}''."/>
+     </module>
++    <!--
+     <module name="LocalVariableName">
+       <property name="tokens" value="VARIABLE_DEF"/>
+       <property name="format" value="^[a-z]([a-z0-9][a-zA-Z0-9]*)?$"/>
+       <message key="name.invalidPattern"
+         value="Local variable name ''{0}'' must match pattern ''{1}''."/>
+     </module>
++    -->
+     <module name="ClassTypeParameterName">
+       <property name="format" value="(^[A-Z][0-9]?)$|([A-Z][a-zA-Z0-9]*[T]$)"/>
+       <message key="name.invalidPattern"
+@@ -185,10 +189,12 @@
+       <property name="lineWrappingIndentation" value="4"/>
+       <property name="arrayInitIndent" value="2"/>
+     </module>
++    <!--
+     <module name="AbbreviationAsWordInName">
+       <property name="ignoreFinal" value="false"/>
+       <property name="allowedAbbreviationLength" value="1"/>
+     </module>
++    -->
+     <module name="OverloadMethodsDeclarationOrder"/>
+     <module name="VariableDeclarationUsageDistance"/>
+     <module name="CustomImportOrder">
+@@ -219,6 +225,7 @@
+       <property name="tokens" value="VARIABLE_DEF"/>
+       <property name="allowSamelineMultipleAnnotations" value="true"/>
+     </module>
++    <!-- ElytraProxy - temp
+     <module name="NonEmptyAtclauseDescription"/>
+     <module name="JavadocTagContinuationIndentation"/>
+     <module name="SummaryJavadoc">
+@@ -240,6 +247,7 @@
+       <property name="allowedAnnotations" value="Override, Test"/>
+       <property name="allowThrowsTagsForSubclasses" value="true"/>
+     </module>
++    -->
+     <module name="MethodName">
+       <property name="format" value="^[a-z][a-z0-9][a-zA-Z0-9_]*$"/>
+       <message key="name.invalidPattern"
+diff --git a/proxy/build.gradle b/proxy/build.gradle
+index 4b7745c7..e8832066 100644
+--- a/proxy/build.gradle
++++ b/proxy/build.gradle
+@@ -2,11 +2,11 @@ import com.github.jengelman.gradle.plugins.shadow.transformers.Log4j2PluginsCach
+ 
+ plugins {
+     id 'java'
+-//    id 'checkstyle'
++    id 'checkstyle'
+ }
+ 
+ apply plugin: 'org.cadixdev.licenser'
+-//apply from: '../gradle/checkstyle.gradle'
++apply from: '../gradle/checkstyle.gradle'
+ apply plugin: 'com.github.johnrengelman.shadow'
+ 
+ license {
+@@ -68,8 +68,6 @@ dependencies {
+     testCompileOnly 'org.projectlombok:lombok:1.18.20'
+     testAnnotationProcessor 'org.projectlombok:lombok:1.18.20'
+ 
+-    implementation 'redis.clients:jedis:3.6.0'
+-    implementation 'com.squareup.okhttp:okhttp:2.7.5'
+     // Note: we depend on the API twice, first the main sourceset, and then the annotation processor.
+     implementation project(':elytraproxy-api')
+     implementation project(':elytraproxy-api').sourceSets.ap.output
+@@ -108,15 +106,10 @@ dependencies {
+ 
+     implementation 'org.bstats:bstats-base:2.2.0'
+ 
+-    // ElytraProxy - add mysql driver
+-    implementation 'org.mariadb.jdbc:mariadb-java-client:2.7.3'
+-
+     compileOnly 'com.github.spotbugs:spotbugs-annotations:4.1.2'
+ 
+     testImplementation "org.junit.jupiter:junit-jupiter-api:${junitVersion}"
+     testImplementation "org.junit.jupiter:junit-jupiter-engine:${junitVersion}"
+-
+-    implementation 'ru.leymooo:AnnotatedYAMLConfiguration-standalone:1.1-SNAPSHOT' //BotFilter
+ }
+ 
+ test {
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
+index 13537e8e..f274f34f 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
+@@ -136,7 +136,8 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+   private final VelocityPluginManager pluginManager;
+   private final AdventureBossBarManager bossBarManager;
+ 
+-  public static final Map<UUID, ConnectedPlayer> connectionsByUuid = new ConcurrentHashMap<>();
++  @Getter
++  private static final Map<UUID, ConnectedPlayer> connectionsByUuid = new ConcurrentHashMap<>();
+   private final Map<String, ConnectedPlayer> connectionsByName = new ConcurrentHashMap<>();
+   private final VelocityConsole console;
+   private @MonotonicNonNull Ratelimiter ipAttemptLimiter;
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/config/VelocityConfiguration.java b/proxy/src/main/java/com/velocitypowered/proxy/config/VelocityConfiguration.java
+index 555dfea3..eb92cb80 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/config/VelocityConfiguration.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/config/VelocityConfiguration.java
+@@ -334,7 +334,7 @@ public class VelocityConfiguration implements ProxyConfig {
+   //BotFilter - global rate limiter
+   @Override
+   public int getLoginRatelimitAttempts() {
+-    return Settings.IMP.ANTIBOT.LOGIN_RATELIMIT_ATTEMPTS;
++    return Settings.IMP.LOGIN_RATELIMIT_ATTEMPTS;
+   }
+ 
+   @Override
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
+index 50ec438a..67f890ea 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
+@@ -258,7 +258,20 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+       }
+       */
+       logger.info("{} has connected", player);
+-      preLoginCheck(player);
++      // ElytraProxy Start - Init antibot & protocol blocker
++      if (Settings.IMP.BANNED_PROTOCOLS
++              .contains(mcConnection.getProtocolVersion().getProtocol())) {
++        player.disconnect0(Component.text(
++                Settings.IMP.MESSAGES.ELYTRAPROXY_MESSAGES.PROTOCOL_BLOCKED), true);
++        return;
++      }
++      if (Settings.IMP.ANTIBOT.ENABLE) {
++        preLoginCheck(player);
++      } else {
++        completeLoginProtocol(player, true);
++        initialize(player);
++      }
++      // ElytraProxy End
+     }, mcConnection.eventLoop()).exceptionally((ex) -> {
+       logger.error("Exception during connection of {}", finalProfile, ex);
+       return null;
+@@ -266,25 +279,24 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+   }
+ 
+   private void preLoginCheck(ConnectedPlayer player) {
+-    if (Settings.IMP.ANTIBOT.ENABLE) {
+-      String formattedNickname = player.getUsername().toLowerCase();
+-
+-      if (Settings.IMP.ANTIBOT.BANNED_NICK_PATTERNS.stream().anyMatch(formattedNickname::contains)) {
+-        player.disconnect0(
+-                Component.text(
+-                        "§cВ вашем нике содержатся запрещённые фразы."
+-                                + "\n§cЕсли вы считаете что это ошибка,"
+-                                + " свяжитесь с администрацией. (ely.su/discord)"),
+-                true
+-        );
+-        logger.info("Firewaled bot {}", player.getUsername());
+-      } else {
+-        //injectBotFilterOrFinishLogin(player);
++    String formattedNickname = player.getUsername().toLowerCase();
++
++    if (Settings.IMP.ANTIBOT.BANNED_NICK_PATTERNS
++              .stream().anyMatch(formattedNickname::contains)) {
++      player.disconnect0(
++              Component.text(
++                      "§cВ вашем нике содержатся запрещённые фразы."
++                              + "\n§cЕсли вы считаете что это ошибка,"
++                              + " свяжитесь с администрацией. (ely.su/discord)"),
++              true
++      );
++      logger.info("Firewaled bot {}", player.getUsername());
++    } else {
++      //injectBotFilterOrFinishLogin(player);
+ 
+-        // temp
+-        completeLoginProtocol(player, true);
+-        initialize(player);
+-      }
++      // temp
++      completeLoginProtocol(player, true);
++      initialize(player);
+     }
+   }
+ 
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/protocol/StateRegistry.java b/proxy/src/main/java/com/velocitypowered/proxy/protocol/StateRegistry.java
+index f8905b72..ad210663 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/protocol/StateRegistry.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/protocol/StateRegistry.java
+@@ -394,6 +394,7 @@ public enum StateRegistry {
+         }
+         return id;
+       }
++
+       /**
+        * Attempts to look up the packet ID for a {@code packet} class.
+        *
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/util/ratelimit/GuavaCacheRatelimiter.java b/proxy/src/main/java/com/velocitypowered/proxy/util/ratelimit/GuavaCacheRatelimiter.java
+index 04a37654..85ba984f 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/util/ratelimit/GuavaCacheRatelimiter.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/util/ratelimit/GuavaCacheRatelimiter.java
+@@ -24,13 +24,13 @@ import com.google.common.cache.Cache;
+ import com.google.common.cache.CacheBuilder;
+ import com.google.common.cache.CacheLoader;
+ import com.google.common.cache.LoadingCache;
+-import org.jetbrains.annotations.NotNull;
+ 
+ import java.net.InetAddress;
+-import java.util.concurrent.ExecutionException;
+ import java.util.concurrent.TimeUnit;
+ import java.util.concurrent.atomic.AtomicInteger;
+ 
++import org.jetbrains.annotations.NotNull;
++
+ /**
+  * A simple rate-limiter based on a Guava {@link Cache}.
+  */
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/ElytraProxy.java b/proxy/src/main/java/ru/elytrium/elytraproxy/ElytraProxy.java
+index d9850931..8877fcac 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/ElytraProxy.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/ElytraProxy.java
+@@ -24,14 +24,14 @@ import com.velocitypowered.proxy.connection.client.ConnectedPlayer;
+ import com.velocitypowered.proxy.connection.client.LoginSessionHandler;
+ import com.velocitypowered.proxy.network.Connections;
+ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
++import io.netty.channel.ChannelPipeline;
+ 
+ import java.io.File;
+-import io.netty.channel.ChannelPipeline;
++
+ import lombok.Getter;
+ 
+ import org.apache.logging.log4j.LogManager;
+ import org.apache.logging.log4j.Logger;
+-
+ import ru.elytrium.elytraproxy.botfilter.protocol.cache.netty.MultiplePreparedPacketsEncoder;
+ import ru.elytrium.elytraproxy.botfilter.protocol.cache.netty.PreparedPacketEncoder;
+ import ru.elytrium.elytraproxy.botfilter.server.BotFilterSessionHandler;
+@@ -104,9 +104,12 @@ public class ElytraProxy {
+     manager.unregister("send");
+ 
+     manager.register("elytraproxy", new ElytraProxyCommand(server, this));
+-    manager.register("alert", new AlertCommand(server, Settings.IMP.MESSAGES.PREFIX));
+-    manager.register("find", new FindCommand(server, Settings.IMP.MESSAGES.PREFIX));
+-    manager.register("send", new SendCommand(server, Settings.IMP.MESSAGES.PREFIX));
++    manager.register("alert", new AlertCommand(server,
++            Settings.IMP.MESSAGES.ELYTRAPROXY_MESSAGES.PREFIX));
++    manager.register("find", new FindCommand(server,
++            Settings.IMP.MESSAGES.ELYTRAPROXY_MESSAGES.PREFIX));
++    manager.register("send", new SendCommand(server,
++            Settings.IMP.MESSAGES.ELYTRAPROXY_MESSAGES.PREFIX));
+   }
+ 
+   public boolean shouldCheck(ConnectedPlayer player) {
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/BotFilterProtocol.java b/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/BotFilterProtocol.java
+index ccd3864f..fed66eec 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/BotFilterProtocol.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/BotFilterProtocol.java
+@@ -74,8 +74,5 @@ public class BotFilterProtocol {
+         map(0x24, ProtocolVersion.MINECRAFT_1_14, true),
+         map(0x25, ProtocolVersion.MINECRAFT_1_15, true),
+         map(0xF0, ProtocolVersion.MINECRAFT_1_16, true)); //RANDOM ID
+-
+-
+   }
+-
+ }
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/cache/ByteBufCreator.java b/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/cache/ByteBufCreator.java
+index 9de49411..2a696839 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/cache/ByteBufCreator.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/cache/ByteBufCreator.java
+@@ -37,7 +37,6 @@ public class ByteBufCreator {
+     compressor.close();
+   }
+ 
+-
+   public static ByteBuf newBuffer() {
+     return directBuffers ? Unpooled.directBuffer() : Unpooled.buffer();
+   }
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/cache/PacketCompressor.java b/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/cache/PacketCompressor.java
+index 3a97f958..b986d4ec 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/cache/PacketCompressor.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/cache/PacketCompressor.java
+@@ -65,5 +65,4 @@ public class PacketCompressor {
+     }
+     return destination;
+   }
+-
+ }
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/cache/PreparedPacket.java b/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/cache/PreparedPacket.java
+index d2abd664..1d96976e 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/cache/PreparedPacket.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/cache/PreparedPacket.java
+@@ -33,7 +33,6 @@ import java.util.Map;
+ import java.util.Map.Entry;
+ import ru.elytrium.elytraproxy.botfilter.protocol.BotFilterProtocol;
+ 
+-
+ public class PreparedPacket<T extends MinecraftPacket> {
+ 
+   static {
+@@ -84,8 +83,7 @@ public class PreparedPacket<T extends MinecraftPacket> {
+       prepared.put(protocolVersion, holder);
+     }
+   }
+-
+-   */
++  */
+ 
+   private ByteBuf encodePacket(T packet, ProtocolVersion version, StateRegistry protocol) {
+     int id = getPacketId(packet, version, protocol);
+@@ -109,7 +107,6 @@ public class PreparedPacket<T extends MinecraftPacket> {
+     return holder == null ? null : holder.byteBuf.retainedSlice();
+   }
+ 
+-
+   public int getBufferLength(ProtocolVersion version) {
+     ByteBufHolder holder = offlineMode.get(version);
+     return holder == null ? 0 : holder.byteBuf.readableBytes();
+@@ -129,7 +126,6 @@ public class PreparedPacket<T extends MinecraftPacket> {
+     return finished;
+   }
+ 
+-
+   private ByteBufHolder getHolder(ByteBuf buf, ProtocolVersion version) {
+     if (version.isBefore(ProtocolVersion.MINECRAFT_1_8)) {
+       ByteBufHolder holder = offlineMode.get(ProtocolVersion.MINECRAFT_1_7_2);
+@@ -149,7 +145,6 @@ public class PreparedPacket<T extends MinecraftPacket> {
+     return new ByteBufHolder(false, buf);
+   }
+ 
+-
+   public void processCompress(PacketCompressor packetCompressor) {
+     if (finished) {
+       throw new IllegalStateException("Packet compression does not allowed after adapt");
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/cache/netty/MultiplePreparedPacketsEncoder.java b/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/cache/netty/MultiplePreparedPacketsEncoder.java
+index c89231fd..ead33ef1 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/cache/netty/MultiplePreparedPacketsEncoder.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/cache/netty/MultiplePreparedPacketsEncoder.java
+@@ -34,7 +34,6 @@ import ru.elytrium.elytraproxy.botfilter.protocol.cache.MultiplePreparedPackets;
+ public class MultiplePreparedPacketsEncoder extends
+     MessageToMessageEncoder<MultiplePreparedPackets> {
+ 
+-
+   private static Map<ProtocolVersion, MultiplePreparedPacketsEncoder> encoders = new EnumMap<>(
+       ProtocolVersion.class);
+ 
+@@ -46,7 +45,6 @@ public class MultiplePreparedPacketsEncoder extends
+ 
+   private final ProtocolVersion protocolVersion;
+ 
+-
+   @Override
+   protected void encode(ChannelHandlerContext ctx, MultiplePreparedPackets msg, List<Object> out)
+       throws Exception {
+@@ -62,9 +60,7 @@ public class MultiplePreparedPacketsEncoder extends
+     return ByteBufCreator.isDirectBufferPreferred() ? ctx.alloc().directBuffer(length)
+         : ctx.alloc().heapBuffer(length);
+   }
+-
+-   */
+-
++  */
+ 
+   public static MultiplePreparedPacketsEncoder getEncoder(ProtocolVersion version) {
+     return encoders.get(version);
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/cache/netty/PreparedPacketEncoder.java b/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/cache/netty/PreparedPacketEncoder.java
+index 5299d34f..34fb3eb2 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/cache/netty/PreparedPacketEncoder.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/cache/netty/PreparedPacketEncoder.java
+@@ -35,12 +35,10 @@ import ru.elytrium.elytraproxy.botfilter.protocol.cache.PreparedPacket;
+ @RequiredArgsConstructor
+ public class PreparedPacketEncoder extends MessageToMessageEncoder<PreparedPacket> {
+ 
+-
+   private static final boolean IS_JAVA_CIPHER = Natives.cipher.get() == JavaVelocityCipher.FACTORY;
+   private static Table<ProtocolVersion, Boolean, PreparedPacketEncoder> encoders = HashBasedTable
+       .create(ProtocolVersion.SUPPORTED_VERSIONS.size(), 2);
+ 
+-
+   static {
+     for (ProtocolVersion version : ProtocolVersion.SUPPORTED_VERSIONS) {
+       encoders.put(version, true, new PreparedPacketEncoder(version, true));
+@@ -60,7 +58,6 @@ public class PreparedPacketEncoder extends MessageToMessageEncoder<PreparedPacke
+   }
+ 
+   /*
+-
+   @Override
+   protected ByteBuf allocateBuffer(ChannelHandlerContext ctx, PreparedPacket msg,
+       boolean preferDirect) throws Exception {
+@@ -68,9 +65,7 @@ public class PreparedPacketEncoder extends MessageToMessageEncoder<PreparedPacke
+     boolean direct = onlineMode ? IS_JAVA_CIPHER : ByteBufCreator.isDirectBufferPreferred();
+     return direct ? ctx.alloc().directBuffer(length) : ctx.alloc().heapBuffer(length);
+   }
+-
+-   */
+-
++  */
+ 
+   public static PreparedPacketEncoder getEncoder(ProtocolVersion version, boolean onlineMode) {
+     return encoders.get(version, onlineMode);
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/packet/JoinGame.java b/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/packet/JoinGame.java
+index 2d2dac2b..3dac8975 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/packet/JoinGame.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/packet/JoinGame.java
+@@ -31,7 +31,6 @@ import lombok.Setter;
+ import lombok.ToString;
+ import ru.elytrium.elytraproxy.botfilter.protocol.registry.DimensionRegistry;
+ 
+-
+ @Getter
+ @Setter
+ @AllArgsConstructor
+@@ -54,7 +53,6 @@ public class JoinGame implements MinecraftPacket {
+   private DimensionRegistry dimensionRegistry;
+   private short previousGamemode;
+ 
+-
+   @Override
+   public void encode(ByteBuf buf, ProtocolUtils.Direction direction, ProtocolVersion version) {
+     buf.writeInt(entityId);
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/packet/PlayerPositionAndLook.java b/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/packet/PlayerPositionAndLook.java
+index 5c11ad14..6e27cd6b 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/packet/PlayerPositionAndLook.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/packet/PlayerPositionAndLook.java
+@@ -45,7 +45,6 @@ public class PlayerPositionAndLook implements MinecraftPacket {
+   private int teleportId;
+   private boolean onGround;
+ 
+-
+   @Override
+   public void encode(ByteBuf buf, Direction direction, ProtocolVersion protocolVersion) {
+     buf.writeDouble(this.x);
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/packet/world/Chunk17to115.java b/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/packet/world/Chunk17to115.java
+index 254a6f33..4e71fa21 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/packet/world/Chunk17to115.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/packet/world/Chunk17to115.java
+@@ -108,7 +108,6 @@ public class Chunk17to115 extends ChunkData {
+         .putLongArray("WORLD_SURFACE", surface.getData()).build();
+   }
+ 
+-
+   private int writeChunkData(ByteBuf data, ProtocolVersion version) {
+     networkSections.clear();
+     ChunkSection[] sections = simpleChunk.getSections();
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/packet/world/EmptyChunk113.java b/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/packet/world/EmptyChunk113.java
+index 83bf8695..2f5dc4d9 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/packet/world/EmptyChunk113.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/packet/world/EmptyChunk113.java
+@@ -30,7 +30,6 @@ import java.io.IOException;
+  */
+ public class EmptyChunk113 extends ChunkData {
+ 
+-
+   public EmptyChunk113(int x, int z) {
+     super(x, z);
+   }
+@@ -93,5 +92,4 @@ public class EmptyChunk113 extends ChunkData {
+       throw new RuntimeException(ex);
+     }
+   }
+-
+ }
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/registry/Biome.java b/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/registry/Biome.java
+index 34793e85..73e07dba 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/registry/Biome.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/registry/Biome.java
+@@ -48,7 +48,6 @@ public class Biome {
+   public final int id;
+   public final Element element;
+ 
+-
+   public Biome(String name, int id, Element element) {
+     this.name = name;
+     this.id = id;
+@@ -62,7 +61,6 @@ public class Biome {
+         .put("element", element.encode()).build();
+   }
+ 
+-
+   public static class Element {
+ 
+     public final String precipitation;
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/registry/Dimension.java b/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/registry/Dimension.java
+index ad882942..380f7317 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/registry/Dimension.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/registry/Dimension.java
+@@ -25,7 +25,6 @@ import lombok.NonNull;
+ import net.kyori.adventure.nbt.CompoundBinaryTag;
+ import net.kyori.adventure.nbt.CompoundBinaryTag.Builder;
+ 
+-
+ @AllArgsConstructor
+ @Data
+ public class Dimension {
+@@ -34,6 +33,10 @@ public class Dimension {
+       0.0f, null, false, "minecraft:infiniburn_overworld",
+       false, true, true, "minecraft:overworld", true, 256, 1.0f, false, false);
+ 
++  public static final Dimension THEEND = new Dimension("minecraft:the_end", 1, false, true,
++          0.0f, null, false, "minecraft:infiniburn_the_end",
++          false, true, true, "minecraft:the_end", true, 256, 1.0f, false, false);
++
+   @NonNull
+   private final String key;
+   private final int id;
+@@ -56,7 +59,6 @@ public class Dimension {
+   private final boolean ultrawarm;
+   private final boolean hasCeiling;
+ 
+-
+   public CompoundBinaryTag encodeAttributes(ProtocolVersion protocolVersion) {
+     Builder tag = CompoundBinaryTag.builder()
+         .putString("name", key)
+@@ -86,6 +88,4 @@ public class Dimension {
+ 
+     return tag.build();
+   }
+-
+-
+ }
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/util/NetworkSection.java b/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/util/NetworkSection.java
+index 274099a6..f28c7af7 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/util/NetworkSection.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/util/NetworkSection.java
+@@ -97,7 +97,6 @@ public abstract class NetworkSection {
+       create();
+     }
+ 
+-
+     @Override
+     void setBlockLight(int x, int y, int z, byte blockLight) {
+       this.blockLight.set(x, y, z, blockLight);
+@@ -252,6 +251,7 @@ public abstract class NetworkSection {
+ 
+     private final BlockStorage blocks;
+     private int nonAirBlocks = 0;
++
+     public NetworkSection1_14(ChunkSection section, boolean skyLight, Version version) {
+       super(section, skyLight);
+       this.blocks = new BlockStorage(version);
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/util/mcprotocollib/ByteArray3d.java b/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/util/mcprotocollib/ByteArray3d.java
+index f6e34ac1..f74c4d3c 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/util/mcprotocollib/ByteArray3d.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/util/mcprotocollib/ByteArray3d.java
+@@ -56,5 +56,4 @@ public class ByteArray3d {
+   public void fill(int val) {
+     Arrays.fill(this.data, (byte) val);
+   }
+-
+ }
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/util/mcprotocollib/FlexibleStorage.java b/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/util/mcprotocollib/FlexibleStorage.java
+index 4054b8d6..fcef9eda 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/util/mcprotocollib/FlexibleStorage.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/util/mcprotocollib/FlexibleStorage.java
+@@ -118,5 +118,4 @@ public class FlexibleStorage {
+       return remainder != 0 ? value + roundTo - remainder : value;
+     }
+   }
+-
+ }
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/util/mcprotocollib/NibbleArray3d.java b/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/util/mcprotocollib/NibbleArray3d.java
+index 9886c2c0..d7bb5592 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/util/mcprotocollib/NibbleArray3d.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/util/mcprotocollib/NibbleArray3d.java
+@@ -73,5 +73,4 @@ public class NibbleArray3d {
+       }
+     }
+   }
+-
+ }
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/util/mcprotocollib/ShortArray3d.java b/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/util/mcprotocollib/ShortArray3d.java
+index f5e6538e..8e5a2456 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/util/mcprotocollib/ShortArray3d.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/util/mcprotocollib/ShortArray3d.java
+@@ -45,6 +45,10 @@ public class ShortArray3d {
+     return this.data;
+   }
+ 
++  public int getData(int x, int y, int z) {
++    return this.get(x, y, z) & 0xF;
++  }
++
+   public int get(int x, int y, int z) {
+     return this.data[y << 8 | z << 4 | x] & 0xFFFF;
+   }
+@@ -61,10 +65,6 @@ public class ShortArray3d {
+     this.set(x, y, z, block << 4 | this.getData(x, y, z));
+   }
+ 
+-  public int getData(int x, int y, int z) {
+-    return this.get(x, y, z) & 0xF;
+-  }
+-
+   public void setData(int x, int y, int z, int data) {
+     this.set(x, y, z, this.getBlock(x, y, z) << 4 | data);
+   }
+@@ -79,18 +79,18 @@ public class ShortArray3d {
+ 
+   @Override
+   public boolean equals(Object o) {
+-      if (this == o) {
+-          return true;
+-      }
+-      if (o == null || getClass() != o.getClass()) {
+-          return false;
+-      }
++    if (this == o) {
++      return true;
++    }
++    if (o == null || getClass() != o.getClass()) {
++      return false;
++    }
+ 
+     ShortArray3d that = (ShortArray3d) o;
+ 
+-      if (!Arrays.equals(data, that.data)) {
+-          return false;
+-      }
++    if (!Arrays.equals(data, that.data)) {
++      return false;
++    }
+ 
+     return true;
+   }
+@@ -99,5 +99,4 @@ public class ShortArray3d {
+   public int hashCode() {
+     return Arrays.hashCode(data);
+   }
+-
+ }
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/server/BotFilterSessionHandler.java b/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/server/BotFilterSessionHandler.java
+index f99200d8..31f1e81e 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/server/BotFilterSessionHandler.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/server/BotFilterSessionHandler.java
+@@ -18,7 +18,6 @@
+ 
+ package ru.elytrium.elytraproxy.botfilter.server;
+ 
+-
+ import com.velocitypowered.proxy.connection.MinecraftSessionHandler;
+ import com.velocitypowered.proxy.connection.client.ConnectedPlayer;
+ import com.velocitypowered.proxy.connection.client.LoginSessionHandler;
+@@ -28,7 +27,6 @@ import lombok.Data;
+ @Data
+ public class BotFilterSessionHandler implements MinecraftSessionHandler {
+ 
+-
+   private final ConnectedPlayer player;
+   private final LoginSessionHandler originalHandler;
+   private final VirtualServer virtualServer;
+@@ -50,7 +48,6 @@ public class BotFilterSessionHandler implements MinecraftSessionHandler {
+     //afterCheck.run();
+   }
+ 
+-
+   @Override
+   public boolean equals(Object o) {
+     if (this == o) {
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/server/ServerPackets.java b/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/server/ServerPackets.java
+index fc3fcec9..f19e8654 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/server/ServerPackets.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/server/ServerPackets.java
+@@ -51,24 +51,23 @@ public class ServerPackets {
+   private final PacketCompressor packetCompressor;
+   private final VirtualServer virtualServer;
+   private VirtualWorld virtualWorld;
+-  //JoinGame +  Chunks + Light + PlayerPosAndLook
++  //JoinGame + Chunks + Light + PlayerPosAndLook
+   private MultiplePreparedPackets spawnPackets;
+   private PreparedPacket<Disconnect> alreadyConnected;
+ 
+-
+   public ServerPackets(PacketCompressor packetCompressor,
+       VirtualServer virtualServer) {
+     this.packetCompressor = packetCompressor;
+     this.virtualServer = virtualServer;
+   }
+ 
+-
+   public void createPackets() {
+     releaseAll();
+-    this.virtualWorld = new VirtualWorld(Dimension.OVERWORLD,
+-        new DimensionInfo(Dimension.OVERWORLD.getKey(), Dimension.OVERWORLD.getKey(), true, false));
++    this.virtualWorld = new VirtualWorld(Dimension.THEEND,
++        new DimensionInfo(Dimension.THEEND.getKey(), Dimension.THEEND.getKey(), true, false));
+     virtualWorld.setSkyLight(0, 60, 0, (byte) 1); //1.7 workaround
+ 
++    /*
+     for (int x = 0; x < 16; x++) {
+       for (int z = 0; z < 16; z++) {
+         virtualWorld.setBlock(x, 40, z, SimpleBlock.GRANITE);
+@@ -91,6 +90,7 @@ public class ServerPackets {
+         virtualWorld.setBlock(15, y, x, SimpleBlock.GRANITE);
+       }
+     }
++    */
+ 
+     List<PreparedPacket> preparedPackets = new ArrayList<>();
+     preparedPackets.add(createJoinGamePacket());
+@@ -106,13 +106,13 @@ public class ServerPackets {
+   private PreparedPacket<JoinGame> createJoinGamePacket() {
+     DimensionRegistry dimensionRegistry = new DimensionRegistry();
+     dimensionRegistry.addDimension(
+-        Dimension.OVERWORLD, ImmutableList.of(Biome.PLAINTS, Biome.SWAMP, Biome.SWAMP_HILLS));
+-    dimensionRegistry.setActiveDimension(Dimension.OVERWORLD);
++        Dimension.THEEND, ImmutableList.of(Biome.PLAINTS, Biome.SWAMP, Biome.SWAMP_HILLS));
++    dimensionRegistry.setActiveDimension(Dimension.THEEND);
+     dimensionRegistry.setActiveDimensionInfo(
+-        new DimensionInfo("minecraft:overworld", "minecraft:overworld", false, false));
++        new DimensionInfo("minecraft:the_end", "minecraft:the_end", false, false));
+     PreparedPacket<JoinGame> joinGame = new PreparedPacket<>();
+-    joinGame.prepare(JoinGame.builder().entityId(0).gamemode((short) 1).dimension(0).
+-        partialHashedSeed(1).difficulty((short) 0).maxPlayers(1).levelType("flat").viewDistance(4)
++    joinGame.prepare(JoinGame.builder().entityId(0).gamemode((short) 2).dimension(1)
++        .partialHashedSeed(1).difficulty((short) 0).maxPlayers(1).levelType("flat").viewDistance(4)
+         .reducedDebugInfo(false).showRespawnScreen(true).hardcore(false)
+         .dimensionRegistry(dimensionRegistry).build());
+ 
+@@ -180,7 +180,6 @@ public class ServerPackets {
+     return preparedPacket;
+   }
+ 
+-
+   public void releaseAll() {
+     for (PreparedPacket packet : Arrays.asList(alreadyConnected)) {
+       if (packet != null) {
+@@ -191,5 +190,4 @@ public class ServerPackets {
+       spawnPackets.release();
+     }
+   }
+-
+ }
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/server/VirtualServer.java b/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/server/VirtualServer.java
+index 7d70eb52..7ccc2686 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/server/VirtualServer.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/server/VirtualServer.java
+@@ -33,7 +33,8 @@ import ru.elytrium.elytraproxy.botfilter.server.world.VirtualWorld;
+ public class VirtualServer {
+ 
+   @Getter private final ElytraProxy elytraProxy;
+-  private final ConcurrentMap<String, BotFilterSessionHandler> activeConnections = new ConcurrentHashMap<>();
++  private final ConcurrentMap<String,
++          BotFilterSessionHandler> activeConnections = new ConcurrentHashMap<>();
+   private final ServerPackets packets;
+ 
+   public VirtualServer(ElytraProxy elytraProxy) {
+@@ -42,7 +43,6 @@ public class VirtualServer {
+         new PacketCompressor(elytraProxy.getVelocityServer()::getConfiguration), this);
+   }
+ 
+-
+   public void reload() {
+     for (BotFilterSessionHandler session : activeConnections.values()) {
+       session.getPlayer().getConnection().close();
+@@ -50,7 +50,6 @@ public class VirtualServer {
+     packets.createPackets();
+   }
+ 
+-
+   public void spawnPlayer(BotFilterSessionHandler user) {
+     String username = user.getPlayer().getUsername().toLowerCase();
+     ConnectedPlayer player = user.getPlayer();
+@@ -69,5 +68,4 @@ public class VirtualServer {
+   public void disconnected(BotFilterSessionHandler botFilterConnection) {
+     activeConnections.remove(botFilterConnection.getPlayer().getUsername().toLowerCase());
+   }
+-
+ }
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/server/world/SimpleBlock.java b/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/server/world/SimpleBlock.java
+index 267c4679..7c938339 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/server/world/SimpleBlock.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/server/world/SimpleBlock.java
+@@ -42,8 +42,8 @@ public class SimpleBlock {
+       info(MINECRAFT_1_8, 1, 1), info(MINECRAFT_1_13, 2));
+   public static final SimpleBlock GLASS = solid(info(MINECRAFT_1_7, 20),
+       info(MINECRAFT_1_13, 230));
+-  public static final SimpleBlock TORCH = nonSolid(false, info(MINECRAFT_1_7, 50, 14)
+-      , info(MINECRAFT_1_13, 1130), info(MINECRAFT_1_13_1, 1131), info(MINECRAFT_1_14, 1134));
++  public static final SimpleBlock TORCH = nonSolid(false, info(MINECRAFT_1_7, 50, 14),
++      info(MINECRAFT_1_13, 1130), info(MINECRAFT_1_13_1, 1131), info(MINECRAFT_1_14, 1134));
+   public static final SimpleBlock BARRIER = solid(fallback(MINECRAFT_1_7, GLASS),
+       info(MINECRAFT_1_8, 166), info(MINECRAFT_1_13, 6493), info(MINECRAFT_1_13_1, 6494),
+       info(MINECRAFT_1_14, 7000));
+@@ -92,7 +92,6 @@ public class SimpleBlock {
+     return new SimpleBlock(true, false, motionBlocking, infos);
+   }
+ 
+-
+   public static SimpleBlock nonSolid(BlockInfo... infos) {
+     return nonSolid(true, infos);
+   }
+@@ -203,11 +202,8 @@ public class SimpleBlock {
+       return info(version, id, 0);
+     }
+ 
+-
+     public static BlockInfo fallback(Version version, SimpleBlock fallback) {
+       return new BlockInfo(version, fallback.blockInfos.get(version));
+     }
+   }
+-
+-
+ }
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/server/world/SimpleChunk.java b/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/server/world/SimpleChunk.java
+index 80c2264c..aaa957f8 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/server/world/SimpleChunk.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/server/world/SimpleChunk.java
+@@ -136,7 +136,6 @@ public class SimpleChunk {
+     return y / 16;
+   }
+ 
+-
+   @NoArgsConstructor
+   public static class ChunkSection {
+ 
+@@ -196,7 +195,6 @@ public class SimpleChunk {
+       return (byte) (blockLight == null ? 0 : blockLight.get(x, y, z));
+     }
+ 
+-
+     public void setBlockLightAt(int x, int y, int z, byte light) {
+       checkIndexes(x, y, z);
+       Preconditions.checkArgument(light >= 0 && light <= 15, "light should be between 0 and 15");
+@@ -211,7 +209,6 @@ public class SimpleChunk {
+       return (byte) (skyLight == null ? 0 : skyLight.get(x, y, z));
+     }
+ 
+-
+     public void setSkyLightAt(int x, int y, int z, byte light) {
+       checkIndexes(x, y, z);
+       Preconditions.checkArgument(light >= 0 && light <= 15, "light should be between 0 and 15");
+@@ -239,5 +236,4 @@ public class SimpleChunk {
+       return (y << 8) | (z << 4) | x;
+     }
+   }
+-
+ }
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/server/world/VirtualWorld.java b/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/server/world/VirtualWorld.java
+index 88c0e5fd..5cc10ac9 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/server/world/VirtualWorld.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/server/world/VirtualWorld.java
+@@ -80,7 +80,6 @@ public class VirtualWorld {
+         (c) -> c.getSkyLight(getChunkCoordinate(x), y, getChunkCoordinate(z)), () -> (byte) 0);
+   }
+ 
+-
+   public void setSkyLight(int x, int y, int z, byte light) {
+     getChunkOrNew(x, z).setSkyLight(getChunkCoordinate(x), y, getChunkCoordinate(z), light);
+   }
+@@ -114,12 +113,10 @@ public class VirtualWorld {
+     return simpleChunk;
+   }
+ 
+-
+   private static long getChunkIndex(int x, int z) {
+     return (((long) x) << 32) | (z & 0xffffffffL);
+   }
+ 
+-
+   private static int getChunkXZ(int xz) {
+     return Math.floorDiv(xz, 16);
+   }
+@@ -131,6 +128,4 @@ public class VirtualWorld {
+     }
+     return xz;
+   }
+-
+-
+ }
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/AlertCommand.java b/proxy/src/main/java/ru/elytrium/elytraproxy/commands/AlertCommand.java
+index 7f919ca8..ee5b6fbb 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/AlertCommand.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/commands/AlertCommand.java
+@@ -19,17 +19,22 @@ package ru.elytrium.elytraproxy.commands;
+ 
+ import com.velocitypowered.api.command.CommandSource;
+ import com.velocitypowered.api.command.SimpleCommand;
++import com.velocitypowered.api.proxy.Player;
+ import com.velocitypowered.api.proxy.ProxyServer;
+-import com.velocitypowered.proxy.connection.client.ConnectedPlayer;
++import com.velocitypowered.proxy.VelocityServer;
+ 
++import com.velocitypowered.proxy.connection.client.ConnectedPlayer;
++import net.kyori.adventure.identity.Identified;
+ import net.kyori.adventure.text.Component;
+ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
++import ru.elytrium.elytraproxy.config.Settings;
+ 
+ public class AlertCommand implements SimpleCommand {
+ 
+   private final ProxyServer server;
+   private final String prefix;
+ 
++
+   public AlertCommand(ProxyServer server, String prefix) {
+     this.server = server;
+     this.prefix = prefix;
+@@ -44,22 +49,25 @@ public class AlertCommand implements SimpleCommand {
+       source.sendMessage(
+               LegacyComponentSerializer
+                       .legacyAmpersand()
+-                      .deserialize(prefix + " §fУкажите сообщение.")
++                      .deserialize(prefix + Settings.IMP.MESSAGES.ERROR_MESSAGES.MESSAGE_NEEDED)
+       );
+     } else {
+       String message = String.join(" ", args);
+       Component component = LegacyComponentSerializer
+               .legacyAmpersand()
+-              .deserialize(prefix + message);
++              .deserialize(Settings.IMP.MESSAGES.INFO_MESSAGES.ALERT_PREFIX + message);
+       if (server.getAllPlayers().size() == 0) {
+         source.sendMessage(
+                 LegacyComponentSerializer
+                         .legacyAmpersand()
+-                        .deserialize(prefix + " §fНа сервере никого нет.")
++                        .deserialize(prefix + Settings.IMP.MESSAGES.ERROR_MESSAGES.SERVER_EMPTY)
+         );
+       } else if (server.getAllPlayers().size() >= 1) {
+-        for (ConnectedPlayer player : com.velocitypowered.proxy.VelocityServer.connectionsByUuid.values()) {
+-          server.sendMessage(player, component);
++        if (!(source instanceof Player)) {
++          source.sendMessage(component);
++        }
++        for (ConnectedPlayer player : VelocityServer.getConnectionsByUuid().values()) {
++          player.sendMessage(component);
+         }
+       }
+     }
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/SendCommand.java b/proxy/src/main/java/ru/elytrium/elytraproxy/commands/SendCommand.java
+index 10efffff..c8594719 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/SendCommand.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/commands/SendCommand.java
+@@ -22,8 +22,13 @@ import com.velocitypowered.api.command.SimpleCommand;
+ import com.velocitypowered.api.proxy.Player;
+ import com.velocitypowered.api.proxy.ProxyServer;
+ import com.velocitypowered.api.proxy.server.RegisteredServer;
++import com.velocitypowered.api.proxy.server.ServerInfo;
++import com.velocitypowered.proxy.VelocityServer;
++import com.velocitypowered.proxy.connection.client.ConnectedPlayer;
+ 
+ import java.util.Collection;
++import java.util.List;
++import java.util.stream.Collectors;
+ 
+ import net.kyori.adventure.text.Component;
+ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+@@ -38,6 +43,33 @@ public class SendCommand implements SimpleCommand {
+     this.prefix = prefix;
+   }
+ 
++  @Override
++  public List<String> suggest(final SimpleCommand.Invocation invocation) {
++    final String[] args = invocation.arguments();
++
++    if (args.length == 0) {
++      List<String> toReturn = server.getAllPlayers()
++              .stream()
++              .map(Player::getUsername)
++              .collect(Collectors.toList());
++      List<String> serverNames = server.getAllServers()
++              .stream()
++              .map(RegisteredServer::getServerInfo)
++              .map(ServerInfo::getName)
++              .collect(Collectors.toList());
++      serverNames.add("all");
++      serverNames.add("current");
++      toReturn.addAll(serverNames);
++      return toReturn;
++    } else {
++      return server.getAllServers()
++              .stream()
++              .map(RegisteredServer::getServerInfo)
++              .map(ServerInfo::getName)
++              .collect(Collectors.toList());
++    }
++  }
++
+   @Override
+   public void execute(final SimpleCommand.Invocation invocation) {
+     final CommandSource source = invocation.source();
+@@ -59,16 +91,17 @@ public class SendCommand implements SimpleCommand {
+       return;
+     }
+ 
++    String sender = (source instanceof Player) ? ((Player) source).getUsername() : "CONSOLE";
+     Component summoned = LegacyComponentSerializer.legacyAmpersand().deserialize(
+             prefix
+                     + " §fВы были перемещены на сервер §6"
+-                    + target.getServerInfo().getName() + " §fадминистратором §6" + source);
++                    + target.getServerInfo().getName() + " §fадминистратором §6" + sender);
+ 
+     switch (args[0].toLowerCase()) {
+       case "all":
+-        server.getAllPlayers().forEach(p -> p.createConnectionRequest(target).connect());
+-        for (Player player : server.getAllPlayers()) {
+-          server.sendMessage(player, summoned);
++        server.getAllPlayers().forEach(p -> p.createConnectionRequest(target).fireAndForget());
++        for (ConnectedPlayer player : VelocityServer.getConnectionsByUuid().values()) {
++          player.sendMessage(summoned);
+         }
+         break;
+       case "current":
+@@ -82,7 +115,7 @@ public class SendCommand implements SimpleCommand {
+         player.getCurrentServer().ifPresent(serverConnection -> {
+           Collection<Player> players = serverConnection.getServer().getPlayersConnected();
+           for (Player p : players) {
+-            p.createConnectionRequest(target).connect();
++            p.createConnectionRequest(target).fireAndForget();
+             p.sendMessage(summoned);
+           }
+         });
+@@ -90,7 +123,7 @@ public class SendCommand implements SimpleCommand {
+       default:
+         player = server.getPlayer(args[0]).orElse(null);
+         if (player != null) {
+-          player.createConnectionRequest(target).connect();
++          player.createConnectionRequest(target).fireAndForget();
+           player.sendMessage(summoned);
+         } else {
+           source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize(
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/config/Config.java b/proxy/src/main/java/ru/elytrium/elytraproxy/config/Config.java
+index 267d2b7d..898e6a6e 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/config/Config.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/config/Config.java
+@@ -18,9 +18,6 @@
+ package ru.elytrium.elytraproxy.config;
+ 
+ import com.velocitypowered.proxy.VelocityServer;
+-import ru.elytrium.elytraproxy.config.helpers.Configuration;
+-import ru.elytrium.elytraproxy.config.helpers.ConfigurationProvider;
+-import ru.elytrium.elytraproxy.config.helpers.YamlConfiguration;
+ 
+ import java.io.File;
+ import java.io.FileInputStream;
+@@ -46,345 +43,364 @@ import java.util.Arrays;
+ import java.util.Collection;
+ import java.util.List;
+ 
+-public class Config {
+-    private VelocityServer server;
++import ru.elytrium.elytraproxy.config.helpers.Configuration;
++import ru.elytrium.elytraproxy.config.helpers.ConfigurationProvider;
++import ru.elytrium.elytraproxy.config.helpers.YamlConfiguration;
+ 
+-    public Config() {
+-        save(new ArrayList<>(), getClass(), this, 0);
+-    }
++public class Config {
++  private VelocityServer server;
+ 
+-    /**
+-     * Set the value of a specific node<br>
+-     * Probably throws some error if you supply non existing keys or invalid
+-     * values
+-     *
+-     * @param key   config node
+-     * @param value value
+-     */
+-    private void set(String key, Object value) {
+-        String[] split = key.split("\\.");
+-        Object instance = getInstance(split, this.getClass());
+-        if (instance != null) {
+-            Field field = getField(split, instance);
+-            if (field != null) {
+-                try {
+-                    if (field.getAnnotation(Final.class) != null) {
+-                        return;
+-                    }
+-                    if (field.getType() == String.class && !(value instanceof String)) {
+-                        value = value + "";
+-                    }
+-                    field.set(instance, value);
+-                    return;
+-                } catch (IllegalAccessException | IllegalArgumentException e) {
+-                    server.getElytraProxy().getLogger().warn("Error:", e);
+-                }
+-            }
+-        }
+-        server.getElytraProxy().getLogger().warn("Failed to set config option: {}: {} | {} ", new Object[]
+-                {
+-                        key, value, instance
+-                });
+-    }
++  public Config() {
++    save(new ArrayList<>(), getClass(), this, 0);
++  }
+ 
+-    public boolean load(File file) {
+-        if (!file.exists()) {
+-            return false;
+-        }
+-        Configuration yml;
++  /**
++   * Set the value of a specific node<br>
++   * Probably throws some error if you supply non existing keys or invalid
++   * values
++   *
++   * @param key   config node
++   * @param value value
++   */
++  private void set(String key, Object value) {
++    String[] split = key.split("\\.");
++    Object instance = getInstance(split, this.getClass());
++    if (instance != null) {
++      Field field = getField(split, instance);
++      if (field != null) {
+         try {
+-            try (InputStreamReader reader = new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8)) {
+-                yml = ConfigurationProvider.getProvider(YamlConfiguration.class).load(reader);
+-            }
+-        } catch (IOException ex) {
+-            server.getElytraProxy().getLogger().warn("Не могу загрузить конфиг ", ex);
+-            return false;
++          if (field.getAnnotation(Final.class) != null) {
++            return;
++          }
++          if (field.getType() == String.class && !(value instanceof String)) {
++            value = value + "";
++          }
++          field.set(instance, value);
++          return;
++        } catch (IllegalAccessException | IllegalArgumentException e) {
++          server.getElytraProxy().getLogger().warn("Error:", e);
+         }
+-        set(yml, "");
+-        return true;
++      }
+     }
++    server.getElytraProxy().getLogger().warn(
++            "Failed to set config option: {}: {} | {} ", new Object[]
++            {
++              key, value, instance
++            });
++  }
+ 
+-    public void set(Configuration yml, String oldPath) {
+-        for (String key : yml.getKeys()) {
+-            Object value = yml.get(key);
+-            String newPath = oldPath + (oldPath.isEmpty() ? "" : ".") + key;
+-            if (value instanceof Configuration) {
+-                set((Configuration) value, newPath);
+-                continue;
+-            }
+-            set(newPath, value);
+-        }
++  public void set(Configuration yml, String oldPath) {
++    for (String key : yml.getKeys()) {
++      Object value = yml.get(key);
++      String newPath = oldPath + (oldPath.isEmpty() ? "" : ".") + key;
++      if (value instanceof Configuration) {
++        set((Configuration) value, newPath);
++        continue;
++      }
++      set(newPath, value);
+     }
++  }
+ 
+-    /*
+-    public int getConfigVersion(File file)
+-    {
+-        return YamlConfiguration.loadConfiguration( file ).getInt( "config-version", 0 );
++  public boolean load(File file) {
++    if (!file.exists()) {
++      return false;
++    }
++    Configuration yml;
++    try {
++      try (InputStreamReader reader = new InputStreamReader(
++              new FileInputStream(file), StandardCharsets.UTF_8)) {
++        yml = ConfigurationProvider.getProvider(YamlConfiguration.class).load(reader);
++      }
++    } catch (IOException ex) {
++      server.getElytraProxy().getLogger().warn("Не могу загрузить конфиг ", ex);
++      return false;
+     }
+-     */
++    set(yml, "");
++    return true;
++  }
+ 
+-    /**
+-     * Set all values in the file (load first to avoid overwriting)
+-     *
+-     * @param file file
+-     */
+-    public void save(File file) {
+-        try {
+-            File parent = file.getParentFile();
+-            if (parent != null) {
+-                file.getParentFile().mkdirs();
+-            }
+-            Path configFile = file.toPath();
+-            Path tempCfg = new File(file.getParentFile(), "__tmpcfg").toPath();
+-            List<String> lines = new ArrayList<>();
+-            save(lines, getClass(), this, 0);
++  /*
++  public int getConfigVersion(File file)
++  {
++      return YamlConfiguration.loadConfiguration( file ).getInt( "config-version", 0 );
++  }
++  */
+ 
+-            Files.write(tempCfg, lines, StandardCharsets.UTF_8, StandardOpenOption.CREATE);
+-            try {
+-                Files.move(tempCfg, configFile, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+-            } catch (AtomicMoveNotSupportedException e) {
+-                Files.move(tempCfg, configFile, StandardCopyOption.REPLACE_EXISTING);
+-            }
++  /**
++   * Set all values in the file (load first to avoid overwriting)
++   *
++   * @param file file
++   */
++  public void save(File file) {
++    try {
++      File parent = file.getParentFile();
++      if (parent != null) {
++        file.getParentFile().mkdirs();
++      }
++      Path configFile = file.toPath();
++      Path tempCfg = new File(file.getParentFile(), "__tmpcfg").toPath();
++      List<String> lines = new ArrayList<>();
++      save(lines, getClass(), this, 0);
+ 
+-        } catch (IOException e) {
+-            server.getElytraProxy().getLogger().warn("Error:", e);
+-        }
++      Files.write(tempCfg, lines, StandardCharsets.UTF_8, StandardOpenOption.CREATE);
++      try {
++        Files.move(
++            tempCfg, configFile,
++            StandardCopyOption.REPLACE_EXISTING,
++            StandardCopyOption.ATOMIC_MOVE);
++      } catch (AtomicMoveNotSupportedException e) {
++        Files.move(tempCfg, configFile, StandardCopyOption.REPLACE_EXISTING);
++      }
++    } catch (IOException e) {
++      server.getElytraProxy().getLogger().warn("Error:", e);
+     }
++  }
+ 
+-    /**
+-     * Indicates that a field should be instantiated / created
+-     */
+-    @Retention(RetentionPolicy.RUNTIME)
+-    @Target({ElementType.FIELD})
+-    public @interface Create {
++  private void save(List<String> lines, Class clazz, final Object instance, int indent) {
++    try {
++      String spacing = repeat(" ", indent);
++      for (Field field : clazz.getFields()) {
++        if (field.getAnnotation(Ignore.class) != null) {
++          continue;
++        }
++        Class<?> current = field.getType();
++        if (field.getAnnotation(Ignore.class) != null) {
++          continue;
++        }
++        Comment comment = field.getAnnotation(Comment.class);
++        if (comment != null) {
++          for (String commentLine : comment.value()) {
++            lines.add(spacing + "# " + commentLine);
++          }
++        }
++        Create create = field.getAnnotation(Create.class);
++        if (create != null) {
++          Object value = field.get(instance);
++          setAccessible(field);
++          if (indent == 0) {
++            lines.add("");
++          }
++          comment = current.getAnnotation(Comment.class);
++          if (comment != null) {
++            for (String commentLine : comment.value()) {
++              lines.add(spacing + "# " + commentLine);
++            }
++          }
++          lines.add(spacing + toNodeName(current.getSimpleName()) + ":");
++          if (value == null) {
++            field.set(instance, value = current.newInstance());
++          }
++          save(lines, current, value, indent + 2);
++        } else {
++          lines.add(spacing + toNodeName(field.getName() + ": ")
++                  + toYamlString(field.get(instance), spacing));
++        }
++      }
++    } catch (Exception e) {
++      server.getElytraProxy().getLogger().warn("Error:", e);
+     }
++  }
+ 
+-    /**
+-     * Indicates that a field cannot be modified
+-     */
+-    @Retention(RetentionPolicy.RUNTIME)
+-    @Target(
+-            {
+-                    ElementType.FIELD
+-            })
+-    public @interface Final {
+-    }
++  /**
++   * Indicates that a field should be instantiated / created
++   */
++  @Retention(RetentionPolicy.RUNTIME)
++  @Target({ElementType.FIELD})
++  public @interface Create {
++  }
+ 
+-    /**
+-     * Creates a comment
+-     */
+-    @Retention(RetentionPolicy.RUNTIME)
+-    @Target(
+-            {
+-                    ElementType.FIELD, ElementType.TYPE
+-            })
+-    public @interface Comment {
++  /**
++   * Indicates that a field cannot be modified
++   */
++  @Retention(RetentionPolicy.RUNTIME)
++  @Target(
++          {
++                  ElementType.FIELD
++          })
++  public @interface Final {
++  }
+ 
+-        String[] value();
+-    }
++  /**
++   * Creates a comment
++   */
++  @Retention(RetentionPolicy.RUNTIME)
++  @Target(
++          {
++                  ElementType.FIELD, ElementType.TYPE
++          })
++  public @interface Comment {
+ 
+-    /**
+-     * Any field or class with is not part of the config
+-     */
+-    @Retention(RetentionPolicy.RUNTIME)
+-    @Target(
+-            {
+-                    ElementType.FIELD, ElementType.TYPE
+-            })
+-    public @interface Ignore {
+-    }
++      String[] value();
++  }
+ 
+-    private String toYamlString(Object value, String spacing) {
+-        if (value instanceof List) {
+-            Collection<?> listValue = (Collection<?>) value;
+-            if (listValue.isEmpty()) {
+-                return "[]";
+-            }
+-            StringBuilder m = new StringBuilder();
+-            for (Object obj : listValue) {
+-                m.append(System.lineSeparator()).append(spacing).append("- ").append(toYamlString(obj, spacing));
+-            }
+-            return m.toString();
+-        }
+-        if (value instanceof String) {
+-            String stringValue = (String) value;
+-            if (stringValue.isEmpty()) {
+-                return "''";
+-            }
+-            return "\"" + stringValue + "\"";
+-        }
+-        return value != null ? value.toString() : "null";
+-    }
++  /**
++   * Any field or class with is not part of the config
++   */
++  @Retention(RetentionPolicy.RUNTIME)
++  @Target(
++          {
++                  ElementType.FIELD, ElementType.TYPE
++          })
++  public @interface Ignore {
++  }
+ 
+-    private void save(List<String> lines, Class clazz, final Object instance, int indent) {
+-        try {
+-            String spacing = repeat(" ", indent);
+-            for (Field field : clazz.getFields()) {
+-                if (field.getAnnotation(Ignore.class) != null) {
+-                    continue;
+-                }
+-                Class<?> current = field.getType();
+-                if (field.getAnnotation(Ignore.class) != null) {
+-                    continue;
+-                }
+-                Comment comment = field.getAnnotation(Comment.class);
+-                if (comment != null) {
+-                    for (String commentLine : comment.value()) {
+-                        lines.add(spacing + "# " + commentLine);
+-                    }
+-                }
+-                Create create = field.getAnnotation(Create.class);
+-                if (create != null) {
+-                    Object value = field.get(instance);
+-                    setAccessible(field);
+-                    if (indent == 0) {
+-                        lines.add("");
+-                    }
+-                    comment = current.getAnnotation(Comment.class);
+-                    if (comment != null) {
+-                        for (String commentLine : comment.value()) {
+-                            lines.add(spacing + "# " + commentLine);
+-                        }
+-                    }
+-                    lines.add(spacing + toNodeName(current.getSimpleName()) + ":");
+-                    if (value == null) {
+-                        field.set(instance, value = current.newInstance());
+-                    }
+-                    save(lines, current, value, indent + 2);
+-                } else {
+-                    lines.add(spacing + toNodeName(field.getName() + ": ") + toYamlString(field.get(instance), spacing));
+-                }
+-            }
+-        } catch (Exception e) {
+-            server.getElytraProxy().getLogger().warn("Error:", e);
+-        }
++  private String toYamlString(Object value, String spacing) {
++    if (value instanceof List) {
++      Collection<?> listValue = (Collection<?>) value;
++      if (listValue.isEmpty()) {
++        return "[]";
++      }
++      StringBuilder m = new StringBuilder();
++      for (Object obj : listValue) {
++        m.append(
++          System.lineSeparator()).append(spacing).append("- ").append(toYamlString(obj, spacing));
++      }
++      return m.toString();
++    }
++    if (value instanceof String) {
++      String stringValue = (String) value;
++      if (stringValue.isEmpty()) {
++        return "''";
++      }
++      return "\"" + stringValue + "\"";
+     }
++    return value != null ? value.toString() : "null";
++  }
+ 
+-    /**
+-     * Get the field for a specific config node and instance<br>
+-     * Note: As expiry can have multiple blocks there will be multiple instances
+-     *
+-     * @param split    the node (split by period)
+-     * @param instance the instance
+-     * @return Field field
+-     */
+-    private Field getField(String[] split, Object instance) {
+-        try {
+-            Field field = instance.getClass().getField(toFieldName(split[split.length - 1]));
+-            setAccessible(field);
+-            return field;
+-        } catch (IllegalAccessException | NoSuchFieldException | SecurityException | NoSuchMethodException | InvocationTargetException e) {
+-            server.getElytraProxy().getLogger().warn("Invalid config field: {} for {}", new Object[]
+-                    {
+-                            String.join(".", split), toNodeName(instance.getClass().getSimpleName())
+-                    });
+-            return null;
+-        }
++  /**
++   * Get the field for a specific config node and instance<br>
++   * Note: As expiry can have multiple blocks there will be multiple instances
++   *
++   * @param split    the node (split by period)
++   * @param instance the instance
++   * @return Field field
++   */
++  private Field getField(String[] split, Object instance) {
++    try {
++      Field field = instance.getClass().getField(toFieldName(split[split.length - 1]));
++      setAccessible(field);
++      return field;
++    } catch (IllegalAccessException
++            | NoSuchFieldException
++            | SecurityException
++            | NoSuchMethodException
++            | InvocationTargetException e) {
++      server.getElytraProxy().getLogger().warn("Invalid config field: {} for {}", new Object[]
++      {
++          String.join(".", split), toNodeName(instance.getClass().getSimpleName())
++      });
++      return null;
+     }
++  }
+ 
+-    /**
+-     * Get the instance for a specific config node
+-     *
+-     * @param split the node (split by period)
+-     * @param root  the root class
+-     * @return The instance or null
+-     */
+-    private Object getInstance(String[] split, Class root) {
+-        try {
+-            Class<?> clazz = root == null ? MethodHandles.lookup().lookupClass() : root;
+-            Object instance = this;
+-            while (split.length > 0) {
+-                switch (split.length) {
+-                    case 1:
+-                        return instance;
+-                    default:
+-                        Class found = null;
+-                        Class<?>[] classes = clazz.getDeclaredClasses();
+-                        for (Class current : classes) {
+-                            if (current.getSimpleName().equalsIgnoreCase(toFieldName(split[0]))) {
+-                                found = current;
+-                                break;
+-                            }
+-                        }
+-                        try {
+-                            Field instanceField = clazz.getDeclaredField(toFieldName(split[0]));
+-                            setAccessible(instanceField);
+-                            Object value = instanceField.get(instance);
+-                            if (value == null) {
+-                                value = found.newInstance();
+-                                instanceField.set(instance, value);
+-                            }
+-                            clazz = found;
+-                            instance = value;
+-                            split = Arrays.copyOfRange(split, 1, split.length);
+-                            continue;
+-                        } catch (NoSuchFieldException | NoSuchMethodException | InvocationTargetException ignore) {
+-                        }
+-                        return null;
+-                }
++  /**
++   * Get the instance for a specific config node
++   *
++   * @param split the node (split by period)
++   * @param root  the root class
++   * @return The instance or null
++   */
++  private Object getInstance(String[] split, Class root) {
++    try {
++      Class<?> clazz = root == null ? MethodHandles.lookup().lookupClass() : root;
++      Object instance = this;
++      while (split.length > 0) {
++        switch (split.length) {
++          case 1:
++            return instance;
++          default:
++            Class found = null;
++            Class<?>[] classes = clazz.getDeclaredClasses();
++            for (Class current : classes) {
++              if (current.getSimpleName().equalsIgnoreCase(toFieldName(split[0]))) {
++                found = current;
++                break;
++              }
++            }
++            try {
++              Field instanceField = clazz.getDeclaredField(toFieldName(split[0]));
++              setAccessible(instanceField);
++              Object value = instanceField.get(instance);
++              if (value == null) {
++                value = found.newInstance();
++                instanceField.set(instance, value);
++              }
++              clazz = found;
++              instance = value;
++              split = Arrays.copyOfRange(split, 1, split.length);
++              continue;
++            } catch (NoSuchFieldException
++                    | NoSuchMethodException
++                    | InvocationTargetException ignore) {
++              //
+             }
+-        } catch (Exception e) {
+-            e.printStackTrace();
++            return null;
+         }
+-        return null;
++      }
++    } catch (Exception e) {
++      e.printStackTrace();
+     }
++    return null;
++  }
+ 
+-    /**
+-     * Translate a node to a java field name
+-     *
+-     * @param node node to translate
+-     * @return java field name
+-     */
+-    private String toFieldName(String node) {
+-        return node.toUpperCase().replaceAll("-", "_");
+-    }
++  /**
++   * Translate a node to a java field name
++   *
++   * @param node node to translate
++   * @return java field name
++   */
++  private String toFieldName(String node) {
++    return node.toUpperCase().replaceAll("-", "_");
++  }
+ 
+-    /**
+-     * Translate a field to a config node
+-     *
+-     * @param field to translate
+-     * @return config node name
+-     */
+-    private String toNodeName(String field) {
+-        return field.toLowerCase().replace("_", "-");
+-    }
++  /**
++   * Translate a field to a config node
++   *
++   * @param field to translate
++   * @return config node name
++   */
++  private String toNodeName(String field) {
++    return field.toLowerCase().replace("_", "-");
++  }
+ 
+-    /**
+-     * Set some field to be accesible
+-     *
+-     * @param field to be accesible
+-     * @throws NoSuchFieldException   ...
+-     * @throws IllegalAccessException ...
+-     */
+-    private void setAccessible(Field field) throws NoSuchFieldException, IllegalAccessException, NoSuchMethodException, InvocationTargetException {
+-        field.setAccessible(true);
+-        int modifiers = field.getModifiers();
+-        if (Modifier.isFinal(modifiers)) {
+-            try {
+-                Field modifiersField = Field.class.getDeclaredField("modifiers");
+-                modifiersField.setAccessible(true);
+-                modifiersField.setInt(field, modifiers & ~Modifier.FINAL);
+-            } catch (NoSuchFieldException e) {
+-                // Java 12 compatibility *this is fine*
+-                Method getDeclaredFields0 = Class.class.getDeclaredMethod("getDeclaredFields0", boolean.class);
+-                getDeclaredFields0.setAccessible(true);
+-                Field[] fields = (Field[]) getDeclaredFields0.invoke(Field.class, false);
+-                for (Field classField : fields) {
+-                    if ("modifiers".equals(classField.getName())) {
+-                        classField.setAccessible(true);
+-                        classField.set(field, modifiers & ~Modifier.FINAL);
+-                        break;
+-                    }
+-                }
+-            }
++  /**
++   * Set some field to be accesible
++   *
++   * @param field to be accesible
++   * @throws NoSuchFieldException   ...
++   * @throws IllegalAccessException ...
++   */
++  private void setAccessible(Field field) throws NoSuchFieldException,
++          IllegalAccessException, NoSuchMethodException, InvocationTargetException {
++    field.setAccessible(true);
++    int modifiers = field.getModifiers();
++    if (Modifier.isFinal(modifiers)) {
++      try {
++        Field modifiersField = Field.class.getDeclaredField("modifiers");
++        modifiersField.setAccessible(true);
++        modifiersField.setInt(field, modifiers & ~Modifier.FINAL);
++      } catch (NoSuchFieldException e) {
++        // Java 12 compatibility *this is fine*
++        Method getDeclaredFields0 = Class.class.getDeclaredMethod(
++                "getDeclaredFields0", boolean.class);
++        getDeclaredFields0.setAccessible(true);
++        Field[] fields = (Field[]) getDeclaredFields0.invoke(Field.class, false);
++        for (Field classField : fields) {
++          if ("modifiers".equals(classField.getName())) {
++            classField.setAccessible(true);
++            classField.set(field, modifiers & ~Modifier.FINAL);
++            break;
++          }
+         }
++      }
+     }
++  }
+ 
+-    private String repeat(final String s, final int n) {
+-        final StringBuilder sb = new StringBuilder();
+-        for (int i = 0; i < n; i++) {
+-            sb.append(s);
+-        }
+-        return sb.toString();
++  private String repeat(final String s, final int n) {
++    final StringBuilder sb = new StringBuilder();
++    for (int i = 0; i < n; i++) {
++      sb.append(s);
+     }
++    return sb.toString();
++  }
+ }
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/config/Settings.java b/proxy/src/main/java/ru/elytrium/elytraproxy/config/Settings.java
+index b9676e19..431e92c6 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/config/Settings.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/config/Settings.java
+@@ -23,63 +23,89 @@ import java.util.List;
+ 
+ public class Settings extends Config {
+ 
+-    @Ignore
+-    public static final Settings IMP = new Settings();
++  @Ignore
++  public static final Settings IMP = new Settings();
+ 
+-    @Comment("бета")
+-    @Final
+-    public String VERSION = "0.0.1";
++  @Final
++  public String VERSION = "0.0.1";
++  @Comment("How many attempts are allowed before rate limiting?")
++  public int LOGIN_RATELIMIT_ATTEMPTS = 2;
++  @Comment({
++          "The list of protocols can be found here https://wiki.vg/Protocol_version_numbers",
++          "For example, the list contains all protocols of version 1.7.x",
++          "That is, with version 1.7 will not be able to connect"
++  })
++  public List<Integer> BANNED_PROTOCOLS = Arrays.asList(5, 4, 3, 2, 1, 0);
+ 
+-    @Create
+-    public MESSAGES MESSAGES;
+-
+-    public static class MESSAGES {
+-        public String PREFIX = "§5§l[Elytrium]";
+-        @Comment({"", "СООБЩЕНИЯ ОШИБОК", ""})
+-        public String ALREADY_CONNECTED = "Вы уже подключены к этому серверу!";
+-        public String ALREADY_CONNECTED_PROXY = "Игрок с таким ником уже играет на сервере!";
+-        public String ALREADY_CONNECTING = "Вы уже подключаетесь к серверу!";
+-        public String CANT_CONNECT = "Не удалось подключиться к серверу {0}: {1}";
+-    }
++  @Create
++  public MESSAGES MESSAGES;
+ 
++  public static class MESSAGES {
++    @Create
++    public MESSAGES.ELYTRAPROXY_MESSAGES ELYTRAPROXY_MESSAGES;
++    @Create
++    public MESSAGES.INFO_MESSAGES INFO_MESSAGES;
+     @Create
+-    public AUTH AUTH;
++    public MESSAGES.ERROR_MESSAGES ERROR_MESSAGES;
+ 
+-    public static class AUTH {
+-        public boolean ENABLE = true;
+-        public boolean ONLINE_MODE_REQUIRES_LOGIN = false;
+-        public String TABLE = "auth";
++    public static class ELYTRAPROXY_MESSAGES {
++      public String PREFIX = "§5§l[ElytraProxy]§r ";
++      public String PROTOCOL_BLOCKED = "&cYour &6minecraft version&c is blocked! We allow only X.X-X.X!";
+     }
+ 
+-    @Create
+-    public ANTIBOT ANTIBOT;
+-
+-    public static class ANTIBOT {
+-        public boolean ENABLE = true;
+-        public boolean ONLINE_MODE_REQUIRES_LOGIN = false;
+-        @Comment("How many attempts are allowed before rate limiting?")
+-        public int LOGIN_RATELIMIT_ATTEMPTS = 2;
+-        @Comment("Маленькими буквами")
+-        public List<String> BANNED_NICK_PATTERNS = Arrays.asList("dropbot", "mcspam", "mcdrop", "mcrage", "mcstorm");
++    public static class INFO_MESSAGES {
++      public String ALERT_PREFIX = "§8[§4Alert§8]§r ";
+     }
+ 
+-    @Create
+-    public SQL SQL;
+-
+-    @Comment("Настройка базы данных")
+-    public static class SQL {
+-        @Comment("Тип датабазы. mysql или mysql))")
+-        public String STORAGE_TYPE = "mysql";
+-        @Comment("Настройки для mysql")
+-        public String HOSTNAME = "127.0.0.1";
+-        public int PORT = 3306;
+-        public String USER = "user";
+-        public String PASSWORD = "password";
+-        public String DATABASE = "database";
++    public static class ERROR_MESSAGES {
++      public String SERVER_EMPTY = "§fНа сервере никого нет.";
++      public String MESSAGE_NEEDED = "§cYou must supply a message.";
++      public String USER_NOT_ONLINE = "§cThat user is not online.";
++      public String ALREADY_CONNECTED = "§cYou are already connected to this server!";
++      public String ALREADY_CONNECTED_PROXY = "§cYou are already connected to this proxy!";
++      public String ALREADY_CONNECTING = "§cAlready connecting to this server!";
++      public String CANT_CONNECT = "Не удалось подключиться к серверу {0}: {1}";
+     }
++  }
+ 
+-    public void reload(File file) {
+-        load(file);
+-        save(file);
+-    }
++  @Create
++  public AUTH AUTH;
++
++  public static class AUTH {
++    public boolean ENABLE = true;
++    public boolean ONLINE_MODE_REQUIRES_LOGIN = false;
++    public String TABLE = "auth";
++  }
++
++  @Create
++  public ANTIBOT ANTIBOT;
++
++  public static class ANTIBOT {
++    public boolean ENABLE = true;
++    public boolean ONLINE_MODE_REQUIRES_LOGIN = false;
++    @Comment("Маленькими буквами")
++    public List<String> BANNED_NICK_PATTERNS = Arrays.asList(
++          "dropbot", "mcspam", "mcdrop", "mcrage", "mcstorm"
++    );
++  }
++
++  @Create
++  public SQL SQL;
++
++  @Comment("Настройка базы данных")
++  public static class SQL {
++    @Comment("Тип датабазы. mysql или mysql))")
++    public String STORAGE_TYPE = "mysql";
++    @Comment("Настройки для mysql")
++    public String HOSTNAME = "127.0.0.1";
++    public int PORT = 3306;
++    public String USER = "user";
++    public String PASSWORD = "password";
++    public String DATABASE = "database";
++  }
++
++  public void reload(File file) {
++    load(file);
++    save(file);
++  }
+ }
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/config/helpers/Configuration.java b/proxy/src/main/java/ru/elytrium/elytraproxy/config/helpers/Configuration.java
+index 0368183b..b8c1e722 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/config/helpers/Configuration.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/config/helpers/Configuration.java
+@@ -25,334 +25,337 @@ import java.util.LinkedHashSet;
+ import java.util.List;
+ import java.util.Map;
+ 
+-
+ public final class Configuration {
+ 
+-    private static final char SEPARATOR = '.';
+-    final Map<String, Object> self;
+-    private final Configuration defaults;
+-
+-    public Configuration() {
+-        this(null);
+-    }
+-
+-    public Configuration(Configuration defaults) {
+-        this(new LinkedHashMap<String, Object>(), defaults);
+-    }
+-
+-    Configuration(Map<?, ?> map, Configuration defaults) {
+-        this.self = new LinkedHashMap<>();
+-        this.defaults = defaults;
+-
+-        for (Map.Entry<?, ?> entry : map.entrySet()) {
+-            String key = (entry.getKey() == null) ? "null" : entry.getKey().toString();
+-
+-            if (entry.getValue() instanceof Map) {
+-                this.self.put(key, new Configuration((Map) entry.getValue(), (defaults == null) ? null : defaults.getSection(key)));
+-            } else {
+-                this.self.put(key, entry.getValue());
+-            }
+-        }
+-    }
+-
+-    private Configuration getSectionFor(String path) {
+-        int index = path.indexOf(SEPARATOR);
+-        if (index == -1) {
+-            return this;
+-        }
+-
+-        String root = path.substring(0, index);
+-        Object section = self.get(root);
+-        if (section == null) {
+-            section = new Configuration((defaults == null) ? null : defaults.getSection(root));
+-            self.put(root, section);
+-        }
+-
+-        return (Configuration) section;
+-    }
+-
+-    private String getChild(String path) {
+-        int index = path.indexOf(SEPARATOR);
+-        return (index == -1) ? path : path.substring(index + 1);
+-    }
+-
+-    /*------------------------------------------------------------------------*/
+-    @SuppressWarnings("unchecked")
+-    public <T> T get(String path, T def) {
+-        Configuration section = getSectionFor(path);
+-        Object val;
+-        if (section == this) {
+-            val = self.get(path);
+-        } else {
+-            val = section.get(getChild(path), def);
+-        }
+-
+-        if (val == null && def instanceof Configuration) {
+-            self.put(path, def);
+-        }
+-
+-        return (val != null) ? (T) val : def;
+-    }
++  private static final char SEPARATOR = '.';
++  final Map<String, Object> self;
++  private final Configuration defaults;
+ 
+-    public boolean contains(String path) {
+-        return get(path, null) != null;
+-    }
++  public Configuration() {
++    this(null);
++  }
+ 
+-    public Object get(String path) {
+-        return get(path, getDefault(path));
++  public Configuration(Configuration defaults) {
++    this(new LinkedHashMap<String, Object>(), defaults);
++  }
++
++  Configuration(Map<?, ?> map, Configuration defaults) {
++    this.self = new LinkedHashMap<>();
++    this.defaults = defaults;
++
++    for (Map.Entry<?, ?> entry : map.entrySet()) {
++      String key = (entry.getKey() == null) ? "null" : entry.getKey().toString();
++
++      if (entry.getValue() instanceof Map) {
++        this.self.put(key, new Configuration((Map) entry.getValue(),
++                (defaults == null) ? null : defaults.getSection(key)));
++      } else {
++        this.self.put(key, entry.getValue());
++      }
++    }
++  }
++
++  private Configuration getSectionFor(String path) {
++    int index = path.indexOf(SEPARATOR);
++    if (index == -1) {
++      return this;
++    }
++
++    String root = path.substring(0, index);
++    Object section = self.get(root);
++    if (section == null) {
++      section = new Configuration((defaults == null) ? null : defaults.getSection(root));
++      self.put(root, section);
++    }
++
++    return (Configuration) section;
++  }
++
++  private String getChild(String path) {
++    int index = path.indexOf(SEPARATOR);
++    return (index == -1) ? path : path.substring(index + 1);
++  }
++
++  /*------------------------------------------------------------------------*/
++  @SuppressWarnings("unchecked")
++  public <T> T get(String path, T def) {
++    Configuration section = getSectionFor(path);
++    Object val;
++    if (section == this) {
++      val = self.get(path);
++    } else {
++      val = section.get(getChild(path), def);
++    }
++
++    if (val == null && def instanceof Configuration) {
++      self.put(path, def);
++    }
++
++    return (val != null) ? (T) val : def;
++  }
++
++  public Object get(String path) {
++    return get(path, getDefault(path));
++  }
++
++  public boolean contains(String path) {
++    return get(path, null) != null;
++  }
++
++  public Object getDefault(String path) {
++    return (defaults == null) ? null : defaults.get(path);
++  }
++
++  public void set(String path, Object value) {
++    if (value instanceof Map) {
++      value = new Configuration((Map) value,
++              (defaults == null) ? null : defaults.getSection(path));
+     }
+ 
+-    public Object getDefault(String path) {
+-        return (defaults == null) ? null : defaults.get(path);
++    Configuration section = getSectionFor(path);
++    if (section == this) {
++      if (value == null) {
++        self.remove(path);
++      } else {
++        self.put(path, value);
++      }
++    } else {
++      section.set(getChild(path), value);
++    }
++  }
++
++  /*------------------------------------------------------------------------*/
++  public Configuration getSection(String path) {
++    Object def = getDefault(path);
++    return (Configuration) get(path,
++            (def instanceof Configuration) ? def : new Configuration((
++                    defaults == null) ? null : defaults.getSection(path)));
++  }
++
++  /**
++   * Gets keys, not deep by default.
++   *
++   * @return top level keys for this section
++   */
++  public Collection<String> getKeys() {
++    return new LinkedHashSet<>(self.keySet());
++  }
++
++  /*------------------------------------------------------------------------*/
++  public byte getByte(String path) {
++    Object def = getDefault(path);
++    return getByte(path, (def instanceof Number) ? ((Number) def).byteValue() : 0);
++  }
++
++  public byte getByte(String path, byte def) {
++    Object val = get(path, def);
++    return (val instanceof Number) ? ((Number) val).byteValue() : def;
++  }
++
++  public List<Byte> getByteList(String path) {
++    List<?> list = getList(path);
++    List<Byte> result = new ArrayList<>();
++
++    for (Object object : list) {
++      if (object instanceof Number) {
++        result.add(((Number) object).byteValue());
++      }
++    }
++
++    return result;
++  }
++
++  public short getShort(String path) {
++    Object def = getDefault(path);
++    return getShort(path, (def instanceof Number) ? ((Number) def).shortValue() : 0);
++  }
++
++  public short getShort(String path, short def) {
++    Object val = get(path, def);
++    return (val instanceof Number) ? ((Number) val).shortValue() : def;
++  }
++
++  public List<Short> getShortList(String path) {
++    List<?> list = getList(path);
++    List<Short> result = new ArrayList<>();
++
++    for (Object object : list) {
++      if (object instanceof Number) {
++        result.add(((Number) object).shortValue());
++      }
+     }
+ 
+-    public void set(String path, Object value) {
+-        if (value instanceof Map) {
+-            value = new Configuration((Map) value, (defaults == null) ? null : defaults.getSection(path));
+-        }
+-
+-        Configuration section = getSectionFor(path);
+-        if (section == this) {
+-            if (value == null) {
+-                self.remove(path);
+-            } else {
+-                self.put(path, value);
+-            }
+-        } else {
+-            section.set(getChild(path), value);
+-        }
++    return result;
++  }
++
++  public int getInt(String path) {
++    Object def = getDefault(path);
++    return getInt(path, (def instanceof Number) ? ((Number) def).intValue() : 0);
++  }
++
++  public int getInt(String path, int def) {
++    Object val = get(path, def);
++    return (val instanceof Number) ? ((Number) val).intValue() : def;
++  }
++
++  public List<Integer> getIntList(String path) {
++    List<?> list = getList(path);
++    List<Integer> result = new ArrayList<>();
++
++    for (Object object : list) {
++      if (object instanceof Number) {
++        result.add(((Number) object).intValue());
++      }
++    }
++
++    return result;
++  }
++
++  public long getLong(String path) {
++    Object def = getDefault(path);
++    return getLong(path, (def instanceof Number) ? ((Number) def).longValue() : 0);
++  }
++
++  public long getLong(String path, long def) {
++    Object val = get(path, def);
++    return (val instanceof Number) ? ((Number) val).longValue() : def;
++  }
++
++  public List<Long> getLongList(String path) {
++    List<?> list = getList(path);
++    List<Long> result = new ArrayList<>();
++
++    for (Object object : list) {
++      if (object instanceof Number) {
++        result.add(((Number) object).longValue());
++      }
+     }
+ 
+-    /*------------------------------------------------------------------------*/
+-    public Configuration getSection(String path) {
+-        Object def = getDefault(path);
+-        return (Configuration) get(path, (def instanceof Configuration) ? def : new Configuration((defaults == null) ? null : defaults.getSection(path)));
+-    }
++    return result;
++  }
++
++  public float getFloat(String path) {
++    Object def = getDefault(path);
++    return getFloat(path, (def instanceof Number) ? ((Number) def).floatValue() : 0);
++  }
+ 
+-    /**
+-     * Gets keys, not deep by default.
+-     *
+-     * @return top level keys for this section
+-     */
+-    public Collection<String> getKeys() {
+-        return new LinkedHashSet<>(self.keySet());
+-    }
++  public float getFloat(String path, float def) {
++    Object val = get(path, def);
++    return (val instanceof Number) ? ((Number) val).floatValue() : def;
++  }
+ 
+-    /*------------------------------------------------------------------------*/
+-    public byte getByte(String path) {
+-        Object def = getDefault(path);
+-        return getByte(path, (def instanceof Number) ? ((Number) def).byteValue() : 0);
+-    }
++  public List<Float> getFloatList(String path) {
++    List<?> list = getList(path);
++    List<Float> result = new ArrayList<>();
+ 
+-    public byte getByte(String path, byte def) {
+-        Object val = get(path, def);
+-        return (val instanceof Number) ? ((Number) val).byteValue() : def;
++    for (Object object : list) {
++      if (object instanceof Number) {
++        result.add(((Number) object).floatValue());
++      }
+     }
+ 
+-    public List<Byte> getByteList(String path) {
+-        List<?> list = getList(path);
+-        List<Byte> result = new ArrayList<>();
++    return result;
++  }
+ 
+-        for (Object object : list) {
+-            if (object instanceof Number) {
+-                result.add(((Number) object).byteValue());
+-            }
+-        }
++  public double getDouble(String path) {
++    Object def = getDefault(path);
++    return getDouble(path, (def instanceof Number) ? ((Number) def).doubleValue() : 0);
++  }
+ 
+-        return result;
+-    }
++  public double getDouble(String path, double def) {
++    Object val = get(path, def);
++    return (val instanceof Number) ? ((Number) val).doubleValue() : def;
++  }
+ 
+-    public short getShort(String path) {
+-        Object def = getDefault(path);
+-        return getShort(path, (def instanceof Number) ? ((Number) def).shortValue() : 0);
+-    }
++  public List<Double> getDoubleList(String path) {
++    List<?> list = getList(path);
++    List<Double> result = new ArrayList<>();
+ 
+-    public short getShort(String path, short def) {
+-        Object val = get(path, def);
+-        return (val instanceof Number) ? ((Number) val).shortValue() : def;
++    for (Object object : list) {
++      if (object instanceof Number) {
++        result.add(((Number) object).doubleValue());
++      }
+     }
+ 
+-    public List<Short> getShortList(String path) {
+-        List<?> list = getList(path);
+-        List<Short> result = new ArrayList<>();
++    return result;
++  }
+ 
+-        for (Object object : list) {
+-            if (object instanceof Number) {
+-                result.add(((Number) object).shortValue());
+-            }
+-        }
++  public boolean getBoolean(String path) {
++    Object def = getDefault(path);
++    return getBoolean(path, (def instanceof Boolean) ? (Boolean) def : false);
++  }
+ 
+-        return result;
+-    }
++  public boolean getBoolean(String path, boolean def) {
++    Object val = get(path, def);
++    return (val instanceof Boolean) ? (Boolean) val : def;
++  }
+ 
+-    public int getInt(String path) {
+-        Object def = getDefault(path);
+-        return getInt(path, (def instanceof Number) ? ((Number) def).intValue() : 0);
+-    }
++  public List<Boolean> getBooleanList(String path) {
++    List<?> list = getList(path);
++    List<Boolean> result = new ArrayList<>();
+ 
+-    public int getInt(String path, int def) {
+-        Object val = get(path, def);
+-        return (val instanceof Number) ? ((Number) val).intValue() : def;
++    for (Object object : list) {
++      if (object instanceof Boolean) {
++        result.add((Boolean) object);
++      }
+     }
+ 
+-    public List<Integer> getIntList(String path) {
+-        List<?> list = getList(path);
+-        List<Integer> result = new ArrayList<>();
++    return result;
++  }
+ 
+-        for (Object object : list) {
+-            if (object instanceof Number) {
+-                result.add(((Number) object).intValue());
+-            }
+-        }
++  public char getChar(String path) {
++    Object def = getDefault(path);
++    return getChar(path, (def instanceof Character) ? (Character) def : '\u0000');
++  }
+ 
+-        return result;
+-    }
++  public char getChar(String path, char def) {
++    Object val = get(path, def);
++    return (val instanceof Character) ? (Character) val : def;
++  }
+ 
+-    public long getLong(String path) {
+-        Object def = getDefault(path);
+-        return getLong(path, (def instanceof Number) ? ((Number) def).longValue() : 0);
+-    }
++  public List<Character> getCharList(String path) {
++    List<?> list = getList(path);
++    List<Character> result = new ArrayList<>();
+ 
+-    public long getLong(String path, long def) {
+-        Object val = get(path, def);
+-        return (val instanceof Number) ? ((Number) val).longValue() : def;
++    for (Object object : list) {
++      if (object instanceof Character) {
++        result.add((Character) object);
++      }
+     }
++    return result;
++  }
+ 
+-    public List<Long> getLongList(String path) {
+-        List<?> list = getList(path);
+-        List<Long> result = new ArrayList<>();
+-
+-        for (Object object : list) {
+-            if (object instanceof Number) {
+-                result.add(((Number) object).longValue());
+-            }
+-        }
+-
+-        return result;
+-    }
++  public String getString(String path) {
++    Object def = getDefault(path);
++    return getString(path, (def instanceof String) ? (String) def : "");
++  }
+ 
+-    public float getFloat(String path) {
+-        Object def = getDefault(path);
+-        return getFloat(path, (def instanceof Number) ? ((Number) def).floatValue() : 0);
+-    }
++  public String getString(String path, String def) {
++    Object val = get(path, def);
++    return (val instanceof String) ? (String) val : def;
++  }
++
++  public List<String> getStringList(String path) {
++    List<?> list = getList(path);
++    List<String> result = new ArrayList<>();
+ 
+-    public float getFloat(String path, float def) {
+-        Object val = get(path, def);
+-        return (val instanceof Number) ? ((Number) val).floatValue() : def;
++    for (Object object : list) {
++      if (object instanceof String) {
++        result.add((String) object);
++      }
+     }
+ 
+-    public List<Float> getFloatList(String path) {
+-        List<?> list = getList(path);
+-        List<Float> result = new ArrayList<>();
+-
+-        for (Object object : list) {
+-            if (object instanceof Number) {
+-                result.add(((Number) object).floatValue());
+-            }
+-        }
++    return result;
++  }
+ 
+-        return result;
+-    }
++  /*------------------------------------------------------------------------*/
++  public List<?> getList(String path) {
++    Object def = getDefault(path);
++    return getList(path, (def instanceof List<?>) ? (List<?>) def : Collections.EMPTY_LIST);
++  }
+ 
+-    public double getDouble(String path) {
+-        Object def = getDefault(path);
+-        return getDouble(path, (def instanceof Number) ? ((Number) def).doubleValue() : 0);
+-    }
+-
+-    public double getDouble(String path, double def) {
+-        Object val = get(path, def);
+-        return (val instanceof Number) ? ((Number) val).doubleValue() : def;
+-    }
+-
+-    public List<Double> getDoubleList(String path) {
+-        List<?> list = getList(path);
+-        List<Double> result = new ArrayList<>();
+-
+-        for (Object object : list) {
+-            if (object instanceof Number) {
+-                result.add(((Number) object).doubleValue());
+-            }
+-        }
+-
+-        return result;
+-    }
+-
+-    public boolean getBoolean(String path) {
+-        Object def = getDefault(path);
+-        return getBoolean(path, (def instanceof Boolean) ? (Boolean) def : false);
+-    }
+-
+-    public boolean getBoolean(String path, boolean def) {
+-        Object val = get(path, def);
+-        return (val instanceof Boolean) ? (Boolean) val : def;
+-    }
+-
+-    public List<Boolean> getBooleanList(String path) {
+-        List<?> list = getList(path);
+-        List<Boolean> result = new ArrayList<>();
+-
+-        for (Object object : list) {
+-            if (object instanceof Boolean) {
+-                result.add((Boolean) object);
+-            }
+-        }
+-
+-        return result;
+-    }
+-
+-    public char getChar(String path) {
+-        Object def = getDefault(path);
+-        return getChar(path, (def instanceof Character) ? (Character) def : '\u0000');
+-    }
+-
+-    public char getChar(String path, char def) {
+-        Object val = get(path, def);
+-        return (val instanceof Character) ? (Character) val : def;
+-    }
+-
+-    public List<Character> getCharList(String path) {
+-        List<?> list = getList(path);
+-        List<Character> result = new ArrayList<>();
+-
+-        for (Object object : list) {
+-            if (object instanceof Character) {
+-                result.add((Character) object);
+-            }
+-        }
+-        return result;
+-    }
+-
+-    public String getString(String path) {
+-        Object def = getDefault(path);
+-        return getString(path, (def instanceof String) ? (String) def : "");
+-    }
+-
+-    public String getString(String path, String def) {
+-        Object val = get(path, def);
+-        return (val instanceof String) ? (String) val : def;
+-    }
+-
+-    public List<String> getStringList(String path) {
+-        List<?> list = getList(path);
+-        List<String> result = new ArrayList<>();
+-
+-        for (Object object : list) {
+-            if (object instanceof String) {
+-                result.add((String) object);
+-            }
+-        }
+-
+-        return result;
+-    }
+-
+-    /*------------------------------------------------------------------------*/
+-    public List<?> getList(String path) {
+-        Object def = getDefault(path);
+-        return getList(path, (def instanceof List<?>) ? (List<?>) def : Collections.EMPTY_LIST);
+-    }
+-
+-    public List<?> getList(String path, List<?> def) {
+-        Object val = get(path, def);
+-        return (val instanceof List<?>) ? (List<?>) val : def;
+-    }
++  public List<?> getList(String path, List<?> def) {
++    Object val = get(path, def);
++    return (val instanceof List<?>) ? (List<?>) val : def;
++  }
+ }
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/config/helpers/ConfigurationProvider.java b/proxy/src/main/java/ru/elytrium/elytraproxy/config/helpers/ConfigurationProvider.java
+index 5cfc61d0..8e174ce5 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/config/helpers/ConfigurationProvider.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/config/helpers/ConfigurationProvider.java
+@@ -27,38 +27,39 @@ import java.util.Map;
+ 
+ public abstract class ConfigurationProvider {
+ 
+-    private static final Map<Class<? extends ConfigurationProvider>, ConfigurationProvider> providers = new HashMap<>();
+-
+-    static {
+-        try {
+-            providers.put(YamlConfiguration.class, new YamlConfiguration());
+-        } catch (NoClassDefFoundError ex) {
+-            // Ignore, no SnakeYAML
+-        }
++  private static final Map<Class<? extends ConfigurationProvider>,
++          ConfigurationProvider> providers = new HashMap<>();
++
++  static {
++    try {
++      providers.put(YamlConfiguration.class, new YamlConfiguration());
++    } catch (NoClassDefFoundError ex) {
++      // Ignore, no SnakeYAML
+     }
++  }
+ 
+-    public static ConfigurationProvider getProvider(Class<? extends ConfigurationProvider> provider) {
+-        return providers.get(provider);
+-    }
++  public static ConfigurationProvider getProvider(Class<? extends ConfigurationProvider> provider) {
++    return providers.get(provider);
++  }
+ 
+-    /*------------------------------------------------------------------------*/
+-    public abstract void save(Configuration config, File file) throws IOException;
++  /*------------------------------------------------------------------------*/
++  public abstract void save(Configuration config, File file) throws IOException;
+ 
+-    public abstract void save(Configuration config, Writer writer);
++  public abstract void save(Configuration config, Writer writer);
+ 
+-    public abstract Configuration load(File file) throws IOException;
++  public abstract Configuration load(File file) throws IOException;
+ 
+-    public abstract Configuration load(File file, Configuration defaults) throws IOException;
++  public abstract Configuration load(File file, Configuration defaults) throws IOException;
+ 
+-    public abstract Configuration load(Reader reader);
++  public abstract Configuration load(Reader reader);
+ 
+-    public abstract Configuration load(Reader reader, Configuration defaults);
++  public abstract Configuration load(Reader reader, Configuration defaults);
+ 
+-    public abstract Configuration load(InputStream is);
++  public abstract Configuration load(InputStream is);
+ 
+-    public abstract Configuration load(InputStream is, Configuration defaults);
++  public abstract Configuration load(InputStream is, Configuration defaults);
+ 
+-    public abstract Configuration load(String string);
++  public abstract Configuration load(String string);
+ 
+-    public abstract Configuration load(String string, Configuration defaults);
++  public abstract Configuration load(String string, Configuration defaults);
+ }
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/config/helpers/YamlConfiguration.java b/proxy/src/main/java/ru/elytrium/elytraproxy/config/helpers/YamlConfiguration.java
+index 70c42f33..179fd04b 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/config/helpers/YamlConfiguration.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/config/helpers/YamlConfiguration.java
+@@ -42,93 +42,93 @@ import org.yaml.snakeyaml.representer.Representer;
+ @NoArgsConstructor(access = AccessLevel.PACKAGE)
+ public class YamlConfiguration extends ConfigurationProvider {
+ 
+-    private final ThreadLocal<Yaml> yaml = new ThreadLocal<Yaml>() {
+-        @Override
+-        protected Yaml initialValue() {
+-            Representer representer = new Representer() {
+-                {
+-                    representers.put(Configuration.class, new Represent() {
+-                        @Override
+-                        public Node representData(Object data) {
+-                            return represent(((Configuration) data).self);
+-                        }
+-                    });
+-                }
+-            };
+-
+-            DumperOptions options = new DumperOptions();
+-            options.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK);
+-
+-            return new Yaml(new Constructor(), representer, options);
+-        }
+-    };
+-
++  private final ThreadLocal<Yaml> yaml = new ThreadLocal<Yaml>() {
+     @Override
+-    public void save(Configuration config, File file) throws IOException {
+-        try (Writer writer = new OutputStreamWriter(new FileOutputStream(file), Charsets.UTF_8)) {
+-            save(config, writer);
++    protected Yaml initialValue() {
++      Representer representer = new Representer() {
++        {
++          representers.put(Configuration.class, new Represent() {
++            @Override
++            public Node representData(Object data) {
++              return represent(((Configuration) data).self);
++            }
++          });
+         }
+-    }
++      };
+ 
+-    @Override
+-    public void save(Configuration config, Writer writer) {
+-        yaml.get().dump(config.self, writer);
+-    }
++      DumperOptions options = new DumperOptions();
++      options.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK);
+ 
+-    @Override
+-    public Configuration load(File file) throws IOException {
+-        return load(file, null);
++      return new Yaml(new Constructor(), representer, options);
+     }
++  };
+ 
+-    @Override
+-    public Configuration load(File file, Configuration defaults) throws IOException {
+-        try (FileInputStream is = new FileInputStream(file)) {
+-            return load(is, defaults);
+-        }
++  @Override
++  public void save(Configuration config, File file) throws IOException {
++    try (Writer writer = new OutputStreamWriter(new FileOutputStream(file), Charsets.UTF_8)) {
++      save(config, writer);
+     }
+-
+-    @Override
+-    public Configuration load(Reader reader) {
+-        return load(reader, null);
++  }
++
++  @Override
++  public void save(Configuration config, Writer writer) {
++    yaml.get().dump(config.self, writer);
++  }
++
++  @Override
++  public Configuration load(File file) throws IOException {
++    return load(file, null);
++  }
++
++  @Override
++  public Configuration load(File file, Configuration defaults) throws IOException {
++    try (FileInputStream is = new FileInputStream(file)) {
++      return load(is, defaults);
+     }
+-
+-    @Override
+-    @SuppressWarnings("unchecked")
+-    public Configuration load(Reader reader, Configuration defaults) {
+-        Map<String, Object> map = yaml.get().loadAs(reader, LinkedHashMap.class);
+-        if (map == null) {
+-            map = new LinkedHashMap<>();
+-        }
+-        return new Configuration(map, defaults);
++  }
++
++  @Override
++  public Configuration load(Reader reader) {
++    return load(reader, null);
++  }
++
++  @Override
++  @SuppressWarnings("unchecked")
++  public Configuration load(Reader reader, Configuration defaults) {
++    Map<String, Object> map = yaml.get().loadAs(reader, LinkedHashMap.class);
++    if (map == null) {
++      map = new LinkedHashMap<>();
+     }
+-
+-    @Override
+-    public Configuration load(InputStream is) {
+-        return load(is, null);
+-    }
+-
+-    @Override
+-    @SuppressWarnings("unchecked")
+-    public Configuration load(InputStream is, Configuration defaults) {
+-        Map<String, Object> map = yaml.get().loadAs(is, LinkedHashMap.class);
+-        if (map == null) {
+-            map = new LinkedHashMap<>();
+-        }
+-        return new Configuration(map, defaults);
++    return new Configuration(map, defaults);
++  }
++
++  @Override
++  public Configuration load(InputStream is) {
++    return load(is, null);
++  }
++
++  @Override
++  @SuppressWarnings("unchecked")
++  public Configuration load(InputStream is, Configuration defaults) {
++    Map<String, Object> map = yaml.get().loadAs(is, LinkedHashMap.class);
++    if (map == null) {
++      map = new LinkedHashMap<>();
+     }
+-
+-    @Override
+-    public Configuration load(String string) {
+-        return load(string, null);
+-    }
+-
+-    @Override
+-    @SuppressWarnings("unchecked")
+-    public Configuration load(String string, Configuration defaults) {
+-        Map<String, Object> map = yaml.get().loadAs(string, LinkedHashMap.class);
+-        if (map == null) {
+-            map = new LinkedHashMap<>();
+-        }
+-        return new Configuration(map, defaults);
++    return new Configuration(map, defaults);
++  }
++
++  @Override
++  public Configuration load(String string) {
++    return load(string, null);
++  }
++
++  @Override
++  @SuppressWarnings("unchecked")
++  public Configuration load(String string, Configuration defaults) {
++    Map<String, Object> map = yaml.get().loadAs(string, LinkedHashMap.class);
++    if (map == null) {
++      map = new LinkedHashMap<>();
+     }
++    return new Configuration(map, defaults);
++  }
+ }
+-- 
+2.24.1.windows.2
+
