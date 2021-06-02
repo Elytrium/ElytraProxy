@@ -35,4 +35,4 @@ jobs:
             - uses: actions/upload-artifact@v2
               with:
                 name: ElytraProxy
-                path: ElytraProxy-proxy/proxy/build/libs/*-all.jar
+                path: ElytraProxy-Build/proxy/build/libs/*-all.jar
