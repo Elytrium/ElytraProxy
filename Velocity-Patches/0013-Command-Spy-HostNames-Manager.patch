@@ -1,4 +1,4 @@
-From d1fb7cfea6b41d370e493126b760c4bfcede277b Mon Sep 17 00:00:00 2001
+From d897ae4d23716c7327748140a812880579a5b8bb Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Sat, 5 Jun 2021 04:10:26 +0900
 Subject: [PATCH] Command Spy, HostNames Manager
@@ -65,7 +65,7 @@ index c8df6e3c..99fd4a7b 100644
  }
  
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftConnection.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftConnection.java
-index 506c6bd8..6fd5b757 100644
+index 506c6bd8..8e4173cb 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftConnection.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftConnection.java
 @@ -65,6 +65,7 @@ import javax.crypto.spec.SecretKeySpec;
@@ -76,32 +76,39 @@ index 506c6bd8..6fd5b757 100644
  
  /**
   * A utility class to make working with the pipeline a little less painful and transparently handles
-@@ -136,6 +137,34 @@ public class MinecraftConnection extends ChannelInboundHandlerAdapter {
+@@ -136,6 +137,41 @@ public class MinecraftConnection extends ChannelInboundHandlerAdapter {
        }
  
        if (msg instanceof MinecraftPacket) {
 +        // ElytraProxy Start
 +        if (Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.ENABLE) {
 +          InetSocketAddress adr = (InetSocketAddress) ctx.channel().localAddress();
-+          String notifymsg = "{} tried to connect using ip {} or {}";
++          String notifymsg = "{} tried to connect using ip {}";
 +          if (Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.WHITELIST) {
-+            if ((!Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.HOSTNAMES
-+                    .contains(adr.getHostName()))
-+                    || (!Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.HOSTNAMES
-+                    .contains(adr.getAddress().getHostAddress()))) {
++            if (!Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.HOSTNAMES.contains(
++                    adr.getHostName())) {
 +              server.getElytraProxy().getLogger().info(notifymsg,
 +                      ctx.channel().remoteAddress(),
-+                      adr.getHostName(),
++                      adr.getHostName());
++              return;
++            } else if (!Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.HOSTNAMES.contains(
++                    adr.getAddress().getHostAddress())) {
++              server.getElytraProxy().getLogger().info(notifymsg,
++                      ctx.channel().remoteAddress(),
 +                      adr.getAddress().getHostAddress());
 +              return;
 +            }
 +          } else {
-+            if ((Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.HOSTNAMES.contains(adr.getHostName()))
-+                    || (Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.HOSTNAMES
-+                    .contains(adr.getAddress().getHostAddress()))) {
++            if (Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.HOSTNAMES.contains(
++                    adr.getHostName())) {
 +              server.getElytraProxy().getLogger().info(notifymsg,
 +                      ctx.channel().remoteAddress(),
-+                      adr.getHostName(),
++                      adr.getHostName());
++              return;
++            } else if (Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.HOSTNAMES.contains(
++                    adr.getAddress().getHostAddress())) {
++              server.getElytraProxy().getLogger().info(notifymsg,
++                      ctx.channel().remoteAddress(),
 +                      adr.getAddress().getHostAddress());
 +              return;
 +            }
@@ -111,6 +118,15 @@ index 506c6bd8..6fd5b757 100644
          MinecraftPacket pkt = (MinecraftPacket) msg;
          if (!pkt.handle(sessionHandler)) {
            sessionHandler.handleGeneric((MinecraftPacket) msg);
+@@ -166,7 +202,7 @@ public class MinecraftConnection extends ChannelInboundHandlerAdapter {
+         try {
+           // ElytraProxy Start - Fix long message while player disconnect unexpectedly
+           if (cause instanceof ReadTimeoutException && association instanceof Player) {
+-            logger.info("{} предположительно вышел с сервера закрыв майнкрафт.", association);
++            logger.info("{} may have disconnect by closing minecraft.", association);
+           } else {
+             sessionHandler.exception(cause);
+           }
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
 index 8ac39750..9c0d0b01 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
