@@ -1,0 +1,216 @@
+From d1fb7cfea6b41d370e493126b760c4bfcede277b Mon Sep 17 00:00:00 2001
+From: mdxd44 <mdxd44@ely.su>
+Date: Sat, 5 Jun 2021 04:10:26 +0900
+Subject: [PATCH] Command Spy, HostNames Manager
+
+
+diff --git a/config/checkstyle/checkstyle.xml b/config/checkstyle/checkstyle.xml
+index 66cc9e59..f614cb53 100644
+--- a/config/checkstyle/checkstyle.xml
++++ b/config/checkstyle/checkstyle.xml
+@@ -121,7 +121,6 @@
+       <message key="name.invalidPattern"
+         value="Package name ''{0}'' must match pattern ''{1}''."/>
+     </module>
+-    <!-- TODO: revert checkstyle changes
+     <module name="TypeName">
+       <message key="name.invalidPattern"
+         value="Type name ''{0}'' must match pattern ''{1}''."/>
+@@ -136,7 +135,6 @@
+       <message key="name.invalidPattern"
+         value="Parameter name ''{0}'' must match pattern ''{1}''."/>
+     </module>
+-    -->
+     <module name="LambdaParameterName">
+       <property name="format" value="^[a-z]([a-z0-9][a-zA-Z0-9]*)?$"/>
+       <message key="name.invalidPattern"
+@@ -147,14 +145,12 @@
+       <message key="name.invalidPattern"
+         value="Catch parameter name ''{0}'' must match pattern ''{1}''."/>
+     </module>
+-    <!--
+     <module name="LocalVariableName">
+       <property name="tokens" value="VARIABLE_DEF"/>
+       <property name="format" value="^[a-z]([a-z0-9][a-zA-Z0-9]*)?$"/>
+       <message key="name.invalidPattern"
+         value="Local variable name ''{0}'' must match pattern ''{1}''."/>
+     </module>
+-    -->
+     <module name="ClassTypeParameterName">
+       <property name="format" value="(^[A-Z][0-9]?)$|([A-Z][a-zA-Z0-9]*[T]$)"/>
+       <message key="name.invalidPattern"
+@@ -189,12 +185,10 @@
+       <property name="lineWrappingIndentation" value="4"/>
+       <property name="arrayInitIndent" value="2"/>
+     </module>
+-    <!--
+     <module name="AbbreviationAsWordInName">
+       <property name="ignoreFinal" value="false"/>
+       <property name="allowedAbbreviationLength" value="1"/>
+     </module>
+-    -->
+     <module name="OverloadMethodsDeclarationOrder"/>
+     <module name="VariableDeclarationUsageDistance"/>
+     <module name="CustomImportOrder">
+diff --git a/proxy/build.gradle b/proxy/build.gradle
+index c8df6e3c..99fd4a7b 100644
+--- a/proxy/build.gradle
++++ b/proxy/build.gradle
+@@ -59,6 +59,7 @@ shadowJar {
+ 
+ tasks.withType(Checkstyle) {
+     exclude('**/com/velocitypowered/proxy/protocol/packet/*.java')
++    exclude('**/ru/elytrium/elytraproxy/botfilter/**') // temp
+     exclude('**/ru/elytrium/elytraproxy/config/Settings.java')
+ }
+ 
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftConnection.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftConnection.java
+index 506c6bd8..6fd5b757 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftConnection.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftConnection.java
+@@ -65,6 +65,7 @@ import javax.crypto.spec.SecretKeySpec;
+ import org.apache.logging.log4j.LogManager;
+ import org.apache.logging.log4j.Logger;
+ import org.checkerframework.checker.nullness.qual.Nullable;
++import ru.elytrium.elytraproxy.config.Settings;
+ 
+ /**
+  * A utility class to make working with the pipeline a little less painful and transparently handles
+@@ -136,6 +137,34 @@ public class MinecraftConnection extends ChannelInboundHandlerAdapter {
+       }
+ 
+       if (msg instanceof MinecraftPacket) {
++        // ElytraProxy Start
++        if (Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.ENABLE) {
++          InetSocketAddress adr = (InetSocketAddress) ctx.channel().localAddress();
++          String notifymsg = "{} tried to connect using ip {} or {}";
++          if (Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.WHITELIST) {
++            if ((!Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.HOSTNAMES
++                    .contains(adr.getHostName()))
++                    || (!Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.HOSTNAMES
++                    .contains(adr.getAddress().getHostAddress()))) {
++              server.getElytraProxy().getLogger().info(notifymsg,
++                      ctx.channel().remoteAddress(),
++                      adr.getHostName(),
++                      adr.getAddress().getHostAddress());
++              return;
++            }
++          } else {
++            if ((Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.HOSTNAMES.contains(adr.getHostName()))
++                    || (Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.HOSTNAMES
++                    .contains(adr.getAddress().getHostAddress()))) {
++              server.getElytraProxy().getLogger().info(notifymsg,
++                      ctx.channel().remoteAddress(),
++                      adr.getHostName(),
++                      adr.getAddress().getHostAddress());
++              return;
++            }
++          }
++        }
++        // ElytraProxy End
+         MinecraftPacket pkt = (MinecraftPacket) msg;
+         if (!pkt.handle(sessionHandler)) {
+           sessionHandler.handleGeneric((MinecraftPacket) msg);
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
+index 8ac39750..9c0d0b01 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
+@@ -70,9 +70,11 @@ import java.util.concurrent.CompletableFuture;
+ import net.kyori.adventure.identity.Identity;
+ import net.kyori.adventure.text.Component;
+ import net.kyori.adventure.text.format.NamedTextColor;
++import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+ import org.apache.logging.log4j.LogManager;
+ import org.apache.logging.log4j.Logger;
+ import org.checkerframework.checker.nullness.qual.Nullable;
++import ru.elytrium.elytraproxy.config.Settings;
+ 
+ /**
+  * Handles communication with the connected Minecraft client. This is effectively the primary nerve
+@@ -157,6 +159,19 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+           .thenComposeAsync(event -> processCommandExecuteResult(originalCommand,
+               event.getResult()))
+           .whenComplete((ignored, throwable) -> {
++            if (Settings.IMP.MAIN_SETTINGS.ENABLE_COMMAND_SPY_IN_CHAT) {
++              for (ConnectedPlayer player : VelocityServer.getConnectionsByUuid().values()) {
++                if (player.hasPermission("elytraproxy.commandspy")) {
++                  player.sendMessage(LegacyComponentSerializer
++                          .legacyAmpersand()
++                          .deserialize(Settings.IMP.MESSAGES.ELYTRAPROXY.COMMAND_SPY_FORMAT
++                                  .replace("{cmd}", originalCommand)
++                                  .replace("{player}", player.getUsername())));
++                } else {
++                  return;
++                }
++              }
++            }
+             if (server.getConfiguration().isLogCommandExecutions()) {
+               logger.info("{} -> executed command /{}", player, originalCommand);
+             }
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/ElytraProxy.java b/proxy/src/main/java/ru/elytrium/elytraproxy/ElytraProxy.java
+index 71c88fd8..d7b492b3 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/ElytraProxy.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/ElytraProxy.java
+@@ -146,11 +146,11 @@ public class ElytraProxy {
+     try {
+       new ElytraProxy(velocityServer);
+       source.sendMessage(Identity.nil(), Component.text(
+-              "ElytraProxy Reloaded.", NamedTextColor.GREEN));
++              "ElytraProxy reloaded.", NamedTextColor.GREEN));
+     } catch (Exception e) {
+       logger.error("Unable to reload configuration", e);
+       source.sendMessage(Identity.nil(), Component.text(
+-              "Unable to reload ElytraPRoxy. Check the console for more details.",
++              "Unable to reload ElytraProxy. Check the console for more details.",
+               NamedTextColor.RED));
+     }
+   }
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/config/Settings.java b/proxy/src/main/java/ru/elytrium/elytraproxy/config/Settings.java
+index 5e60e1bc..910001fd 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/config/Settings.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/config/Settings.java
+@@ -53,6 +53,19 @@ public class Settings extends Config {
+     public String BRAND = "{ServerBrand} => {ProxyBrand} (by ElytraDev)";
+     @Comment("Changes server version in ping request")
+     public String PING_VERSION = "ElytraProxy (by ElytraDev)";
++    @Comment("Enables command spy for players with permission elytraproxy.commandspy")
++    public boolean ENABLE_COMMAND_SPY_IN_CHAT = true;
++
++    @Create
++    public MAIN_SETTINGS.HOSTNAMES_MANAGER HOSTNAMES_MANAGER;
++
++    @Comment("Allows you to reject connection to the server for all domains except yours and direct ip")
++    public static class HOSTNAMES_MANAGER {
++      public boolean ENABLE = true;
++      @Comment("If whitelist enabled, all hostnames (domains and ips) in list WON'T BE BLOCKED, but other hostnames WILL BE BLOCKED")
++      public boolean WHITELIST = true;
++      public List<String> HOSTNAMES = Arrays.asList("127.0.0.1 (or your ip)", "your-domain.com");
++    }
+   }
+ 
+   @Create
+@@ -66,9 +79,11 @@ public class Settings extends Config {
+     @Create
+     public MESSAGES.ERROR ERROR;
+ 
++    @Comment("CommandSpy format doesn't have prefix")
+     public static class ELYTRAPROXY {
+       public String PREFIX = "§5§l[ElytraProxy]§f ";
+-      public String PROTOCOL_BLOCKED = "&cYour &6minecraft version&c is blocked! We allow only X.X-X.X!";
++      public String PROTOCOL_BLOCKED = "&cYour &6minecraft version&c is blocked. We allow only X.X-X.X!";
++      public String COMMAND_SPY_FORMAT = "&7 — Игрок {player} ввёл команду {cmd}";
+     }
+ 
+     public static class INFO {
+@@ -104,7 +119,7 @@ public class Settings extends Config {
+ 
+   public static class ANTIBOT {
+     public boolean ENABLE = true;
+-    @Comment("Маленькими буквами")
++    @Comment("In lowercase")
+     public List<String> BANNED_NICK_PATTERNS = Arrays.asList(
+           "dropbot", "mcspam", "mcdrop", "mcrage", "mcstorm", "extremebot", "cipher_bot"
+     );
+-- 
+2.24.1.windows.2
+
