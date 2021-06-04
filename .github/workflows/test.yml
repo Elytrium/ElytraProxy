@@ -34,5 +34,5 @@ jobs:
                   ./elytraproxy b
             - uses: actions/upload-artifact@v2
               with:
-                name: ElytraProxy build on ${{ matrix.java }} java
+                name: ElytraProxy built on ${{ matrix.java }} java
                 path: ElytraProxy-Build/proxy/build/libs/*-all.jar
