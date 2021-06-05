@@ -1,0 +1,203 @@
+From 9519e943ff5ab8d60addf325ceaaad39bf8827f2 Mon Sep 17 00:00:00 2001
+From: mdxd44 <mdxd44@ely.su>
+Date: Sat, 5 Jun 2021 17:50:10 +0900
+Subject: [PATCH] Improve HostNames Manager, Cleanup
+
+
+diff --git a/build.gradle b/build.gradle
+index 0fa93a2b..82b2812b 100644
+--- a/build.gradle
++++ b/build.gradle
+@@ -18,7 +18,7 @@ allprojects {
+     compileJava.options.encoding = 'UTF-8' // ElytraProxy - Fix UTF-8 for build on Windows
+ 
+     group 'com.velocitypowered'
+-    version 'beta'
++    version '0.1.0'
+ 
+     ext {
+         // dependency versions
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
+index a027c018..7bc23d6f 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
+@@ -222,8 +222,6 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+ 
+     this.doStartupConfigLoad();
+ 
+-    this.elytraProxy = new ElytraProxy(this);
+-
+     for (Map.Entry<String, String> entry : configuration.getServers().entrySet()) {
+       servers.register(new ServerInfo(entry.getKey(), AddressUtil.parseAddress(entry.getValue())));
+     }
+@@ -251,6 +249,8 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+       this.cm.queryBind(configuration.getBind().getHostString(), configuration.getQueryPort());
+     }
+ 
++    this.elytraProxy = new ElytraProxy(this);
++
+     Metrics.VelocityMetrics.startMetrics(this, configuration.getMetrics());
+   }
+ 
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftConnection.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftConnection.java
+index 8e4173cb..22f77162 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftConnection.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftConnection.java
+@@ -140,34 +140,38 @@ public class MinecraftConnection extends ChannelInboundHandlerAdapter {
+         // ElytraProxy Start
+         if (Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.ENABLE) {
+           InetSocketAddress adr = (InetSocketAddress) ctx.channel().localAddress();
+-          String notifymsg = "{} tried to connect using ip {}";
++          String notifymsg = "{} tried to ping server using {}";
+           if (Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.WHITELIST) {
+             if (!Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.HOSTNAMES.contains(
+-                    adr.getHostName())) {
+-              server.getElytraProxy().getLogger().info(notifymsg,
+-                      ctx.channel().remoteAddress(),
+-                      adr.getHostName());
+-              return;
+-            } else if (!Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.HOSTNAMES.contains(
+                     adr.getAddress().getHostAddress())) {
+               server.getElytraProxy().getLogger().info(notifymsg,
+                       ctx.channel().remoteAddress(),
+                       adr.getAddress().getHostAddress());
+               return;
++            } else if (Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.DOMAINS_CHECK) {
++              if (!Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.HOSTNAMES.contains(
++                      adr.getHostName())) {
++                server.getElytraProxy().getLogger().info(notifymsg,
++                        ctx.channel().remoteAddress(),
++                        adr.getHostName());
++                return;
++              }
+             }
+           } else {
+             if (Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.HOSTNAMES.contains(
+-                    adr.getHostName())) {
+-              server.getElytraProxy().getLogger().info(notifymsg,
+-                      ctx.channel().remoteAddress(),
+-                      adr.getHostName());
+-              return;
+-            } else if (Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.HOSTNAMES.contains(
+                     adr.getAddress().getHostAddress())) {
+               server.getElytraProxy().getLogger().info(notifymsg,
+                       ctx.channel().remoteAddress(),
+                       adr.getAddress().getHostAddress());
+               return;
++            } else if (Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.DOMAINS_CHECK) {
++              if (Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.HOSTNAMES.contains(
++                      adr.getHostName())) {
++                server.getElytraProxy().getLogger().info(notifymsg,
++                        ctx.channel().remoteAddress(),
++                        adr.getHostName());
++                return;
++              }
+             }
+           }
+         }
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/config/Config.java b/proxy/src/main/java/ru/elytrium/elytraproxy/config/Config.java
+index 8d8b2ff3..f2f480ac 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/config/Config.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/config/Config.java
+@@ -85,11 +85,9 @@ public class Config {
+         }
+       }
+     }
+-    logger.warn(
+-            "Failed to set config option: {}: {} | {} ", new Object[]
+-            {
+-              key, value, instance
+-            });
++    logger.warn("Failed to set config option: {}: {} | {} ", new Object[] {
++                    key, value, instance
++    });
+   }
+ 
+   public void set(Configuration yml, String oldPath) {
+@@ -121,20 +119,13 @@ public class Config {
+         yml = ConfigurationProvider.getProvider(YamlConfiguration.class).load(reader);
+       }
+     } catch (IOException ex) {
+-      logger.warn("Не могу загрузить конфиг ", ex);
++      logger.warn("Unable to load config ", ex);
+       return false;
+     }
+     set(yml, "");
+     return true;
+   }
+ 
+-  /*
+-  public int getConfigVersion(File file)
+-  {
+-      return YamlConfiguration.loadConfiguration( file ).getInt( "config-version", 0 );
+-  }
+-  */
+-
+   /**
+    * Set all values in the file (load first to avoid overwriting)
+    *
+@@ -224,10 +215,7 @@ public class Config {
+    * Indicates that a field cannot be modified
+    */
+   @Retention(RetentionPolicy.RUNTIME)
+-  @Target(
+-          {
+-                  ElementType.FIELD
+-          })
++  @Target(ElementType.FIELD)
+   public @interface Final {
+   }
+ 
+@@ -235,10 +223,7 @@ public class Config {
+    * Creates a comment
+    */
+   @Retention(RetentionPolicy.RUNTIME)
+-  @Target(
+-          {
+-                  ElementType.FIELD, ElementType.TYPE
+-          })
++  @Target({ElementType.FIELD, ElementType.TYPE})
+   public @interface Comment {
+ 
+       String[] value();
+@@ -248,10 +233,7 @@ public class Config {
+    * Any field or class with is not part of the config
+    */
+   @Retention(RetentionPolicy.RUNTIME)
+-  @Target(
+-          {
+-                  ElementType.FIELD, ElementType.TYPE
+-          })
++  @Target({ElementType.FIELD, ElementType.TYPE})
+   public @interface Ignore {
+   }
+ 
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/config/Settings.java b/proxy/src/main/java/ru/elytrium/elytraproxy/config/Settings.java
+index a1b1645f..ea64dae6 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/config/Settings.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/config/Settings.java
+@@ -27,7 +27,6 @@ public class Settings extends Config {
+   public static final Settings IMP = new Settings();
+ 
+   @Final
+-  @Comment("Please, don't touch.")
+   public String VERSION = "0.1.0";
+ 
+   @Create
+@@ -62,7 +61,12 @@ public class Settings extends Config {
+       public boolean ENABLE = true;
+       @Comment("If whitelist enabled, all hostnames (domains and ips) in list WON'T BE BLOCKED, but other hostnames WILL BE BLOCKED")
+       public boolean WHITELIST = true;
+-      public List<String> HOSTNAMES = Arrays.asList("127.0.0.1 (or your ip)", "your-domain.com");
++      @Comment({
++              "If disabled, ONLY IP'S will be checked, if enabled will be cheked DOMAIN'S and IP'S together",
++              "If you use an SRV record keep false, or you can set to true and observe how this check will behave."
++      })
++      public boolean DOMAINS_CHECK = false;
++      public List<String> HOSTNAMES = Arrays.asList("your digital ip", "your-domain.com");
+     }
+   }
+ 
+-- 
+2.24.1.windows.2
+
