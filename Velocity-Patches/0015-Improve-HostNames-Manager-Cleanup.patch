@@ -1,4 +1,4 @@
-From 9519e943ff5ab8d60addf325ceaaad39bf8827f2 Mon Sep 17 00:00:00 2001
+From 726ade6267f13d77c670ef938dc6d9e03cb59dbf Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Sat, 5 Jun 2021 17:50:10 +0900
 Subject: [PATCH] Improve HostNames Manager, Cleanup
@@ -96,7 +96,7 @@ index 8e4173cb..22f77162 100644
            }
          }
 diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/config/Config.java b/proxy/src/main/java/ru/elytrium/elytraproxy/config/Config.java
-index 8d8b2ff3..f2f480ac 100644
+index 8d8b2ff3..69861ff3 100644
 --- a/proxy/src/main/java/ru/elytrium/elytraproxy/config/Config.java
 +++ b/proxy/src/main/java/ru/elytrium/elytraproxy/config/Config.java
 @@ -85,11 +85,9 @@ public class Config {
@@ -109,7 +109,7 @@ index 8d8b2ff3..f2f480ac 100644
 -              key, value, instance
 -            });
 +    logger.warn("Failed to set config option: {}: {} | {} ", new Object[] {
-+                    key, value, instance
++        key, value, instance
 +    });
    }
  
