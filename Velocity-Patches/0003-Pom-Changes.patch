@@ -1,4 +1,4 @@
-From a755b35a5bade5e2edadb7e02ef54fe8d1d04b27 Mon Sep 17 00:00:00 2001
+From e1ff6c044f84ca3b58d8821c30b00e8e647ba2f0 Mon Sep 17 00:00:00 2001
 From: banklazhan222 <ogurec332@mail.ru>
 Date: Mon, 10 May 2021 03:53:07 +0900
 Subject: [PATCH] Pom Changes
@@ -75,10 +75,10 @@ index e0e3aa20..f2db8750 100644
        metrics.addCustomChart(
            new SimplePie("online_mode",
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-index 63b3b755..80bf492d 100644
+index 725e8403..15320bb0 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-@@ -169,11 +169,11 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -171,11 +171,11 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
      String implVersion;
      String implVendor;
      if (pkg != null) {
@@ -92,7 +92,7 @@ index 63b3b755..80bf492d 100644
        implVersion = "<unknown>";
        implVendor = "Velocity Contributors";
      }
-@@ -210,7 +210,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -212,7 +212,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
      cm.logChannelInformation();
  
      // Initialize commands first

@@ -1,14 +1,14 @@
-From e59f009e9525a0bec1fbcddab340d4c8a6a0458b Mon Sep 17 00:00:00 2001
+From c37958c14415676ef6d6324cf39fe1729d206cdb Mon Sep 17 00:00:00 2001
 From: banklazhan222 <ogurec332@mail.ru>
 Date: Sat, 22 May 2021 04:39:59 +0900
 Subject: [PATCH] Commands from bungee
 
 
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-index b1253ab9..deae364b 100644
+index 8c85ccac..006b32f4 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-@@ -39,10 +39,10 @@ import com.velocitypowered.api.util.bossbar.BossBar;
+@@ -40,10 +40,10 @@ import com.velocitypowered.api.util.bossbar.BossBar;
  import com.velocitypowered.api.util.bossbar.BossBarColor;
  import com.velocitypowered.api.util.bossbar.BossBarOverlay;
  import com.velocitypowered.proxy.command.VelocityCommandManager;
@@ -19,8 +19,8 @@ index b1253ab9..deae364b 100644
 -import com.velocitypowered.proxy.command.builtin.ElytraProxyCommand;
  import com.velocitypowered.proxy.config.VelocityConfiguration;
  import com.velocitypowered.proxy.connection.client.ConnectedPlayer;
- import com.velocitypowered.proxy.console.VelocityConsole;
-@@ -102,6 +102,9 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
+ import com.velocitypowered.proxy.connection.player.VelocityResourcePackInfo;
+@@ -104,6 +104,9 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
  import org.checkerframework.checker.nullness.qual.NonNull;
  import org.checkerframework.checker.nullness.qual.Nullable;
  import ru.mdxd44.elytraproxy.ElytraProxy;
@@ -30,7 +30,7 @@ index b1253ab9..deae364b 100644
  
  public class VelocityServer implements ProxyServer, ForwardingAudience {
  
-@@ -213,6 +216,9 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -215,6 +218,9 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
      // Initialize commands first
      commandManager.register("elytraproxy", new ElytraProxyCommand(this));
      commandManager.register("server", new ServerCommand(this));

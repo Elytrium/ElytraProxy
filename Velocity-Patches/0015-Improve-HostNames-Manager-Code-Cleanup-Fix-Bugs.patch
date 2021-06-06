@@ -1,4 +1,4 @@
-From dc9b7711be5dae24b98997964283a05647b88f0e Mon Sep 17 00:00:00 2001
+From 42f899da790d53e480817267f226783ac6a10b4b Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Sat, 5 Jun 2021 17:50:10 +0900
 Subject: [PATCH] Improve HostNames Manager, Code Cleanup, Fix Bugs
@@ -18,10 +18,10 @@ index 0fa93a2b..82b2812b 100644
      ext {
          // dependency versions
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-index a027c018..a204977c 100644
+index ff71cb19..11eedb03 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-@@ -222,8 +222,6 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -224,8 +224,6 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
  
      this.doStartupConfigLoad();
  
@@ -30,7 +30,7 @@ index a027c018..a204977c 100644
      for (Map.Entry<String, String> entry : configuration.getServers().entrySet()) {
        servers.register(new ServerInfo(entry.getKey(), AddressUtil.parseAddress(entry.getValue())));
      }
-@@ -252,6 +250,8 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -254,6 +252,8 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
      }
  
      Metrics.VelocityMetrics.startMetrics(this, configuration.getMetrics());
@@ -121,10 +121,10 @@ index 8e4173cb..c5b252ef 100644
            }
          }
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
-index 9c0d0b01..c824eee2 100644
+index 377ae28e..0d9a6f97 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
-@@ -167,8 +167,6 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+@@ -169,8 +169,6 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
                            .deserialize(Settings.IMP.MESSAGES.ELYTRAPROXY.COMMAND_SPY_FORMAT
                                    .replace("{cmd}", originalCommand)
                                    .replace("{player}", player.getUsername())));

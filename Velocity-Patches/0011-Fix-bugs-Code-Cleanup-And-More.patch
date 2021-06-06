@@ -1,4 +1,4 @@
-From 842bb94e8e682d14514a0b089d54731eb6dd7d3e Mon Sep 17 00:00:00 2001
+From 2c37b26f80a75af224d02289203aec13845cdbe8 Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Thu, 3 Jun 2021 02:23:42 +0900
 Subject: [PATCH] Fix bugs, Code Cleanup And More
@@ -31,10 +31,10 @@ index e8832066..02972e88 100644
  
  dependencies {
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-index f274f34f..a027c018 100644
+index 0c22d2b8..ff71cb19 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-@@ -207,7 +207,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -209,7 +209,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
    @EnsuresNonNull({"serverKeyPair", "servers", "pluginManager", "eventManager", "scheduler",
        "console", "cm", "configuration"})
    void start() {

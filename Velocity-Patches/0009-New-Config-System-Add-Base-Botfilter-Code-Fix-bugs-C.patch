@@ -1,4 +1,4 @@
-From f1883d91eb3ffe97ab98d23c45729d02a4243e92 Mon Sep 17 00:00:00 2001
+From f7a557d72b9de6f10c46e473deb91defc5ca4124 Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Sat, 29 May 2021 02:33:34 +0900
 Subject: [PATCH] New Config System, Add Base Botfilter Code, Fix bugs, Code
@@ -63,10 +63,10 @@ index 00000000..bd06f8c7
 +THE SOFTWARE.
 \ No newline at end of file
 diff --git a/api/src/main/java/com/velocitypowered/api/network/ProtocolVersion.java b/api/src/main/java/com/velocitypowered/api/network/ProtocolVersion.java
-index 8b3632f9..9b2eff4c 100644
+index 20662ab6..87dce6ff 100644
 --- a/api/src/main/java/com/velocitypowered/api/network/ProtocolVersion.java
 +++ b/api/src/main/java/com/velocitypowered/api/network/ProtocolVersion.java
-@@ -229,6 +229,29 @@ public enum ProtocolVersion {
+@@ -230,6 +230,29 @@ public enum ProtocolVersion {
      return this == LEGACY;
    }
  
@@ -230,10 +230,10 @@ index aaef1279..4b7745c7 100644
  
  test {
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-index a5697a1c..13537e8e 100644
+index 9f6f999c..9bc7fb68 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-@@ -90,6 +90,8 @@ import java.util.concurrent.TimeoutException;
+@@ -92,6 +92,8 @@ import java.util.concurrent.TimeoutException;
  import java.util.concurrent.atomic.AtomicBoolean;
  import java.util.function.IntFunction;
  import java.util.stream.Collectors;
@@ -242,7 +242,7 @@ index a5697a1c..13537e8e 100644
  import net.kyori.adventure.audience.Audience;
  import net.kyori.adventure.audience.ForwardingAudience;
  import net.kyori.adventure.text.Component;
-@@ -101,6 +103,7 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
+@@ -103,6 +105,7 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
  import org.checkerframework.checker.nullness.qual.NonNull;
  import org.checkerframework.checker.nullness.qual.Nullable;
  import ru.elytrium.elytraproxy.ElytraProxy;
@@ -250,7 +250,7 @@ index a5697a1c..13537e8e 100644
  
  public class VelocityServer implements ProxyServer, ForwardingAudience {
  
-@@ -133,13 +136,14 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -135,13 +138,14 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
    private final VelocityPluginManager pluginManager;
    private final AdventureBossBarManager bossBarManager;
  
@@ -266,7 +266,7 @@ index a5697a1c..13537e8e 100644
  
    VelocityServer(final ProxyOptions options) {
      pluginManager = new VelocityPluginManager(this);
-@@ -217,11 +221,14 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -219,11 +223,14 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
  
      this.doStartupConfigLoad();
  
@@ -282,7 +282,7 @@ index a5697a1c..13537e8e 100644
      loadPlugins();
  
      // Go ahead and fire the proxy initialization event. We block since plugins should have a chance
-@@ -251,10 +258,6 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -253,10 +260,6 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
      try {
        Path configPath = Paths.get("velocity.toml");
        configuration = VelocityConfiguration.read(configPath);
@@ -293,7 +293,7 @@ index a5697a1c..13537e8e 100644
  
        if (!configuration.validate()) {
          logger.error("Your configuration is invalid. Velocity will not start up until the errors "
-@@ -263,7 +266,8 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -265,7 +268,8 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
          System.exit(1);
        }
      } catch (Exception e) {
@@ -303,7 +303,7 @@ index a5697a1c..13537e8e 100644
        LogManager.shutdown();
        System.exit(1);
      }
-@@ -399,7 +403,8 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -401,7 +405,8 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
            newConfiguration.getQueryPort());
      }
  
@@ -313,7 +313,7 @@ index a5697a1c..13537e8e 100644
      this.configuration = newConfiguration;
      eventManager.fireAndForget(new ProxyReloadEvent());
      return true;
-@@ -526,7 +531,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -528,7 +533,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
      return !(connectionsByName.containsKey(lowerName)
          || connectionsByUuid.containsKey(connection.getUniqueId()));
    }
@@ -322,7 +322,7 @@ index a5697a1c..13537e8e 100644
    /**
     * Attempts to register the {@code connection} with the proxy.
     * @param connection the connection to register
-@@ -682,6 +687,10 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -684,6 +689,10 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
      return bossBarManager;
    }
  
@@ -392,18 +392,18 @@ index e37343e5..506c6bd8 100644
            // 1.7.x versions have a race condition with switching protocol states, so just explicitly
            // close the connection after a short while.
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftSessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftSessionHandler.java
-index 3dcb3807..8bf6d489 100644
+index e72f42d6..2c6d4375 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftSessionHandler.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftSessionHandler.java
-@@ -48,6 +48,7 @@ import com.velocitypowered.proxy.protocol.packet.TabCompleteRequest;
- import com.velocitypowered.proxy.protocol.packet.TabCompleteResponse;
- import com.velocitypowered.proxy.protocol.packet.TitlePacket;
+@@ -53,6 +53,7 @@ import com.velocitypowered.proxy.protocol.packet.title.TitleSubtitlePacket;
+ import com.velocitypowered.proxy.protocol.packet.title.TitleTextPacket;
+ import com.velocitypowered.proxy.protocol.packet.title.TitleTimesPacket;
  import io.netty.buffer.ByteBuf;
 +import ru.elytrium.elytraproxy.botfilter.protocol.packet.PlayerPositionAndLook;
  
  public interface MinecraftSessionHandler {
  
-@@ -206,4 +207,10 @@ public interface MinecraftSessionHandler {
+@@ -231,4 +232,10 @@ public interface MinecraftSessionHandler {
    default boolean handle(ResourcePackResponse packet) {
      return false;
    }
@@ -737,10 +737,10 @@ index 7115bb8b..7b2184d9 100644
    default int expectedMaxLength(ByteBuf buf, ProtocolUtils.Direction direction,
        ProtocolVersion version) {
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/protocol/StateRegistry.java b/proxy/src/main/java/com/velocitypowered/proxy/protocol/StateRegistry.java
-index 87bc5d09..f8905b72 100644
+index 8e787539..ffbb5d45 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/protocol/StateRegistry.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/protocol/StateRegistry.java
-@@ -265,7 +265,7 @@ public enum StateRegistry {
+@@ -296,7 +296,7 @@ public enum StateRegistry {
        clientbound.register(LoginPluginMessage.class, LoginPluginMessage::new,
            map(0x04, MINECRAFT_1_13, false));
      }
@@ -749,7 +749,7 @@ index 87bc5d09..f8905b72 100644
  
    public static final int STATUS_ID = 1;
    public static final int LOGIN_ID = 2;
-@@ -291,7 +291,8 @@ public enum StateRegistry {
+@@ -322,7 +322,8 @@ public enum StateRegistry {
        this.versions = Collections.unmodifiableMap(mutableVersions);
      }
  
@@ -759,7 +759,7 @@ index 87bc5d09..f8905b72 100644
        ProtocolRegistry registry = versions.get(version);
        if (registry == null) {
          if (fallback) {
-@@ -302,7 +303,8 @@ public enum StateRegistry {
+@@ -333,7 +334,8 @@ public enum StateRegistry {
        return registry;
      }
  
@@ -769,7 +769,7 @@ index 87bc5d09..f8905b72 100644
          PacketMapping... mappings) {
        if (mappings.length == 0) {
          throw new IllegalArgumentException("At least one mapping must be provided.");
-@@ -392,6 +394,23 @@ public enum StateRegistry {
+@@ -435,6 +437,23 @@ public enum StateRegistry {
          }
          return id;
        }
@@ -793,14 +793,14 @@ index 87bc5d09..f8905b72 100644
      }
    }
  
-@@ -444,7 +463,8 @@ public enum StateRegistry {
+@@ -490,7 +509,8 @@ public enum StateRegistry {
     * @param encodeOnly When true packet decoding will be disabled
     * @return PacketMapping with the provided arguments
     */
 -  private static PacketMapping map(int id, ProtocolVersion version, boolean encodeOnly) {
 +  //BotFilter public
 +  public static PacketMapping map(int id, ProtocolVersion version, boolean encodeOnly) {
-     return new PacketMapping(id, version, encodeOnly);
+     return map(id, version, null, encodeOnly);
    }
  
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/util/ratelimit/GuavaCacheRatelimiter.java b/proxy/src/main/java/com/velocitypowered/proxy/util/ratelimit/GuavaCacheRatelimiter.java

@@ -1,4 +1,4 @@
-From c1c21356305403045111b9ae7d630a7594283db3 Mon Sep 17 00:00:00 2001
+From 68ba95d75c8ba2ff66627783a4436b0f5c507972 Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Mon, 7 Jun 2021 04:45:40 +0900
 Subject: [PATCH] Move Messages Section To ElytraProxy Config
@@ -463,10 +463,10 @@ index 19643031..227ea644 100644
    private final VelocityServer server;
    private final VelocityServerConnection serverConn;
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
-index c824eee2..33a2a17b 100644
+index 0d9a6f97..057ce0cc 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
-@@ -68,8 +68,6 @@ import java.util.Queue;
+@@ -69,8 +69,6 @@ import java.util.Queue;
  import java.util.UUID;
  import java.util.concurrent.CompletableFuture;
  import net.kyori.adventure.identity.Identity;
@@ -475,7 +475,7 @@ index c824eee2..33a2a17b 100644
  import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
  import org.apache.logging.log4j.LogManager;
  import org.apache.logging.log4j.Logger;
-@@ -160,26 +158,39 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+@@ -162,26 +160,39 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
                event.getResult()))
            .whenComplete((ignored, throwable) -> {
              if (Settings.IMP.MAIN_SETTINGS.ENABLE_COMMAND_SPY_IN_CHAT) {
@@ -525,7 +525,7 @@ index c824eee2..33a2a17b 100644
              return null;
            });
      } else {
-@@ -339,7 +350,12 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+@@ -340,7 +351,12 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
  
    @Override
    public void exception(Throwable throwable) {
@@ -540,10 +540,10 @@ index c824eee2..33a2a17b 100644
  
    @Override
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
-index fe49f71e..f5982bcf 100644
+index 26ba80c2..35fe777f 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
-@@ -50,7 +50,6 @@ import com.velocitypowered.api.util.title.TextTitle;
+@@ -52,7 +52,6 @@ import com.velocitypowered.api.util.title.TextTitle;
  import com.velocitypowered.api.util.title.Title;
  import com.velocitypowered.api.util.title.Titles;
  import com.velocitypowered.proxy.VelocityServer;
@@ -551,7 +551,7 @@ index fe49f71e..f5982bcf 100644
  import com.velocitypowered.proxy.connection.MinecraftConnection;
  import com.velocitypowered.proxy.connection.MinecraftConnectionAssociation;
  import com.velocitypowered.proxy.connection.backend.VelocityServerConnection;
-@@ -91,7 +90,6 @@ import net.kyori.adventure.bossbar.BossBar;
+@@ -96,7 +95,6 @@ import net.kyori.adventure.bossbar.BossBar;
  import net.kyori.adventure.identity.Identity;
  import net.kyori.adventure.text.Component;
  import net.kyori.adventure.text.TranslatableComponent;
@@ -559,7 +559,7 @@ index fe49f71e..f5982bcf 100644
  import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
  import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
  import net.kyori.adventure.text.serializer.plain.PlainComponentSerializer;
-@@ -100,6 +98,7 @@ import org.apache.logging.log4j.Logger;
+@@ -105,6 +103,7 @@ import org.apache.logging.log4j.Logger;
  import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
  import org.checkerframework.checker.nullness.qual.NonNull;
  import org.checkerframework.checker.nullness.qual.Nullable;
@@ -567,7 +567,7 @@ index fe49f71e..f5982bcf 100644
  
  public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
  
-@@ -565,18 +564,26 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
+@@ -581,18 +580,26 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
          wrapped = cause;
        }
      }
@@ -601,7 +601,7 @@ index fe49f71e..f5982bcf 100644
    }
  
    /**
-@@ -592,26 +599,32 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
+@@ -608,26 +615,32 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
        return;
      }
  
@@ -646,7 +646,7 @@ index fe49f71e..f5982bcf 100644
      }
    }
  
-@@ -695,8 +708,16 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
+@@ -711,8 +724,16 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
                            getProtocolVersion()), ((Impl) status).isSafe());
                        break;
                      case SUCCESS:
@@ -887,6 +887,20 @@ index 6b465193..fb4dd818 100644
        }
      } catch (Exception e) {
        logger.error("An error occurred while running this command.", e);
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/protocol/StateRegistry.java b/proxy/src/main/java/com/velocitypowered/proxy/protocol/StateRegistry.java
+index 5fb51bbf..65b74802 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/protocol/StateRegistry.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/protocol/StateRegistry.java
+@@ -524,7 +524,8 @@ public enum StateRegistry {
+    * @param lastValidProtocolVersion Last version this Mapping is valid at
+    * @return PacketMapping with the provided arguments
+    */
+-  private static PacketMapping map(int id, ProtocolVersion version,
++  //BotFilter public
++  public static PacketMapping map(int id, ProtocolVersion version,
+           ProtocolVersion lastValidProtocolVersion, boolean encodeOnly) {
+     return new PacketMapping(id, version, lastValidProtocolVersion, encodeOnly);
+   }
 diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/ElytraProxy.java b/proxy/src/main/java/ru/elytrium/elytraproxy/ElytraProxy.java
 index 337f03d8..b297f5d5 100644
 --- a/proxy/src/main/java/ru/elytrium/elytraproxy/ElytraProxy.java

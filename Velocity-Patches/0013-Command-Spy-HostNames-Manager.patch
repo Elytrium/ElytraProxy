@@ -1,4 +1,4 @@
-From d897ae4d23716c7327748140a812880579a5b8bb Mon Sep 17 00:00:00 2001
+From 800435a5dac5fd0ecd068f20aba521647f9a7ed1 Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Sat, 5 Jun 2021 04:10:26 +0900
 Subject: [PATCH] Command Spy, HostNames Manager
@@ -128,22 +128,23 @@ index 506c6bd8..8e4173cb 100644
              sessionHandler.exception(cause);
            }
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
-index 8ac39750..9c0d0b01 100644
+index 7c872961..377ae28e 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
-@@ -70,9 +70,11 @@ import java.util.concurrent.CompletableFuture;
+@@ -71,10 +71,12 @@ import java.util.concurrent.CompletableFuture;
  import net.kyori.adventure.identity.Identity;
  import net.kyori.adventure.text.Component;
  import net.kyori.adventure.text.format.NamedTextColor;
 +import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
  import org.apache.logging.log4j.LogManager;
  import org.apache.logging.log4j.Logger;
+ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
  import org.checkerframework.checker.nullness.qual.Nullable;
 +import ru.elytrium.elytraproxy.config.Settings;
  
  /**
   * Handles communication with the connected Minecraft client. This is effectively the primary nerve
-@@ -157,6 +159,19 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+@@ -159,6 +161,19 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
            .thenComposeAsync(event -> processCommandExecuteResult(originalCommand,
                event.getResult()))
            .whenComplete((ignored, throwable) -> {

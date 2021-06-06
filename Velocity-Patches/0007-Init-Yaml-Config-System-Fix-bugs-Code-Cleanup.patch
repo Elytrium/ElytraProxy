@@ -1,4 +1,4 @@
-From e8ce042f010436f9f1a9b9ecb72db74cdf764e5d Mon Sep 17 00:00:00 2001
+From e3ba261d8451262a3efb58f62ad6cf4f80a7ef9e Mon Sep 17 00:00:00 2001
 From: Petr Ilin <hevav@hevav.dev>
 Date: Sat, 22 May 2021 14:37:12 +0900
 Subject: [PATCH] Init Yaml Config System, Fix bugs, Code Cleanup
@@ -68,10 +68,10 @@ index f2db8750..4e2c25cf 100644
  
          return map;
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-index deae364b..a5697a1c 100644
+index 006b32f4..9f6f999c 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-@@ -39,7 +39,6 @@ import com.velocitypowered.api.util.bossbar.BossBar;
+@@ -40,7 +40,6 @@ import com.velocitypowered.api.util.bossbar.BossBar;
  import com.velocitypowered.api.util.bossbar.BossBarColor;
  import com.velocitypowered.api.util.bossbar.BossBarOverlay;
  import com.velocitypowered.proxy.command.VelocityCommandManager;
@@ -79,7 +79,7 @@ index deae364b..a5697a1c 100644
  import com.velocitypowered.proxy.command.builtin.GlistCommand;
  import com.velocitypowered.proxy.command.builtin.ServerCommand;
  import com.velocitypowered.proxy.command.builtin.ShutdownCommand;
-@@ -101,10 +100,7 @@ import org.checkerframework.checker.nullness.qual.EnsuresNonNull;
+@@ -103,10 +102,7 @@ import org.checkerframework.checker.nullness.qual.EnsuresNonNull;
  import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
  import org.checkerframework.checker.nullness.qual.NonNull;
  import org.checkerframework.checker.nullness.qual.Nullable;
@@ -91,7 +91,7 @@ index deae364b..a5697a1c 100644
  
  public class VelocityServer implements ProxyServer, ForwardingAudience {
  
-@@ -214,11 +210,8 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -216,11 +212,8 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
      cm.logChannelInformation();
  
      // Initialize commands first
@@ -104,7 +104,7 @@ index deae364b..a5697a1c 100644
      commandManager.register("shutdown", new ShutdownCommand(this),"end");
      new GlistCommand(this).register();
  
-@@ -258,8 +251,10 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -260,8 +253,10 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
      try {
        Path configPath = Paths.get("velocity.toml");
        configuration = VelocityConfiguration.read(configPath);

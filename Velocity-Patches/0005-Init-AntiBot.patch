@@ -1,4 +1,4 @@
-From 752f0ce60550ea62c49aaadfe2fea938959aeb44 Mon Sep 17 00:00:00 2001
+From 56c56bef114322aebe9fad002e8462cc5f70771b Mon Sep 17 00:00:00 2001
 From: banklazhan222 <ogurec332@mail.ru>
 Date: Tue, 11 May 2021 17:51:21 +0900
 Subject: [PATCH] Init AntiBot
@@ -757,10 +757,10 @@ index 8493df39..9f87b2ef 100644
          attributes 'Add-Opens': 'java.base/java.lang'
      }
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-index 80bf492d..b1253ab9 100644
+index 15320bb0..8c85ccac 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-@@ -42,7 +42,7 @@ import com.velocitypowered.proxy.command.VelocityCommandManager;
+@@ -43,7 +43,7 @@ import com.velocitypowered.proxy.command.VelocityCommandManager;
  import com.velocitypowered.proxy.command.builtin.GlistCommand;
  import com.velocitypowered.proxy.command.builtin.ServerCommand;
  import com.velocitypowered.proxy.command.builtin.ShutdownCommand;
@@ -768,8 +768,8 @@ index 80bf492d..b1253ab9 100644
 +import com.velocitypowered.proxy.command.builtin.ElytraProxyCommand;
  import com.velocitypowered.proxy.config.VelocityConfiguration;
  import com.velocitypowered.proxy.connection.client.ConnectedPlayer;
- import com.velocitypowered.proxy.console.VelocityConsole;
-@@ -101,6 +101,7 @@ import org.checkerframework.checker.nullness.qual.EnsuresNonNull;
+ import com.velocitypowered.proxy.connection.player.VelocityResourcePackInfo;
+@@ -103,6 +103,7 @@ import org.checkerframework.checker.nullness.qual.EnsuresNonNull;
  import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
  import org.checkerframework.checker.nullness.qual.NonNull;
  import org.checkerframework.checker.nullness.qual.Nullable;
@@ -777,7 +777,7 @@ index 80bf492d..b1253ab9 100644
  
  public class VelocityServer implements ProxyServer, ForwardingAudience {
  
-@@ -210,7 +211,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -212,7 +213,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
      cm.logChannelInformation();
  
      // Initialize commands first
@@ -786,7 +786,7 @@ index 80bf492d..b1253ab9 100644
      commandManager.register("server", new ServerCommand(this));
      commandManager.register("shutdown", new ShutdownCommand(this),"end");
      new GlistCommand(this).register();
-@@ -251,6 +252,8 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -253,6 +254,8 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
      try {
        Path configPath = Paths.get("velocity.toml");
        configuration = VelocityConfiguration.read(configPath);

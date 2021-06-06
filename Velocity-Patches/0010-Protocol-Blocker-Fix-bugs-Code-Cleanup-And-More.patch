@@ -1,4 +1,4 @@
-From 9d740e070daed1770c1acc6c041069efd3f730ed Mon Sep 17 00:00:00 2001
+From abbfbf736cdeb63ec97a1c56a799ccc6c921fff3 Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Wed, 2 Jun 2021 23:35:32 +0900
 Subject: [PATCH] Protocol Blocker, Fix bugs, Code Cleanup And More
@@ -128,10 +128,10 @@ index 4b7745c7..e8832066 100644
  
  test {
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-index 13537e8e..f274f34f 100644
+index 9bc7fb68..0c22d2b8 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-@@ -136,7 +136,8 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -138,7 +138,8 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
    private final VelocityPluginManager pluginManager;
    private final AdventureBossBarManager bossBarManager;
  
@@ -224,10 +224,10 @@ index 50ec438a..67f890ea 100644
    }
  
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/protocol/StateRegistry.java b/proxy/src/main/java/com/velocitypowered/proxy/protocol/StateRegistry.java
-index f8905b72..ad210663 100644
+index ffbb5d45..5fb51bbf 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/protocol/StateRegistry.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/protocol/StateRegistry.java
-@@ -394,6 +394,7 @@ public enum StateRegistry {
+@@ -437,6 +437,7 @@ public enum StateRegistry {
          }
          return id;
        }
