@@ -1,4 +1,4 @@
-From b4260b4d3e935e2c604255accce2759942baf123 Mon Sep 17 00:00:00 2001
+From ac1446427f91e449e5445508ab8c4be3100f5ce1 Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Mon, 7 Jun 2021 04:45:40 +0900
 Subject: [PATCH] Move Messages Section To ElytraProxy Config
@@ -99,7 +99,7 @@ index 00000000..deeb16fa
 +  }
 +}
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/GlistCommand.java b/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/GlistCommand.java
-index fe20ff6b..dff992c1 100644
+index fe20ff6b..f192f6fc 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/GlistCommand.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/GlistCommand.java
 @@ -37,6 +37,8 @@ import net.kyori.adventure.identity.Identity;
@@ -134,7 +134,7 @@ index fe20ff6b..dff992c1 100644
        if (!registeredServer.isPresent()) {
          source.sendMessage(Identity.nil(),
 -            Component.text("Server " + serverName + " doesn't exist.", NamedTextColor.RED));
-+                CommandMessages.SERVER_DOES_NOT_EXIST(serverName));
++            CommandMessages.SERVER_DOES_NOT_EXIST(serverName));
          return -1;
        }
        sendServerPlayers(source, registeredServer.get(), false);
@@ -1136,7 +1136,7 @@ index 8dc457ad..1454ced2 100644
      }
    }
 diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/SendCommand.java b/proxy/src/main/java/ru/elytrium/elytraproxy/commands/SendCommand.java
-index b5de161a..30067afd 100644
+index b5de161a..09e6b690 100644
 --- a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/SendCommand.java
 +++ b/proxy/src/main/java/ru/elytrium/elytraproxy/commands/SendCommand.java
 @@ -24,6 +24,7 @@ import com.velocitypowered.api.proxy.ProxyServer;
@@ -1165,7 +1165,7 @@ index b5de161a..30067afd 100644
 -                    + " Используйте: §6/send <server|player|all|current> <target>"));
 +      source.sendMessage(
 +              LegacyComponentSerializer
-+                      .legacySection()
++                      .legacyAmpersand()
 +                      .deserialize((
 +                              prefix
 +                              + Settings.IMP.MESSAGES.ELYTRAPROXY.SEND_NOT_ENOUGH_ARGUMENTS)
@@ -1191,7 +1191,7 @@ index b5de161a..30067afd 100644
 +            : Settings.IMP.MESSAGES.ELYTRAPROXY.IF_CONSOLE;
 +    Component summoned =
 +            LegacyComponentSerializer
-+                    .legacySection()
++                    .legacyAmpersand()
 +                    .deserialize((
 +                            prefix
 +                            + Settings.IMP.MESSAGES.ELYTRAPROXY.SEND_YOU_GOT_SUMMONED)
@@ -1221,7 +1221,7 @@ index b5de161a..30067afd 100644
 -                      + "§fДанный игрок §cне онлайн§f."));
 +          source.sendMessage(
 +                  LegacyComponentSerializer
-+                          .legacySection()
++                          .legacyAmpersand()
 +                          .deserialize((
 +                                  prefix
 +                                  + Settings.IMP.MESSAGES.ELYTRAPROXY.USER_NOT_ONLINE)
@@ -1231,7 +1231,7 @@ index b5de161a..30067afd 100644
          break;
      }
 diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/config/Settings.java b/proxy/src/main/java/ru/elytrium/elytraproxy/config/Settings.java
-index a5a8b6e6..4b8a7a16 100644
+index a5a8b6e6..3277b065 100644
 --- a/proxy/src/main/java/ru/elytrium/elytraproxy/config/Settings.java
 +++ b/proxy/src/main/java/ru/elytrium/elytraproxy/config/Settings.java
 @@ -27,14 +27,98 @@ public class Settings extends Config {
@@ -1318,7 +1318,7 @@ index a5a8b6e6..4b8a7a16 100644
 +        public String GLIST_VIEW_ALL = "To view all players on servers, use &6/glist all&f.";
 +        public String GLIST_PLAYER_SINGULAR = "&6{0} &fplayer is currently connected to the proxy.";
 +        public String GLIST_PLAYER_PLURAL = "&6{0} &fplayers are currently connected to the proxy.";
-+        public String GLIST_FORMAT_VIEW_ALL = "[&6{0}&f] (&6{1}&f): ";
++        public String GLIST_FORMAT_VIEW_ALL = "&f[&6{0}&f] (&6{1}&f): ";
 +        public String RELOAD_SUCCESS = "Velocity configuration successfully reloaded.";
 +        public String RELOAD_FAILURE = "&cUnable to reload your Velocity configuration. Check the console for more details.";
 +      }
