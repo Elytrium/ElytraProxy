@@ -1,4 +1,4 @@
-From 7c41e9ad4dd963ff86c7609080800d61c6e64fe7 Mon Sep 17 00:00:00 2001
+From b4260b4d3e935e2c604255accce2759942baf123 Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Mon, 7 Jun 2021 04:45:40 +0900
 Subject: [PATCH] Move Messages Section To ElytraProxy Config
@@ -99,7 +99,7 @@ index 00000000..deeb16fa
 +  }
 +}
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/GlistCommand.java b/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/GlistCommand.java
-index fe20ff6b..7f186a52 100644
+index fe20ff6b..dff992c1 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/GlistCommand.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/GlistCommand.java
 @@ -37,6 +37,8 @@ import net.kyori.adventure.identity.Identity;
@@ -167,7 +167,7 @@ index fe20ff6b..7f186a52 100644
    }
  
    private void sendServerPlayers(CommandSource target, RegisteredServer server, boolean fromAll) {
-@@ -119,11 +134,14 @@ public class GlistCommand {
+@@ -119,11 +134,13 @@ public class GlistCommand {
        return;
      }
  
@@ -179,8 +179,7 @@ index fe20ff6b..7f186a52 100644
 +    TextComponent.Builder builder = Component.text().append(LegacyComponentSerializer
 +                            .legacyAmpersand()
 +                            .deserialize((
-+                                    Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX
-+                                    + Settings.IMP.MESSAGES.VELOCITY.COMMAND.GLIST_FORMAT_VIEW_ALL)
++                                    Settings.IMP.MESSAGES.VELOCITY.COMMAND.GLIST_FORMAT_VIEW_ALL)
 +                                            .replace("%nl%", "\n")
 +                                            .replace("{0}", server.getServerInfo().getName())
 +                                            .replace("{1}", Integer.toString(onServer.size()))))
@@ -485,7 +484,7 @@ index 19643031..227ea644 100644
    private final VelocityServer server;
    private final VelocityServerConnection serverConn;
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
-index 0d9a6f97..77036318 100644
+index 0d9a6f97..57e3ab31 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
 @@ -69,8 +69,6 @@ import java.util.Queue;
@@ -515,8 +514,8 @@ index 0d9a6f97..77036318 100644
 +                            .legacyAmpersand()
 +                            .deserialize(
 +                                    Settings.IMP.MESSAGES.ELYTRAPROXY.COMMAND_SPY_FORMAT
-+                                            .replace("{cmd}", "/" + originalCommand)
-+                                            .replace("{player}", player.getUsername())
++                                            .replace("{0}", player.getUsername())
++                                            .replace("{1}", "/" + originalCommand)
 +                                            .replace("%nl%", "\n")));
 +                  }
                  }
@@ -527,8 +526,8 @@ index 0d9a6f97..77036318 100644
 +              logger.info(
 +                      Settings.IMP.MESSAGES.ELYTRAPROXY.CONSOLE_LOG_COMMAND_EXECUTIONS_FORMAT
 +                              .replace("&", "§")
-+                              .replace("{cmd}", "/" + originalCommand)
-+                              .replace("{player}", String.valueOf(player))
++                              .replace("{0}", String.valueOf(player))
++                              .replace("{1}", "/" + originalCommand)
 +                              .replace("%nl%", "\n"));
              }
            })
@@ -1232,7 +1231,7 @@ index b5de161a..30067afd 100644
          break;
      }
 diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/config/Settings.java b/proxy/src/main/java/ru/elytrium/elytraproxy/config/Settings.java
-index a5a8b6e6..700253b7 100644
+index a5a8b6e6..4b8a7a16 100644
 --- a/proxy/src/main/java/ru/elytrium/elytraproxy/config/Settings.java
 +++ b/proxy/src/main/java/ru/elytrium/elytraproxy/config/Settings.java
 @@ -27,14 +27,98 @@ public class Settings extends Config {
@@ -1252,7 +1251,7 @@ index a5a8b6e6..700253b7 100644
 +    @Create
 +    public MESSAGES.VELOCITY VELOCITY;
 +
-+    @Comment("command-spy-format, log-command-executions-format, protocol-blocked and nick-blocked doesn't have prefix.")
++    @Comment("command-spy-format, log-command-executions-format, protocol-blocked, glist-format-view-all and nick-blocked doesn't have prefix.")
 +    public static class ELYTRAPROXY {
 +      public String PREFIX = "&5&l[ElytraProxy]&f ";
 +      public String ALERT_PREFIX = "&8[&4Alert&8]&f ";
@@ -1264,8 +1263,8 @@ index a5a8b6e6..700253b7 100644
 +      public String USER_NOT_ONLINE = "&6{0} &fis not online.";
 +      public String SEND_YOU_GOT_SUMMONED = "Summoned to &6{0} &fby &6{1}";
 +      public String SEND_NOT_ENOUGH_ARGUMENTS = "Not enough arguments, usage: &6/send <server|player|all|current> <target>";
-+      public String COMMAND_SPY_FORMAT = "&7 — Player {player} executed command {cmd}";
-+      public String CONSOLE_LOG_COMMAND_EXECUTIONS_FORMAT = "{player} -> executed command {cmd}";
++      public String COMMAND_SPY_FORMAT = "&7 — Player {0} executed command {1}";
++      public String CONSOLE_LOG_COMMAND_EXECUTIONS_FORMAT = "{0} -> executed command {1}";
 +      public String PROTOCOL_BLOCKED = "&c1.7 not supported";
 +      public String NICK_BLOCKED = "&cYour nickname contains forbidden phrases.";
 +      public String RELOAD_SUCCESS = "ElytraProxy configuration successfully reloaded.";
