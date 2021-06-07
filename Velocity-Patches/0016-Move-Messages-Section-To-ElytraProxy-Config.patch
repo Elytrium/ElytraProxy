@@ -1,4 +1,4 @@
-From 68ba95d75c8ba2ff66627783a4436b0f5c507972 Mon Sep 17 00:00:00 2001
+From f27278c5bda72b17078ed2c9353114c33630300e Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Mon, 7 Jun 2021 04:45:40 +0900
 Subject: [PATCH] Move Messages Section To ElytraProxy Config
@@ -99,7 +99,7 @@ index 00000000..deeb16fa
 +  }
 +}
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/GlistCommand.java b/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/GlistCommand.java
-index fe20ff6b..ac6653b2 100644
+index fe20ff6b..816cd7e4 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/GlistCommand.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/GlistCommand.java
 @@ -37,6 +37,8 @@ import net.kyori.adventure.identity.Identity;
@@ -138,7 +138,7 @@ index fe20ff6b..ac6653b2 100644
          return -1;
        }
        sendServerPlayers(source, registeredServer.get(), false);
-@@ -106,11 +109,21 @@ public class GlistCommand {
+@@ -106,11 +109,22 @@ public class GlistCommand {
    }
  
    private void sendTotalProxyCount(CommandSource target) {
@@ -154,6 +154,7 @@ index fe20ff6b..ac6653b2 100644
 +                    .deserialize((
 +                            Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX
 +                            + Settings.IMP.MESSAGES.VELOCITY.COMMAND.GLIST_PLAYER_SINGULAR)
++                                    .replace("%nl%", "\n")
 +                                    .replace("{0}", Integer.toString(online)))
 +            : LegacyComponentSerializer
 +                    .legacyAmpersand()
@@ -165,6 +166,26 @@ index fe20ff6b..ac6653b2 100644
    }
  
    private void sendServerPlayers(CommandSource target, RegisteredServer server, boolean fromAll) {
+@@ -119,11 +133,14 @@ public class GlistCommand {
+       return;
+     }
+ 
+-    TextComponent.Builder builder = Component.text()
+-        .append(Component.text("[" + server.getServerInfo().getName() + "] ",
+-            NamedTextColor.DARK_AQUA))
+-        .append(Component.text("(" + onServer.size() + ")", NamedTextColor.GRAY))
+-        .append(Component.text(": "))
++    TextComponent.Builder builder = Component.text().append(LegacyComponentSerializer
++                            .legacyAmpersand()
++                            .deserialize((
++                                    Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX
++                                    + Settings.IMP.MESSAGES.VELOCITY.COMMAND.GLIST_FORMAT_VIEW_ALL)
++                                            .replace("%nl%", "\n")
++                                            .replace("{0}", server.getServerInfo().getName())
++                                            .replace("{1}", Integer.toString(onServer.size()))))
+         .resetStyle();
+ 
+     for (int i = 0; i < onServer.size(); i++) {
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/ServerCommand.java b/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/ServerCommand.java
 index c54da99d..62cce6f9 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/ServerCommand.java
@@ -961,7 +982,7 @@ index 337f03d8..b297f5d5 100644
        }
      } catch (IOException ex) {
 diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/AlertCommand.java b/proxy/src/main/java/ru/elytrium/elytraproxy/commands/AlertCommand.java
-index 6b4b2be1..7d5efd09 100644
+index 6b4b2be1..e5cd0435 100644
 --- a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/AlertCommand.java
 +++ b/proxy/src/main/java/ru/elytrium/elytraproxy/commands/AlertCommand.java
 @@ -47,19 +47,25 @@ public class AlertCommand implements SimpleCommand {
@@ -972,7 +993,7 @@ index 6b4b2be1..7d5efd09 100644
 -      );
 +                      .deserialize((
 +                              prefix
-+                              + Settings.IMP.MESSAGES.ELYTRAPROXY.MESSAGE_NEEDED)
++                              + Settings.IMP.MESSAGES.ELYTRAPROXY.ALERT_MESSAGE_NEEDED)
 +                                      .replace("%nl%", "\n")));
      } else {
        String message = String.join(" ", args);
@@ -991,7 +1012,7 @@ index 6b4b2be1..7d5efd09 100644
 -        );
 +                        .deserialize((
 +                                prefix
-+                                + Settings.IMP.MESSAGES.ELYTRAPROXY.SERVER_EMPTY)
++                                + Settings.IMP.MESSAGES.ELYTRAPROXY.ALERT_SERVER_EMPTY)
 +                                        .replace("%nl%", "\n")));
        } else if (server.getAllPlayers().size() >= 1) {
          if (!(source instanceof Player)) {
@@ -1053,11 +1074,167 @@ index 0d80ac09..96a83f22 100644
        }
  
        elytraProxy.reload(source);
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/FindCommand.java b/proxy/src/main/java/ru/elytrium/elytraproxy/commands/FindCommand.java
+index 8dc457ad..1454ced2 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/FindCommand.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/commands/FindCommand.java
+@@ -28,6 +28,7 @@ import java.util.Optional;
+ import java.util.stream.Collectors;
+ 
+ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
++import ru.elytrium.elytraproxy.config.Settings;
+ 
+ public class FindCommand implements SimpleCommand {
+ 
+@@ -63,29 +64,36 @@ public class FindCommand implements SimpleCommand {
+     final String[] args = invocation.arguments();
+ 
+     if (args.length == 0) {
+-      source.sendMessage(LegacyComponentSerializer.legacySection().deserialize(
+-              prefix
+-                      + " §fУкажите ник игрока."));
++      source.sendMessage(
++              LegacyComponentSerializer
++                      .legacyAmpersand()
++                      .deserialize((
++                              prefix
++                              + Settings.IMP.MESSAGES.ELYTRAPROXY.FIND_USERNAME_NEEDED)
++                                      .replace("%nl%", "\n")));
+     } else {
+       Optional<Player> player = server.getPlayer(args[0]);
+       if (player.isPresent()) {
+         Player pl = player.get();
+         Optional<ServerConnection> server = pl.getCurrentServer();
+-        server.ifPresent(srv ->
+-                source.sendMessage(
++        server.ifPresent(srv -> source.sendMessage(
+                         LegacyComponentSerializer
+                                 .legacyAmpersand()
+-                                .deserialize(prefix
+-                                        + "§fИгрок §6" + pl.getUsername()
+-                                        + " §fсейчас на сервере §6" + srv.getServerInfo().getName())
+-                )
+-        );
++                                .deserialize((
++                                        prefix
++                                        + Settings.IMP.MESSAGES.ELYTRAPROXY.FIND_USER_ONLINE_AT)
++                                                .replace("%nl%", "\n")
++                                                .replace("{0}", pl.getUsername())
++                                                .replace("{1}", srv.getServerInfo().getName()))));
+       } else {
+         source.sendMessage(
+                 LegacyComponentSerializer
+                         .legacySection()
+-                        .deserialize(prefix + "§fДанный игрок §cне онлайн§f.")
+-        );
++                        .deserialize((
++                                prefix
++                                + Settings.IMP.MESSAGES.ELYTRAPROXY.USER_NOT_ONLINE)
++                                        .replace("%nl%", "\n")
++                                        .replace("{0}", args[0])));
+       }
+     }
+   }
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/SendCommand.java b/proxy/src/main/java/ru/elytrium/elytraproxy/commands/SendCommand.java
+index b5de161a..a35f3976 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/SendCommand.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/commands/SendCommand.java
+@@ -24,6 +24,7 @@ import com.velocitypowered.api.proxy.ProxyServer;
+ import com.velocitypowered.api.proxy.server.RegisteredServer;
+ import com.velocitypowered.api.proxy.server.ServerInfo;
+ import com.velocitypowered.proxy.VelocityServer;
++import com.velocitypowered.proxy.command.builtin.CommandMessages;
+ import com.velocitypowered.proxy.connection.client.ConnectedPlayer;
+ 
+ import java.util.Collection;
+@@ -32,6 +33,7 @@ import java.util.stream.Collectors;
+ 
+ import net.kyori.adventure.text.Component;
+ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
++import ru.elytrium.elytraproxy.config.Settings;
+ 
+ public class SendCommand implements SimpleCommand {
+ 
+@@ -76,26 +78,33 @@ public class SendCommand implements SimpleCommand {
+     final String[] args = invocation.arguments();
+ 
+     if (args.length != 2) {
+-      source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize(
+-            prefix
+-                    + "§cНедостаточно §fаргументов в команде."
+-                    + " Используйте: §6/send <server|player|all|current> <target>"));
++      source.sendMessage(
++              LegacyComponentSerializer
++                      .legacySection()
++                      .deserialize((
++                              prefix
++                              + Settings.IMP.MESSAGES.ELYTRAPROXY.SEND_NOT_ENOUGH_ARGUMENTS)
++                                      .replace("%nl%", "\n")));
+       return;
+     }
+ 
+     RegisteredServer target = server.getServer(args[1]).orElse(null);
+     if (target == null) {
+-      source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize(
+-            prefix
+-                    + "§fУказанного сервера §cне существует§f."));
++      source.sendMessage(CommandMessages.SERVER_DOES_NOT_EXIST(args[1]));
+       return;
+     }
+ 
+-    String sender = (source instanceof Player) ? ((Player) source).getUsername() : "CONSOLE";
+-    Component summoned = LegacyComponentSerializer.legacyAmpersand().deserialize(
+-            prefix
+-                    + "§fВы были перемещены на сервер §6"
+-                    + target.getServerInfo().getName() + " §fадминистратором §6" + sender);
++    String sender = (source instanceof Player) ? ((Player) source).getUsername()
++            : Settings.IMP.MESSAGES.ELYTRAPROXY.CONSOLE;
++    Component summoned =
++            LegacyComponentSerializer
++                    .legacySection()
++                    .deserialize((
++                            prefix
++                            + Settings.IMP.MESSAGES.ELYTRAPROXY.SEND_YOU_GOT_SUMMONED)
++                                    .replace("%nl%", "\n")
++                                    .replace("{0}", target.getServerInfo().getName())
++                                    .replace("{1}", sender));
+ 
+     switch (args[0].toLowerCase()) {
+       case "all":
+@@ -106,9 +115,7 @@ public class SendCommand implements SimpleCommand {
+         break;
+       case "current":
+         if (!(source instanceof Player)) {
+-          source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize(
+-              prefix
+-                      + "§fИз консоли данную команду выполнить §cневозможно§f."));
++          source.sendMessage(CommandMessages.PLAYERS_ONLY);
+           break;
+         }
+         Player player = (Player) source;
+@@ -126,9 +133,14 @@ public class SendCommand implements SimpleCommand {
+           player.createConnectionRequest(target).fireAndForget();
+           player.sendMessage(summoned);
+         } else {
+-          source.sendMessage(LegacyComponentSerializer.legacyAmpersand().deserialize(
+-              prefix
+-                      + "§fДанный игрок §cне онлайн§f."));
++          source.sendMessage(
++                  LegacyComponentSerializer
++                          .legacySection()
++                          .deserialize((
++                                  prefix
++                                  + Settings.IMP.MESSAGES.ELYTRAPROXY.USER_NOT_ONLINE)
++                                          .replace("%nl%", "\n")
++                                          .replace("{0}", args[0])));
+         }
+         break;
+     }
 diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/config/Settings.java b/proxy/src/main/java/ru/elytrium/elytraproxy/config/Settings.java
-index a5a8b6e6..5134b98d 100644
+index a5a8b6e6..c654d0a8 100644
 --- a/proxy/src/main/java/ru/elytrium/elytraproxy/config/Settings.java
 +++ b/proxy/src/main/java/ru/elytrium/elytraproxy/config/Settings.java
-@@ -27,14 +27,92 @@ public class Settings extends Config {
+@@ -27,14 +27,98 @@ public class Settings extends Config {
    public static final Settings IMP = new Settings();
  
    @Final
@@ -1078,15 +1255,20 @@ index a5a8b6e6..5134b98d 100644
 +    public static class ELYTRAPROXY {
 +      public String PREFIX = "&5&l[ElytraProxy]&f ";
 +      public String ALERT_PREFIX = "&8[&4Alert&8]&f ";
-+      public String PROTOCOL_BLOCKED = "&cYour &6minecraft version&c is blocked.%nl% eg. 1.12.2 - 1.16.5!";
++      public String CONSOLE = "CONSOLE";
++      public String ALERT_MESSAGE_NEEDED = "&cYou must supply a message.";
++      public String ALERT_SERVER_EMPTY = "&fServer is empty.";
++      public String FIND_USERNAME_NEEDED = "Please follow this command by a user name.";
++      public String FIND_USER_ONLINE_AT = "&a{0} &fis online at {1}";
++      public String USER_NOT_ONLINE = "&c{0} is not online.";
++      public String SEND_YOU_GOT_SUMMONED = "&6Summoned to {0} by {1}";
++      public String SEND_NOT_ENOUGH_ARGUMENTS = "&cNot enough arguments, usage: &6/send <server|player|all|current> <target>";
 +      public String COMMAND_SPY_FORMAT = "&7 — Player {player} executed command {cmd}";
 +      public String LOG_COMMAND_EXECUTIONS_FORMAT = "{player} -> executed command {cmd}";
-+      public String SERVER_EMPTY = "&fНа сервере никого нет.";
-+      //public String USER_NOT_ONLINE = "That user is not online.";
-+      public String MESSAGE_NEEDED = "&cYou must supply a message.";
++      public String PROTOCOL_BLOCKED = "&c1.7 not supported";
++      public String NICK_BLOCKED = "&cYour nickname contains forbidden phrases.";
 +      public String RELOAD_SUCCESS = "ElytraProxy configuration successfully reloaded.";
 +      public String RELOAD_FAILURE = "Unable to reload your ElytraProxy configuration. Check the console for more details.";
-+      public String NICK_BLOCKED = "&5[Elytrium]%nl%%nl%&cВ вашем нике содержатся запрещённые фразы.%nl%&cЕсли вы считаете что это ошибка, свяжитесь с администрацией. (ely.su/discord)";
 +      /*
 +      public String CONFIG_LOAD_FAILED: "Невозможно обратиться к конфиг-файлу elytraproxy.yml. Выключение..."
 +      public String MYSQL_LOAD_FAILED: "Ошибка при инициализации базы данных. Выключение..."
@@ -1105,39 +1287,40 @@ index a5a8b6e6..5134b98d 100644
 +
 +      @Comment("Error messages doesn't have ElytraProxy prefix")
 +      public static class ERROR {
-+        public String ALREADY_CONNECTED = "You are already connected to this server!";
-+        public String ALREADY_CONNECTED_PROXY = "You are already connected to this proxy!";
-+        public String ALREADY_CONNECTING = "You are already trying to connect to a server!";
-+        public String CANT_CONNECT = "Unable to connect to {0}: {1}";
-+        public String CONNECTING_SERVER_ERROR = "Unable to connect you to {0}. Please try again later.";
-+        public String CONNECTED_SERVER_ERROR = "Your connection to {0} encountered a problem.";
-+        public String INTERNAL_SERVER_CONNECTION_ERROR = "An internal server connection error occurred.";
-+        // public String LOGGING_IN_TOO_FAST = "You are logging in too fast, try again later.";
-+        public String ONLINE_MODE_ONLY = "You are not logged into your Minecraft account. If you are logged into your Minecraft account, try restarting your Minecraft client.";
-+        public String PLAYER_CONNECTION_ERROR = "An internal error occurred in your connection.";
-+        public String MODERN_FORWARDING_NEEDS_NEW_CLIENT = "This server is only compatible with Minecraft 1.13 and above.";
-+        public String MODERN_FORWARDING_FAILED = "Your server did not send a forwarding request to the proxy. Make sure the server is configured for Velocity forwarding.";
-+        public String MOVED_TO_NEW_SERVER = "You were kicked from {0}: {1}";
-+        public String NO_AVAILABLE_SERVERS = "There are no available servers to connect you to. Try again later or contact an admin.";
++        public String ALREADY_CONNECTED = "&cYou are already connected to this server!";
++        public String ALREADY_CONNECTED_PROXY = "&cYou are already connected to this proxy!";
++        public String ALREADY_CONNECTING = "&cYou are already trying to connect to a server!";
++        public String CANT_CONNECT = "&cUnable to connect to &6{0}&c: &6{1}";
++        public String CONNECTING_SERVER_ERROR = "&cUnable to connect you to &6{0}&c. Please try again later.";
++        public String CONNECTED_SERVER_ERROR = "&cYour connection to &6{0} &cencountered a problem.";
++        public String INTERNAL_SERVER_CONNECTION_ERROR = "&cAn internal server connection error occurred.";
++        // public String LOGGING_IN_TOO_FAST = "&cYou are logging in too fast, try again later.";
++        public String ONLINE_MODE_ONLY = "&cYou are not logged into your Minecraft account. If you are logged into your Minecraft account, try restarting your Minecraft client.";
++        public String PLAYER_CONNECTION_ERROR = "&cAn internal error occurred in your connection.";
++        public String MODERN_FORWARDING_NEEDS_NEW_CLIENT = "&cThis server is only compatible with Minecraft 1.13 and above.";
++        public String MODERN_FORWARDING_FAILED = "&cYour server did not send a forwarding request to the proxy. Make sure the server is configured for Velocity forwarding.";
++        public String MOVED_TO_NEW_SERVER = "&cYou were kicked from &6{0}&c: &6{1}";
++        public String NO_AVAILABLE_SERVERS = "&cThere are no available servers to connect you to. Try again later or contact an admin.";
 +      }
 +
 +      public static class COMMAND {
-+        public String GENERIC_ERROR = "&eAn error occurred while running this command.";
-+        public String COMMAND_DOES_NOT_EXIST = "&eThis command does not exist.";
-+        public String PLAYERS_ONLY = "&eOnly players can run this command.";
-+        public String SERVER_DOES_NOT_EXIST = "&eThe specified server &c{0} &edoes not exist.";
-+        public String SERVER_CURRENT_SERVER = "&eYou are currently connected to &c{0}.";
-+        public String SERVER_TOO_MANY = "&eThere are too many servers set up. Use tab completion to view all servers available.";
-+        public String SERVER_AVAILABLE = "&eAvailable servers: ";
-+        public String SERVER_TOOLTIP_PLAYER_ONLINE = "&c{0} &eplayer online";
-+        public String SERVER_TOOLTIP_PLAYERS_ONLINE = "&c{0} &eplayers online";
-+        public String SERVER_TOOLTIP_CURRENT_SERVER = "&eCurrently connected to this server%nl%{0}";
-+        public String SERVER_TOOLTIP_OFFER_CONNECT_SERVER = "&eClick to connect to this server%nl%{0}";
-+        public String GLIST_PLAYER_SINGULAR = "&c{0} &eplayer is currently connected to the proxy.";
-+        public String GLIST_PLAYER_PLURAL = "&c{0} &eplayers are currently connected to the proxy.";
-+        public String GLIST_VIEW_ALL = "&eTo view all players on servers, use /glist all.";
-+        public String RELOAD_SUCCESS = "&eVelocity configuration successfully reloaded.";
-+        public String RELOAD_FAILURE = "&eUnable to reload your Velocity configuration. Check the console for more details.";
++        public String GENERIC_ERROR = "&fAn error occurred while running this command.";
++        public String COMMAND_DOES_NOT_EXIST = "&fThis command does not exist.";
++        public String PLAYERS_ONLY = "&fOnly players can run this command.";
++        public String SERVER_DOES_NOT_EXIST = "&fThe specified server &6{0} &fdoes not exist.";
++        public String SERVER_CURRENT_SERVER = "&fYou are currently connected to &f{0}.";
++        public String SERVER_TOO_MANY = "&fThere are too many servers set up. Use tab completion to view all servers available.";
++        public String SERVER_AVAILABLE = "&fAvailable servers: &6";
++        public String SERVER_TOOLTIP_CURRENT_SERVER = "&fCurrently connected to this server%nl%&6{0}";
++        public String SERVER_TOOLTIP_PLAYER_ONLINE = "&6{0} &fplayer online";
++        public String SERVER_TOOLTIP_PLAYERS_ONLINE = "&6{0} &fplayers online";
++        public String SERVER_TOOLTIP_OFFER_CONNECT_SERVER = "&fClick to connect to this server%nl%&6{0}";
++        public String GLIST_VIEW_ALL = "&fTo view all players on servers, use &6/glist all&f.";
++        public String GLIST_PLAYER_SINGULAR = "&6{0} &fplayer is currently connected to the proxy.";
++        public String GLIST_PLAYER_PLURAL = "&6{0} &fplayers are currently connected to the proxy.";
++        public String GLIST_FORMAT_VIEW_ALL = "&f[&6{0}&f] (&6{1}&f): ";
++        public String RELOAD_SUCCESS = "&cVelocity configuration successfully reloaded.";
++        public String RELOAD_FAILURE = "&cUnable to reload your Velocity configuration. Check the console for more details.";
 +      }
 +    }
 +  }
@@ -1152,7 +1335,7 @@ index a5a8b6e6..5134b98d 100644
      @Comment({
              "The list of protocols can be found here https://wiki.vg/Protocol_version_numbers",
              "For example, the list contains all protocols of version 1.7.x",
-@@ -61,11 +139,11 @@ public class Settings extends Config {
+@@ -61,11 +145,11 @@ public class Settings extends Config {
              "Most likely does not work with SRV records"
      })
      public static class HOSTNAMES_MANAGER {
@@ -1167,7 +1350,7 @@ index a5a8b6e6..5134b98d 100644
        public List<String> HOSTNAMES = Arrays.asList("your-digital-ip", "your-domain.com");
        @Comment("IP's in this list will be ignored in check.")
        public List<String> IGNORED_IPS = Arrays.asList("127.0.0.1", "your-haproxy-ip");
-@@ -73,43 +151,17 @@ public class Settings extends Config {
+@@ -73,43 +157,17 @@ public class Settings extends Config {
    }
  
    @Create
@@ -1221,7 +1404,7 @@ index a5a8b6e6..5134b98d 100644
    }
  
    /*
-@@ -123,31 +175,20 @@ public class Settings extends Config {
+@@ -123,31 +181,20 @@ public class Settings extends Config {
    }
    */
  
