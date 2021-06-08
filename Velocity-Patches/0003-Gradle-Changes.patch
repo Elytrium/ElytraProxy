@@ -1,11 +1,11 @@
-From e1ff6c044f84ca3b58d8821c30b00e8e647ba2f0 Mon Sep 17 00:00:00 2001
+From 1fef81e89956caa792c929fc8f806a0dd831f6c6 Mon Sep 17 00:00:00 2001
 From: banklazhan222 <ogurec332@mail.ru>
 Date: Mon, 10 May 2021 03:53:07 +0900
-Subject: [PATCH] Pom Changes
+Subject: [PATCH] Gradle Changes
 
 
 diff --git a/build.gradle b/build.gradle
-index ac9db4ce..db8295d0 100644
+index 3cab2c1b..db8295d0 100644
 --- a/build.gradle
 +++ b/build.gradle
 @@ -16,8 +16,8 @@ plugins {
@@ -13,7 +13,7 @@ index ac9db4ce..db8295d0 100644
      apply plugin: "com.github.spotbugs"
  
 -    group 'com.velocitypowered'
--    version '1.1.6-SNAPSHOT'
+-    version '1.1.8-SNAPSHOT'
 +    group 'ru.mdxd44'
 +    version 'ely.su'
  
