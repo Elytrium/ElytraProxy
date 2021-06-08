@@ -1,6 +1,6 @@
 # ElytraProxy
 
-Currently in beta and something may just simply not work as intended, we have many ideas, the implementation of which is in the process.
+Minecraft proxy server with BotFilter and some helpful stuff, based on Velocity. Currently in beta and something may just simply not work as intended, we have many ideas, the implementation of which is in the process.
 
 # Building
 
