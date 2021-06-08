@@ -1,5 +1,5 @@
-From 56c56bef114322aebe9fad002e8462cc5f70771b Mon Sep 17 00:00:00 2001
-From: banklazhan222 <ogurec332@mail.ru>
+From d1b078e20db7f5c484283f76d29d8d5387851cc0 Mon Sep 17 00:00:00 2001
+From: mdxd44 <mdxd44@ely.su>
 Date: Tue, 11 May 2021 17:51:21 +0900
 Subject: [PATCH] Init AntiBot
 
@@ -706,7 +706,7 @@ index 00000000..f288702d
 +Public License instead of this License.  But first, please read
 +<https://www.gnu.org/licenses/why-not-lgpl.html>.
 diff --git a/build.gradle b/build.gradle
-index db8295d0..fbf2af18 100644
+index 2ba73986..0b814d80 100644
 --- a/build.gradle
 +++ b/build.gradle
 @@ -15,8 +15,9 @@ plugins {

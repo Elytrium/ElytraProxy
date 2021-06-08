@@ -1,14 +1,14 @@
-From e8cf53aa0039b9e31b751533e60b1e35cbeda2da Mon Sep 17 00:00:00 2001
-From: banklazhan222 <ogurec332@mail.ru>
+From 31eea73ab98d5e4f7c6586c2eaee6c66afe62b6d Mon Sep 17 00:00:00 2001
+From: mdxd44 <mdxd44@ely.su>
 Date: Mon, 10 May 2021 03:53:07 +0900
 Subject: [PATCH] Gradle Changes
 
 
 diff --git a/build.gradle b/build.gradle
-index e2f9a47b..db8295d0 100644
+index e2f9a47b..2ba73986 100644
 --- a/build.gradle
 +++ b/build.gradle
-@@ -16,13 +16,13 @@ plugins {
+@@ -16,8 +16,8 @@ plugins {
  allprojects {
      apply plugin: "com.github.spotbugs"
  
@@ -19,12 +19,6 @@ index e2f9a47b..db8295d0 100644
  
      ext {
          // dependency versions
-         textVersion = '3.0.4'
--        adventureVersion = '4.8.0'
-+        adventureVersion = '4.7.0'
-         adventurePlatformVersion = '4.0.0-SNAPSHOT'
-         junitVersion = '5.7.0'
-         slf4jVersion = '1.7.30'
 diff --git a/proxy/build.gradle b/proxy/build.gradle
 index 33fa5bb4..8493df39 100644
 --- a/proxy/build.gradle

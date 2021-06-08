@@ -1,4 +1,4 @@
-From 3068a0121ce0ed8dc80a8c2cf93a91915b39d895 Mon Sep 17 00:00:00 2001
+From 56cae5ac74fbb1872a37dbaf14d158fc66370267 Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Mon, 7 Jun 2021 04:45:40 +0900
 Subject: [PATCH] Move Messages Section To ElytraProxy Config
@@ -962,20 +962,6 @@ index 6b465193..fb4dd818 100644
        }
      } catch (Exception e) {
        logger.error("An error occurred while running this command.", e);
-diff --git a/proxy/src/main/java/com/velocitypowered/proxy/protocol/StateRegistry.java b/proxy/src/main/java/com/velocitypowered/proxy/protocol/StateRegistry.java
-index 5fb51bbf..65b74802 100644
---- a/proxy/src/main/java/com/velocitypowered/proxy/protocol/StateRegistry.java
-+++ b/proxy/src/main/java/com/velocitypowered/proxy/protocol/StateRegistry.java
-@@ -524,7 +524,8 @@ public enum StateRegistry {
-    * @param lastValidProtocolVersion Last version this Mapping is valid at
-    * @return PacketMapping with the provided arguments
-    */
--  private static PacketMapping map(int id, ProtocolVersion version,
-+  //BotFilter public
-+  public static PacketMapping map(int id, ProtocolVersion version,
-           ProtocolVersion lastValidProtocolVersion, boolean encodeOnly) {
-     return new PacketMapping(id, version, lastValidProtocolVersion, encodeOnly);
-   }
 diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/ElytraProxy.java b/proxy/src/main/java/ru/elytrium/elytraproxy/ElytraProxy.java
 index 337f03d8..b297f5d5 100644
 --- a/proxy/src/main/java/ru/elytrium/elytraproxy/ElytraProxy.java

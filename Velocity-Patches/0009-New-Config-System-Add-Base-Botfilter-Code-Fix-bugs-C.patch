@@ -1,4 +1,4 @@
-From f7a557d72b9de6f10c46e473deb91defc5ca4124 Mon Sep 17 00:00:00 2001
+From 3f6f6bc97cf9947d437c07b946a32b4b79c26154 Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Sat, 29 May 2021 02:33:34 +0900
 Subject: [PATCH] New Config System, Add Base Botfilter Code, Fix bugs, Code
@@ -63,7 +63,7 @@ index 00000000..bd06f8c7
 +THE SOFTWARE.
 \ No newline at end of file
 diff --git a/api/src/main/java/com/velocitypowered/api/network/ProtocolVersion.java b/api/src/main/java/com/velocitypowered/api/network/ProtocolVersion.java
-index 20662ab6..87dce6ff 100644
+index 0bbdc45b..e8f2ef6b 100644
 --- a/api/src/main/java/com/velocitypowered/api/network/ProtocolVersion.java
 +++ b/api/src/main/java/com/velocitypowered/api/network/ProtocolVersion.java
 @@ -230,6 +230,29 @@ public enum ProtocolVersion {
@@ -115,7 +115,7 @@ index 0fa124f7..eaf0ff42 100644
     * Get the proxy favicon shown in the tablist.
     *
 diff --git a/build.gradle b/build.gradle
-index fbf2af18..63a1dc04 100644
+index 0b814d80..f7c25a81 100644
 --- a/build.gradle
 +++ b/build.gradle
 @@ -58,6 +58,11 @@ allprojects {
@@ -737,7 +737,7 @@ index 7115bb8b..7b2184d9 100644
    default int expectedMaxLength(ByteBuf buf, ProtocolUtils.Direction direction,
        ProtocolVersion version) {
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/protocol/StateRegistry.java b/proxy/src/main/java/com/velocitypowered/proxy/protocol/StateRegistry.java
-index 8e787539..ffbb5d45 100644
+index 8e787539..03dc11e5 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/protocol/StateRegistry.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/protocol/StateRegistry.java
 @@ -296,7 +296,7 @@ public enum StateRegistry {
@@ -803,6 +803,16 @@ index 8e787539..ffbb5d45 100644
      return map(id, version, null, encodeOnly);
    }
  
+@@ -503,7 +523,8 @@ public enum StateRegistry {
+    * @param lastValidProtocolVersion Last version this Mapping is valid at
+    * @return PacketMapping with the provided arguments
+    */
+-  private static PacketMapping map(int id, ProtocolVersion version,
++  //BotFilter public
++  public static PacketMapping map(int id, ProtocolVersion version,
+           ProtocolVersion lastValidProtocolVersion, boolean encodeOnly) {
+     return new PacketMapping(id, version, lastValidProtocolVersion, encodeOnly);
+   }
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/util/ratelimit/GuavaCacheRatelimiter.java b/proxy/src/main/java/com/velocitypowered/proxy/util/ratelimit/GuavaCacheRatelimiter.java
 index 0c1976be..04a37654 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/util/ratelimit/GuavaCacheRatelimiter.java

@@ -1,4 +1,4 @@
-From 53eee9141a68432d12230da8badaebdf3be06f81 Mon Sep 17 00:00:00 2001
+From 9a40d11addd878e0660979e451fd46ffe7b9afa8 Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Thu, 3 Jun 2021 20:48:12 +0900
 Subject: [PATCH] Fix Licenses, Update Dependencies, Fix bugs, Code Cleanup And
@@ -405,7 +405,7 @@ index 79f12e47..3af47683 100644
              'https://jd.adventure.kyori.net/api/4.7.0/'
      )
 diff --git a/build.gradle b/build.gradle
-index c812de11..0fa93a2b 100644
+index 6ae007af..0fa93a2b 100644
 --- a/build.gradle
 +++ b/build.gradle
 @@ -10,7 +10,7 @@ buildscript {
@@ -421,7 +421,7 @@ index c812de11..0fa93a2b 100644
      ext {
          // dependency versions
          textVersion = '3.0.4'
--        adventureVersion = '4.7.0'
+-        adventureVersion = '4.8.0'
 +        adventureVersion = '4.8.0-SNAPSHOT'
          adventurePlatformVersion = '4.0.0-SNAPSHOT'
 -        junitVersion = '5.7.0'
