@@ -1,11 +1,11 @@
-From ac1446427f91e449e5445508ab8c4be3100f5ce1 Mon Sep 17 00:00:00 2001
+From ccd73650c0e634ff3c2c3ae3838b4e04dce45f04 Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Mon, 7 Jun 2021 04:45:40 +0900
 Subject: [PATCH] Move Messages Section To ElytraProxy Config
 
 
 diff --git a/build.gradle b/build.gradle
-index 82b2812b..ffa84af7 100644
+index 82b2812b..0284ec0c 100644
 --- a/build.gradle
 +++ b/build.gradle
 @@ -18,7 +18,7 @@ allprojects {
@@ -13,7 +13,7 @@ index 82b2812b..ffa84af7 100644
  
      group 'com.velocitypowered'
 -    version '0.1.0'
-+    version '0.1.1-DEV'
++    version '0.1.1'
  
      ext {
          // dependency versions
@@ -187,10 +187,10 @@ index fe20ff6b..f192f6fc 100644
  
      for (int i = 0; i < onServer.size(); i++) {
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/ServerCommand.java b/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/ServerCommand.java
-index c54da99d..62cce6f9 100644
+index c54da99d..b666855f 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/ServerCommand.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/ServerCommand.java
-@@ -34,12 +34,18 @@ import java.util.stream.Stream;
+@@ -34,8 +34,12 @@ import java.util.stream.Stream;
  import net.kyori.adventure.identity.Identity;
  import net.kyori.adventure.text.Component;
  import net.kyori.adventure.text.TextComponent;
@@ -203,13 +203,7 @@ index c54da99d..62cce6f9 100644
  
  public class ServerCommand implements SimpleCommand {
  
-   public static final int MAX_SERVERS_TO_LIST = 50;
-+  private static final PlainComponentSerializer PASS_THRU_TRANSLATE = new PlainComponentSerializer(
-+      c -> "", TranslatableComponent::key);
-   private final ProxyServer server;
- 
-   public ServerCommand(ProxyServer server) {
-@@ -52,8 +58,7 @@ public class ServerCommand implements SimpleCommand {
+@@ -52,8 +56,7 @@ public class ServerCommand implements SimpleCommand {
      final String[] args = invocation.arguments();
  
      if (!(source instanceof Player)) {
@@ -219,7 +213,7 @@ index c54da99d..62cce6f9 100644
        return;
      }
  
-@@ -63,8 +68,7 @@ public class ServerCommand implements SimpleCommand {
+@@ -63,8 +66,7 @@ public class ServerCommand implements SimpleCommand {
        String serverName = args[0];
        Optional<RegisteredServer> toConnect = server.getServer(serverName);
        if (!toConnect.isPresent()) {
@@ -229,7 +223,7 @@ index c54da99d..62cce6f9 100644
          return;
        }
  
-@@ -77,19 +81,35 @@ public class ServerCommand implements SimpleCommand {
+@@ -77,19 +79,35 @@ public class ServerCommand implements SimpleCommand {
    private void outputServerInformation(Player executor) {
      String currentServer = executor.getCurrentServer().map(ServerConnection::getServerInfo)
          .map(ServerInfo::getName).orElse("<unknown>");
@@ -271,7 +265,7 @@ index c54da99d..62cce6f9 100644
      for (int i = 0; i < servers.size(); i++) {
        RegisteredServer rs = servers.get(i);
        serverListBuilder.append(formatServerComponent(currentServer, rs));
-@@ -105,17 +125,51 @@ public class ServerCommand implements SimpleCommand {
+@@ -105,17 +123,58 @@ public class ServerCommand implements SimpleCommand {
      ServerInfo serverInfo = server.getServerInfo();
      TextComponent serverTextComponent = Component.text(serverInfo.getName());
  
@@ -295,7 +289,6 @@ index c54da99d..62cce6f9 100644
 +                              .replace("%nl%", "\n")
 +                              .replace("{0}", String.valueOf(connectedPlayers)));
 +    }
-+    String plainPlayersTextComponent = PASS_THRU_TRANSLATE.serialize(playersTextComponent);
 +
      if (serverInfo.getName().equals(currentPlayerServer)) {
        serverTextComponent = serverTextComponent.color(NamedTextColor.GREEN)
@@ -308,7 +301,11 @@ index c54da99d..62cce6f9 100644
 +                          Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX
 +                          + Settings.IMP.MESSAGES.VELOCITY.COMMAND.SERVER_TOOLTIP_CURRENT_SERVER)
 +                              .replace("%nl%", "\n")
-+                              .replace("{0}", plainPlayersTextComponent)))
++                              .replace("{0}",
++                                      LegacyComponentSerializer
++                                              .legacySection()
++                                              .serialize(
++                                                      playersTextComponent))))
            );
      } else {
        serverTextComponent = serverTextComponent.color(NamedTextColor.GRAY)
@@ -322,7 +319,11 @@ index c54da99d..62cce6f9 100644
 +                    Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX
 +                    + Settings.IMP.MESSAGES.VELOCITY.COMMAND.SERVER_TOOLTIP_OFFER_CONNECT_SERVER)
 +                      .replace("%nl%", "\n")
-+                      .replace("{0}", plainPlayersTextComponent)))
++                      .replace("{0}",
++                              LegacyComponentSerializer
++                                      .legacySection()
++                                      .serialize(
++                                              playersTextComponent))))
            );
      }
      return serverTextComponent;
@@ -460,6 +461,26 @@ index 034aa72a..e1a31207 100644
 +  ElytraProxy End
 +  */
  }
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftConnection.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftConnection.java
+index c5b252ef..009c7ac4 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftConnection.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftConnection.java
+@@ -37,7 +37,6 @@ import com.velocitypowered.proxy.VelocityServer;
+ import com.velocitypowered.proxy.connection.client.HandshakeSessionHandler;
+ import com.velocitypowered.proxy.connection.client.LoginSessionHandler;
+ import com.velocitypowered.proxy.connection.client.StatusSessionHandler;
+-import com.velocitypowered.proxy.network.Connections;
+ import com.velocitypowered.proxy.protocol.MinecraftPacket;
+ import com.velocitypowered.proxy.protocol.StateRegistry;
+ import com.velocitypowered.proxy.protocol.netty.MinecraftCipherDecoder;
+@@ -138,6 +137,7 @@ public class MinecraftConnection extends ChannelInboundHandlerAdapter {
+ 
+       if (msg instanceof MinecraftPacket) {
+         // ElytraProxy Start
++        // TODO: FIX
+         if (Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.ENABLE) {
+           InetSocketAddress adr = (InetSocketAddress) ctx.channel().localAddress();
+           InetSocketAddress adr1 = (InetSocketAddress) ctx.channel().remoteAddress();
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/backend/LoginSessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/backend/LoginSessionHandler.java
 index 19643031..227ea644 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/backend/LoginSessionHandler.java
@@ -484,7 +505,7 @@ index 19643031..227ea644 100644
    private final VelocityServer server;
    private final VelocityServerConnection serverConn;
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
-index 0d9a6f97..57e3ab31 100644
+index 0d9a6f97..017aeab3 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
 @@ -69,8 +69,6 @@ import java.util.Queue;
@@ -560,8 +581,17 @@ index 0d9a6f97..57e3ab31 100644
    }
  
    @Override
+@@ -595,7 +611,7 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+         }, player.getConnection().eventLoop())
+         .exceptionally((ex) -> {
+           logger.error(
+-              "Exception while finishing regular tab completion, with request {} and response{}",
++              "Exception while finishing regular tab completion, with request {} and response {}",
+               request, response, ex);
+           return null;
+         });
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
-index 26ba80c2..35fe777f 100644
+index 26ba80c2..debf9791 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
 @@ -52,7 +52,6 @@ import com.velocitypowered.api.util.title.TextTitle;
@@ -580,7 +610,7 @@ index 26ba80c2..35fe777f 100644
  import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
  import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
  import net.kyori.adventure.text.serializer.plain.PlainComponentSerializer;
-@@ -105,6 +103,7 @@ import org.apache.logging.log4j.Logger;
+@@ -105,12 +103,11 @@ import org.apache.logging.log4j.Logger;
  import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
  import org.checkerframework.checker.nullness.qual.NonNull;
  import org.checkerframework.checker.nullness.qual.Nullable;
@@ -588,7 +618,13 @@ index 26ba80c2..35fe777f 100644
  
  public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
  
-@@ -581,18 +580,26 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
+   private static final int MAX_PLUGIN_CHANNELS = 1024;
+-  private static final PlainComponentSerializer PASS_THRU_TRANSLATE = new PlainComponentSerializer(
+-      c -> "", TranslatableComponent::key);
+   static final PermissionProvider DEFAULT_PERMISSIONS = s -> PermissionFunction.ALWAYS_UNDEFINED;
+ 
+   private static final Logger logger = LogManager.getLogger(ConnectedPlayer.class);
+@@ -581,18 +578,26 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
          wrapped = cause;
        }
      }
@@ -622,23 +658,26 @@ index 26ba80c2..35fe777f 100644
    }
  
    /**
-@@ -608,26 +615,32 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
+@@ -608,26 +613,44 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
        return;
      }
  
 -    VelocityConfiguration.Messages messages = this.server.getConfiguration().getMessages();
 +    //VelocityConfiguration.Messages messages = this.server.getConfiguration().getMessages();
      Component disconnectReason = GsonComponentSerializer.gson().deserialize(disconnect.getReason());
-     String plainTextReason = PASS_THRU_TRANSLATE.serialize(disconnectReason);
+-    String plainTextReason = PASS_THRU_TRANSLATE.serialize(disconnectReason);
      if (connectedServer != null && connectedServer.getServerInfo().equals(server.getServerInfo())) {
        logger.error("{}: kicked from server {}: {}", this, server.getServerInfo().getName(),
-           plainTextReason);
+-          plainTextReason);
 -      handleConnectionException(server, disconnectReason, Component.text()
 -          .append(messages.getKickPrefix(server.getServerInfo().getName())
 -              .colorIfAbsent(NamedTextColor.RED))
 -          .color(NamedTextColor.RED)
 -          .append(disconnectReason)
 -          .build(), safe);
++              LegacyComponentSerializer
++                      .legacySection()
++                      .serialize(disconnectReason));
 +      // TODO: rewrite this shit
 +      handleConnectionException(server, disconnectReason,
 +              LegacyComponentSerializer
@@ -647,15 +686,23 @@ index 26ba80c2..35fe777f 100644
 +                              Settings.IMP.MESSAGES.VELOCITY.ERROR.MOVED_TO_NEW_SERVER)
 +                                      .replace("%nl%", "\n")
 +                                      .replace("{0}", server.getServerInfo().getName())
-+                                      .replace("{1}", plainTextReason)), safe);
++                                      .replace("{1}",
++                                              LegacyComponentSerializer
++                                                      .legacySection()
++                                                      .serialize(
++                                                              disconnectReason))), safe);
      } else {
        logger.error("{}: disconnected while connecting to {}: {}", this,
-           server.getServerInfo().getName(), plainTextReason);
+-          server.getServerInfo().getName(), plainTextReason);
 -      handleConnectionException(server, disconnectReason, Component.text()
 -          .append(messages.getDisconnectPrefix(server.getServerInfo().getName())
 -              .colorIfAbsent(NamedTextColor.RED))
 -          .append(disconnectReason)
 -          .build(), safe);
++          server.getServerInfo().getName(),
++              LegacyComponentSerializer
++                      .legacySection()
++                      .serialize(disconnectReason));
 +      handleConnectionException(server, disconnectReason,
 +              LegacyComponentSerializer
 +                      .legacyAmpersand()
@@ -663,17 +710,20 @@ index 26ba80c2..35fe777f 100644
 +                              Settings.IMP.MESSAGES.VELOCITY.ERROR.CANT_CONNECT)
 +                                      .replace("%nl%", "\n")
 +                                      .replace("{0}", server.getServerInfo().getName())
-+                                      .replace("{1}", plainTextReason)), safe);
++                                      .replace("{1}",
++                                              LegacyComponentSerializer
++                                                      .legacySection()
++                                                      .serialize(
++                                                              disconnectReason))), safe);
      }
    }
  
-@@ -711,8 +724,16 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
+@@ -711,8 +734,19 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
                            getProtocolVersion()), ((Impl) status).isSafe());
                        break;
                      case SUCCESS:
 -                      sendMessage(Identity.nil(), server.getConfiguration().getMessages()
 -                          .getMovedToNewServerPrefix().append(friendlyReason));
-+                      String plainFriendlyReason = PASS_THRU_TRANSLATE.serialize(friendlyReason);
 +                      sendMessage(Identity.nil(),
 +                            LegacyComponentSerializer
 +                                  .legacyAmpersand()
@@ -682,7 +732,11 @@ index 26ba80c2..35fe777f 100644
 +                                              .replace("%nl%","\n")
 +                                              .replace("{0}", originalEvent.getServer()
 +                                                            .getServerInfo().getName())
-+                                              .replace("{1}", plainFriendlyReason)));
++                                              .replace("{1}",
++                                                      LegacyComponentSerializer
++                                                              .legacySection()
++                                                              .serialize(
++                                                                      friendlyReason))));
                        break;
                      default:
                        // The only remaining value is successful (no need to do anything!)
@@ -1018,7 +1072,7 @@ index 6b4b2be1..e5cd0435 100644
          if (!(source instanceof Player)) {
            source.sendMessage(component);
 diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/ElytraProxyCommand.java b/proxy/src/main/java/ru/elytrium/elytraproxy/commands/ElytraProxyCommand.java
-index 0d80ac09..96a83f22 100644
+index 0d80ac09..e55306ca 100644
 --- a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/ElytraProxyCommand.java
 +++ b/proxy/src/main/java/ru/elytrium/elytraproxy/commands/ElytraProxyCommand.java
 @@ -31,10 +31,12 @@ import java.util.Map;
@@ -1034,7 +1088,25 @@ index 0d80ac09..96a83f22 100644
  
  public class ElytraProxyCommand implements SimpleCommand {
  
-@@ -149,18 +151,31 @@ public class ElytraProxyCommand implements SimpleCommand {
+@@ -63,8 +65,15 @@ public class ElytraProxyCommand implements SimpleCommand {
+   }
+ 
+   private void usage(CommandSource source) {
+-    String commandText = "/elytraproxy <reload>";
+-    source.sendMessage(Identity.nil(), Component.text(commandText, NamedTextColor.RED));
++    source.sendMessage(Identity.nil(), Component.text("§fThis server is using ElytraProxy that based on Velocity Proxy"));
++    source.sendMessage(Identity.nil(), Component.text("§fOriginal Velocity developed by astei and many contributors"));
++    source.sendMessage(Identity.nil(), Component.text("§fElytraProxy developed by Elytrium dev. team (mdxd44, hevav, urFate)"));
++    source.sendMessage(Identity.nil(), Component.text("§d(With Love ️)"));
++    source.sendMessage(Identity.nil(), Component.text("§ahttps://github.com/Elytrium/ElytraProxy"));
++    if (source.hasPermission("elytraproxy.reload")) {
++      source.sendMessage(Identity.nil(), Component.text("§fCommands: "));
++      source.sendMessage(Identity.nil(), Component.text("§6/elytraproxy reload §7-§f reloads proxy server itself, without plugins"));
++    }
+   }
+ 
+   @Override
+@@ -149,18 +158,31 @@ public class ElytraProxyCommand implements SimpleCommand {
      public void execute(CommandSource source, String @NonNull [] args) {
        try {
          if (server.reloadConfiguration()) {
@@ -1231,7 +1303,7 @@ index b5de161a..09e6b690 100644
          break;
      }
 diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/config/Settings.java b/proxy/src/main/java/ru/elytrium/elytraproxy/config/Settings.java
-index a5a8b6e6..3277b065 100644
+index a5a8b6e6..b9fdd328 100644
 --- a/proxy/src/main/java/ru/elytrium/elytraproxy/config/Settings.java
 +++ b/proxy/src/main/java/ru/elytrium/elytraproxy/config/Settings.java
 @@ -27,14 +27,98 @@ public class Settings extends Config {
@@ -1239,7 +1311,7 @@ index a5a8b6e6..3277b065 100644
  
    @Final
 -  public String VERSION = "0.1.0";
-+  public String VERSION = "0.1.1-DEV";
++  public String VERSION = "0.1.1";
 +
 +  @Create
 +  public MESSAGES MESSAGES;
