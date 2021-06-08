@@ -1,4 +1,4 @@
-From ccd73650c0e634ff3c2c3ae3838b4e04dce45f04 Mon Sep 17 00:00:00 2001
+From 702e59aa074f0e49547d0a92adfbc37d033a4628 Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Mon, 7 Jun 2021 04:45:40 +0900
 Subject: [PATCH] Move Messages Section To ElytraProxy Config
@@ -1072,7 +1072,7 @@ index 6b4b2be1..e5cd0435 100644
          if (!(source instanceof Player)) {
            source.sendMessage(component);
 diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/ElytraProxyCommand.java b/proxy/src/main/java/ru/elytrium/elytraproxy/commands/ElytraProxyCommand.java
-index 0d80ac09..e55306ca 100644
+index 0d80ac09..f4204274 100644
 --- a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/ElytraProxyCommand.java
 +++ b/proxy/src/main/java/ru/elytrium/elytraproxy/commands/ElytraProxyCommand.java
 @@ -31,10 +31,12 @@ import java.util.Map;
@@ -1088,25 +1088,30 @@ index 0d80ac09..e55306ca 100644
  
  public class ElytraProxyCommand implements SimpleCommand {
  
-@@ -63,8 +65,15 @@ public class ElytraProxyCommand implements SimpleCommand {
+@@ -63,8 +65,20 @@ public class ElytraProxyCommand implements SimpleCommand {
    }
  
    private void usage(CommandSource source) {
 -    String commandText = "/elytraproxy <reload>";
 -    source.sendMessage(Identity.nil(), Component.text(commandText, NamedTextColor.RED));
-+    source.sendMessage(Identity.nil(), Component.text("§fThis server is using ElytraProxy that based on Velocity Proxy"));
-+    source.sendMessage(Identity.nil(), Component.text("§fOriginal Velocity developed by astei and many contributors"));
-+    source.sendMessage(Identity.nil(), Component.text("§fElytraProxy developed by Elytrium dev. team (mdxd44, hevav, urFate)"));
-+    source.sendMessage(Identity.nil(), Component.text("§d(With Love ️)"));
-+    source.sendMessage(Identity.nil(), Component.text("§ahttps://github.com/Elytrium/ElytraProxy"));
++    source.sendMessage(Identity.nil(), Component.text("§fThis server is using ElytraProxy"
++            + "that based on Velocity Proxy"));
++    source.sendMessage(Identity.nil(), Component.text("§fOriginal Velocity developed by astei"
++            + "and many contributors"));
++    source.sendMessage(Identity.nil(), Component.text("§fElytraProxy developed by"
++            + "Elytrium dev. team (mdxd44, hevav, urFate)"));
++    source.sendMessage(Identity.nil(), Component.text("§d(With Love ❤)"));
++    source.sendMessage(Identity.nil(), Component.text("§a"
++            + "https://github.com/Elytrium/ElytraProxy"));
 +    if (source.hasPermission("elytraproxy.reload")) {
 +      source.sendMessage(Identity.nil(), Component.text("§fCommands: "));
-+      source.sendMessage(Identity.nil(), Component.text("§6/elytraproxy reload §7-§f reloads proxy server itself, without plugins"));
++      source.sendMessage(Identity.nil(), Component.text("§6/elytraproxy reload §7-§f"
++              + "reloads proxy server itself, without plugins"));
 +    }
    }
  
    @Override
-@@ -149,18 +158,31 @@ public class ElytraProxyCommand implements SimpleCommand {
+@@ -149,18 +163,31 @@ public class ElytraProxyCommand implements SimpleCommand {
      public void execute(CommandSource source, String @NonNull [] args) {
        try {
          if (server.reloadConfiguration()) {
