@@ -1,4 +1,4 @@
-From 702e59aa074f0e49547d0a92adfbc37d033a4628 Mon Sep 17 00:00:00 2001
+From 3068a0121ce0ed8dc80a8c2cf93a91915b39d895 Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Mon, 7 Jun 2021 04:45:40 +0900
 Subject: [PATCH] Move Messages Section To ElytraProxy Config
@@ -505,7 +505,7 @@ index 19643031..227ea644 100644
    private final VelocityServer server;
    private final VelocityServerConnection serverConn;
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
-index 0d9a6f97..017aeab3 100644
+index 1a7349be..deb9ece4 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
 @@ -69,8 +69,6 @@ import java.util.Queue;
@@ -567,7 +567,7 @@ index 0d9a6f97..017aeab3 100644
              return null;
            });
      } else {
-@@ -340,7 +351,12 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+@@ -339,7 +350,12 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
  
    @Override
    public void exception(Throwable throwable) {
@@ -581,7 +581,7 @@ index 0d9a6f97..017aeab3 100644
    }
  
    @Override
-@@ -595,7 +611,7 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+@@ -594,7 +610,7 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
          }, player.getConnection().eventLoop())
          .exceptionally((ex) -> {
            logger.error(
@@ -591,7 +591,7 @@ index 0d9a6f97..017aeab3 100644
            return null;
          });
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
-index 26ba80c2..debf9791 100644
+index 64bb1512..830e7c1f 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
 @@ -52,7 +52,6 @@ import com.velocitypowered.api.util.title.TextTitle;
