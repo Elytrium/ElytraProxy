@@ -1,4 +1,4 @@
-From 56cae5ac74fbb1872a37dbaf14d158fc66370267 Mon Sep 17 00:00:00 2001
+From 18f1a81324077c7a934383e2c80943b8690ea411 Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Mon, 7 Jun 2021 04:45:40 +0900
 Subject: [PATCH] Move Messages Section To ElytraProxy Config
@@ -1058,7 +1058,7 @@ index 6b4b2be1..e5cd0435 100644
          if (!(source instanceof Player)) {
            source.sendMessage(component);
 diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/ElytraProxyCommand.java b/proxy/src/main/java/ru/elytrium/elytraproxy/commands/ElytraProxyCommand.java
-index 0d80ac09..f4204274 100644
+index 0d80ac09..88a1e603 100644
 --- a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/ElytraProxyCommand.java
 +++ b/proxy/src/main/java/ru/elytrium/elytraproxy/commands/ElytraProxyCommand.java
 @@ -31,10 +31,12 @@ import java.util.Map;
@@ -1080,19 +1080,19 @@ index 0d80ac09..f4204274 100644
    private void usage(CommandSource source) {
 -    String commandText = "/elytraproxy <reload>";
 -    source.sendMessage(Identity.nil(), Component.text(commandText, NamedTextColor.RED));
-+    source.sendMessage(Identity.nil(), Component.text("§fThis server is using ElytraProxy"
-+            + "that based on Velocity Proxy"));
-+    source.sendMessage(Identity.nil(), Component.text("§fOriginal Velocity developed by astei"
-+            + "and many contributors"));
-+    source.sendMessage(Identity.nil(), Component.text("§fElytraProxy developed by"
-+            + "Elytrium dev. team (mdxd44, hevav, urFate)"));
++    source.sendMessage(Identity.nil(), Component.text("§eThis server is using ElytraProxy"
++            + " that based on Velocity Proxy"));
++    source.sendMessage(Identity.nil(), Component.text("§eOriginal Velocity developed by astei"
++            + " and many-many contributors"));
++    source.sendMessage(Identity.nil(), Component.text("§eElytraProxy developed by"
++            + " Elytrium dev team (mdxd44, hevav, urFate)"));
 +    source.sendMessage(Identity.nil(), Component.text("§d(With Love ❤)"));
 +    source.sendMessage(Identity.nil(), Component.text("§a"
 +            + "https://github.com/Elytrium/ElytraProxy"));
 +    if (source.hasPermission("elytraproxy.reload")) {
-+      source.sendMessage(Identity.nil(), Component.text("§fCommands: "));
++      source.sendMessage(Identity.nil(), Component.text("§aCommands: "));
 +      source.sendMessage(Identity.nil(), Component.text("§6/elytraproxy reload §7-§f"
-+              + "reloads proxy server itself, without plugins"));
++              + " reloads proxy server itself, without plugins"));
 +    }
    }
  
