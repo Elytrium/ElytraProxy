@@ -1,4 +1,4 @@
-From 18f1a81324077c7a934383e2c80943b8690ea411 Mon Sep 17 00:00:00 2001
+From 7126ef372e3a9dfd6763a908343dcea0b3df50d2 Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Mon, 7 Jun 2021 04:45:40 +0900
 Subject: [PATCH] Move Messages Section To ElytraProxy Config
@@ -505,7 +505,7 @@ index 19643031..227ea644 100644
    private final VelocityServer server;
    private final VelocityServerConnection serverConn;
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
-index 1a7349be..deb9ece4 100644
+index 1a7349be..4e924eee 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
 @@ -69,8 +69,6 @@ import java.util.Queue;
@@ -535,9 +535,9 @@ index 1a7349be..deb9ece4 100644
 +                            .legacyAmpersand()
 +                            .deserialize(
 +                                    Settings.IMP.MESSAGES.ELYTRAPROXY.COMMAND_SPY_FORMAT
++                                            .replace("%nl%", "\n")
 +                                            .replace("{0}", player.getUsername())
-+                                            .replace("{1}", "/" + originalCommand)
-+                                            .replace("%nl%", "\n")));
++                                            .replace("{1}", "/" + originalCommand)));
 +                  }
                  }
                }
@@ -546,10 +546,10 @@ index 1a7349be..deb9ece4 100644
 -              logger.info("{} -> executed command /{}", player, originalCommand);
 +              logger.info(
 +                      Settings.IMP.MESSAGES.ELYTRAPROXY.CONSOLE_LOG_COMMAND_EXECUTIONS_FORMAT
++                              .replace("%nl%", "\n")
 +                              .replace("&", "§")
 +                              .replace("{0}", String.valueOf(player))
-+                              .replace("{1}", "/" + originalCommand)
-+                              .replace("%nl%", "\n"));
++                              .replace("{1}", "/" + originalCommand));
              }
            })
            .exceptionally(e -> {
@@ -797,7 +797,7 @@ index ddd72ad1..e36af3b5 100644
      }
  
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
-index e16c102b..f351b05b 100644
+index e16c102b..64ce1cfe 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
 @@ -62,6 +62,7 @@ import java.util.concurrent.CompletableFuture;
@@ -836,7 +836,22 @@ index e16c102b..f351b05b 100644
          return;
        }
        /*
-@@ -284,13 +295,13 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+@@ -261,8 +272,12 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+       // ElytraProxy Start - Init antibot & protocol blocker
+       if (Settings.IMP.MAIN_SETTINGS.BANNED_PROTOCOLS
+               .contains(mcConnection.getProtocolVersion().getProtocol())) {
+-        player.disconnect0(Component.text(
+-                Settings.IMP.MESSAGES.ELYTRAPROXY.PROTOCOL_BLOCKED), true);
++        player.disconnect0(
++                LegacyComponentSerializer
++                        .legacyAmpersand()
++                        .deserialize((
++                                Settings.IMP.MESSAGES.ELYTRAPROXY.PROTOCOL_BLOCKED)
++                                        .replace("%nl%", "\n")), true);
+         return;
+       }
+       if (Settings.IMP.ANTIBOT.ENABLE) {
+@@ -284,13 +299,13 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
      if (Settings.IMP.ANTIBOT.BANNED_NICK_PATTERNS
                .stream().anyMatch(formattedNickname::contains)) {
        player.disconnect0(
@@ -857,7 +872,7 @@ index e16c102b..f351b05b 100644
      } else {
        //injectBotFilterOrFinishLogin(player);
  
-@@ -366,8 +377,12 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+@@ -366,8 +381,12 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
              player.disconnect0(reason.get(), true);
            } else {
              if (!server.registerConnection(player)) {
@@ -872,7 +887,7 @@ index e16c102b..f351b05b 100644
                return;
              }
  
-@@ -396,8 +411,12 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+@@ -396,8 +415,12 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
          .thenRunAsync(() -> {
            Optional<RegisteredServer> toTry = event.getInitialServer();
            if (!toTry.isPresent()) {
@@ -1199,7 +1214,7 @@ index 8dc457ad..1454ced2 100644
      }
    }
 diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/SendCommand.java b/proxy/src/main/java/ru/elytrium/elytraproxy/commands/SendCommand.java
-index b5de161a..09e6b690 100644
+index b5de161a..a85b143e 100644
 --- a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/SendCommand.java
 +++ b/proxy/src/main/java/ru/elytrium/elytraproxy/commands/SendCommand.java
 @@ -24,6 +24,7 @@ import com.velocitypowered.api.proxy.ProxyServer;
@@ -1218,7 +1233,7 @@ index b5de161a..09e6b690 100644
  
  public class SendCommand implements SimpleCommand {
  
-@@ -76,26 +78,33 @@ public class SendCommand implements SimpleCommand {
+@@ -76,26 +78,34 @@ public class SendCommand implements SimpleCommand {
      final String[] args = invocation.arguments();
  
      if (args.length != 2) {
@@ -1251,20 +1266,21 @@ index b5de161a..09e6b690 100644
 -                    + "§fВы были перемещены на сервер §6"
 -                    + target.getServerInfo().getName() + " §fадминистратором §6" + sender);
 +    String sender = (source instanceof Player) ? ((Player) source).getUsername()
-+            : Settings.IMP.MESSAGES.ELYTRAPROXY.IF_CONSOLE;
-+    Component summoned =
-+            LegacyComponentSerializer
-+                    .legacyAmpersand()
-+                    .deserialize((
-+                            prefix
-+                            + Settings.IMP.MESSAGES.ELYTRAPROXY.SEND_YOU_GOT_SUMMONED)
-+                                    .replace("%nl%", "\n")
-+                                    .replace("{0}", target.getServerInfo().getName())
-+                                    .replace("{1}", sender));
++            : ((Settings.IMP.MESSAGES.ELYTRAPROXY.IF_CONSOLE)
++                    .replace("%nl%", "\n")
++                    .replace("&", "§"));
++    Component summoned = LegacyComponentSerializer
++            .legacyAmpersand()
++            .deserialize((
++                    prefix
++                    + Settings.IMP.MESSAGES.ELYTRAPROXY.SEND_YOU_GOT_SUMMONED)
++                            .replace("%nl%", "\n")
++                            .replace("{0}", target.getServerInfo().getName())
++                            .replace("{1}", sender));
  
      switch (args[0].toLowerCase()) {
        case "all":
-@@ -106,9 +115,7 @@ public class SendCommand implements SimpleCommand {
+@@ -106,9 +116,7 @@ public class SendCommand implements SimpleCommand {
          break;
        case "current":
          if (!(source instanceof Player)) {
@@ -1275,7 +1291,7 @@ index b5de161a..09e6b690 100644
            break;
          }
          Player player = (Player) source;
-@@ -126,9 +133,14 @@ public class SendCommand implements SimpleCommand {
+@@ -126,9 +134,14 @@ public class SendCommand implements SimpleCommand {
            player.createConnectionRequest(target).fireAndForget();
            player.sendMessage(summoned);
          } else {
@@ -1294,10 +1310,10 @@ index b5de161a..09e6b690 100644
          break;
      }
 diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/config/Settings.java b/proxy/src/main/java/ru/elytrium/elytraproxy/config/Settings.java
-index a5a8b6e6..b9fdd328 100644
+index a5a8b6e6..5115678e 100644
 --- a/proxy/src/main/java/ru/elytrium/elytraproxy/config/Settings.java
 +++ b/proxy/src/main/java/ru/elytrium/elytraproxy/config/Settings.java
-@@ -27,14 +27,98 @@ public class Settings extends Config {
+@@ -27,14 +27,97 @@ public class Settings extends Config {
    public static final Settings IMP = new Settings();
  
    @Final
@@ -1314,7 +1330,7 @@ index a5a8b6e6..b9fdd328 100644
 +    @Create
 +    public MESSAGES.VELOCITY VELOCITY;
 +
-+    @Comment("command-spy-format, log-command-executions-format, protocol-blocked, glist-format-view-all and nick-blocked doesn't have prefix.")
++    @Comment("alert-prefix, command-spy-format, log-command-executions-format, protocol-blocked, glist-format-view-all and nick-blocked doesn't have prefix.")
 +    public static class ELYTRAPROXY {
 +      public String PREFIX = "&5&l[ElytraProxy]&f ";
 +      public String ALERT_PREFIX = "&8[&4Alert&8]&f ";
@@ -1328,12 +1344,11 @@ index a5a8b6e6..b9fdd328 100644
 +      public String SEND_NOT_ENOUGH_ARGUMENTS = "Not enough arguments, usage: &6/send <server|player|all|current> <target>";
 +      public String COMMAND_SPY_FORMAT = "&7 — Player {0} executed command {1}";
 +      public String CONSOLE_LOG_COMMAND_EXECUTIONS_FORMAT = "{0} -> executed command {1}";
-+      public String PROTOCOL_BLOCKED = "&c1.7 not supported";
++      public String PROTOCOL_BLOCKED = "&c1.7.x not supported";
 +      public String NICK_BLOCKED = "&cYour nickname contains forbidden phrases.";
 +      public String RELOAD_SUCCESS = "ElytraProxy configuration successfully reloaded.";
 +      public String RELOAD_FAILURE = "&cUnable to reload your ElytraProxy configuration. Check the console for more details.";
 +      /*
-+      public String CONFIG_LOAD_FAILED: "Невозможно обратиться к конфиг-файлу elytraproxy.yml. Выключение..."
 +      public String MYSQL_LOAD_FAILED: "Ошибка при инициализации базы данных. Выключение..."
 +      */
 +    }
@@ -1371,7 +1386,7 @@ index a5a8b6e6..b9fdd328 100644
 +        public String COMMAND_DOES_NOT_EXIST = "This command does not exist.";
 +        public String PLAYERS_ONLY = "Only players can run this command.";
 +        public String SERVER_DOES_NOT_EXIST = "The specified server &6{0} &fdoes not exist.";
-+        public String SERVER_CURRENT_SERVER = "You are currently connected to &f{0}.";
++        public String SERVER_CURRENT_SERVER = "You are currently connected to &6{0}.";
 +        public String SERVER_TOO_MANY = "There are too many servers set up. Use tab completion to view all servers available.";
 +        public String SERVER_AVAILABLE = "Available servers: &6";
 +        public String SERVER_TOOLTIP_CURRENT_SERVER = "Currently connected to this server%nl%&6{0}";
@@ -1398,7 +1413,7 @@ index a5a8b6e6..b9fdd328 100644
      @Comment({
              "The list of protocols can be found here https://wiki.vg/Protocol_version_numbers",
              "For example, the list contains all protocols of version 1.7.x",
-@@ -61,11 +145,11 @@ public class Settings extends Config {
+@@ -61,11 +144,11 @@ public class Settings extends Config {
              "Most likely does not work with SRV records"
      })
      public static class HOSTNAMES_MANAGER {
@@ -1413,7 +1428,7 @@ index a5a8b6e6..b9fdd328 100644
        public List<String> HOSTNAMES = Arrays.asList("your-digital-ip", "your-domain.com");
        @Comment("IP's in this list will be ignored in check.")
        public List<String> IGNORED_IPS = Arrays.asList("127.0.0.1", "your-haproxy-ip");
-@@ -73,43 +157,17 @@ public class Settings extends Config {
+@@ -73,43 +156,17 @@ public class Settings extends Config {
    }
  
    @Create
@@ -1467,11 +1482,13 @@ index a5a8b6e6..b9fdd328 100644
    }
  
    /*
-@@ -123,31 +181,20 @@ public class Settings extends Config {
+@@ -121,33 +178,20 @@ public class Settings extends Config {
+     public boolean ONLINE_MODE_REQUIRES_LOGIN = false;
+     public String TABLE = "auth";
    }
-   */
+-  */
  
--  @Create
+   @Create
 -  public ANTIBOT ANTIBOT;
 -
 -  public static class ANTIBOT {
@@ -1482,8 +1499,8 @@ index a5a8b6e6..b9fdd328 100644
 -    );
 -  }
 -
-   /*
-   @Create
+-  /*
+-  @Create
 -  public SQL SQL;
 +  public DATABASE DATABASE;
  
