@@ -1,4 +1,4 @@
-From 7126ef372e3a9dfd6763a908343dcea0b3df50d2 Mon Sep 17 00:00:00 2001
+From 648144345fc9a7187a23ed052fa7aa467c2c9abb Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Mon, 7 Jun 2021 04:45:40 +0900
 Subject: [PATCH] Move Messages Section To ElytraProxy Config
@@ -591,7 +591,7 @@ index 1a7349be..4e924eee 100644
            return null;
          });
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
-index 64bb1512..830e7c1f 100644
+index f0f31f0e..bd361408 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
 @@ -52,7 +52,6 @@ import com.velocitypowered.api.util.title.TextTitle;
@@ -602,18 +602,18 @@ index 64bb1512..830e7c1f 100644
  import com.velocitypowered.proxy.connection.MinecraftConnection;
  import com.velocitypowered.proxy.connection.MinecraftConnectionAssociation;
  import com.velocitypowered.proxy.connection.backend.VelocityServerConnection;
-@@ -96,7 +95,6 @@ import net.kyori.adventure.bossbar.BossBar;
- import net.kyori.adventure.identity.Identity;
+@@ -98,7 +97,6 @@ import net.kyori.adventure.permission.PermissionChecker;
+ import net.kyori.adventure.pointer.Pointers;
  import net.kyori.adventure.text.Component;
  import net.kyori.adventure.text.TranslatableComponent;
 -import net.kyori.adventure.text.format.NamedTextColor;
  import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
  import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
  import net.kyori.adventure.text.serializer.plain.PlainComponentSerializer;
-@@ -105,12 +103,11 @@ import org.apache.logging.log4j.Logger;
- import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
+@@ -108,12 +106,11 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
  import org.checkerframework.checker.nullness.qual.NonNull;
  import org.checkerframework.checker.nullness.qual.Nullable;
+ import org.jetbrains.annotations.NotNull;
 +import ru.elytrium.elytraproxy.config.Settings;
  
  public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
@@ -624,7 +624,7 @@ index 64bb1512..830e7c1f 100644
    static final PermissionProvider DEFAULT_PERMISSIONS = s -> PermissionFunction.ALWAYS_UNDEFINED;
  
    private static final Logger logger = LogManager.getLogger(ConnectedPlayer.class);
-@@ -581,18 +578,26 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
+@@ -589,18 +586,26 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
          wrapped = cause;
        }
      }
@@ -658,7 +658,7 @@ index 64bb1512..830e7c1f 100644
    }
  
    /**
-@@ -608,26 +613,44 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
+@@ -616,26 +621,44 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
        return;
      }
  
@@ -718,7 +718,7 @@ index 64bb1512..830e7c1f 100644
      }
    }
  
-@@ -711,8 +734,19 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
+@@ -719,8 +742,19 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
                            getProtocolVersion()), ((Impl) status).isSafe());
                        break;
                      case SUCCESS:
@@ -943,18 +943,18 @@ index bbb6c2da..f38650b1 100644
    private ConnectionMessages() {
      throw new AssertionError();
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/console/VelocityConsole.java b/proxy/src/main/java/com/velocitypowered/proxy/console/VelocityConsole.java
-index 6b465193..fb4dd818 100644
+index 28454816..43a15009 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/console/VelocityConsole.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/console/VelocityConsole.java
-@@ -27,6 +27,7 @@ import com.velocitypowered.proxy.VelocityServer;
- import java.util.List;
- import net.kyori.adventure.identity.Identity;
+@@ -29,6 +29,7 @@ import net.kyori.adventure.identity.Identity;
+ import net.kyori.adventure.permission.PermissionChecker;
+ import net.kyori.adventure.pointer.Pointers;
  import net.kyori.adventure.text.Component;
 +import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
  import net.kyori.text.TextComponent;
  import net.kyori.text.format.TextColor;
  import net.minecrell.terminalconsole.SimpleTerminalConsole;
-@@ -38,6 +39,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
+@@ -41,6 +42,7 @@ import org.jetbrains.annotations.NotNull;
  import org.jline.reader.Candidate;
  import org.jline.reader.LineReader;
  import org.jline.reader.LineReaderBuilder;
@@ -962,7 +962,7 @@ index 6b465193..fb4dd818 100644
  
  public final class VelocityConsole extends SimpleTerminalConsole implements ConsoleCommandSource {
  
-@@ -120,7 +122,13 @@ public final class VelocityConsole extends SimpleTerminalConsole implements Cons
+@@ -125,7 +127,13 @@ public final class VelocityConsole extends SimpleTerminalConsole implements Cons
    protected void runCommand(String command) {
      try {
        if (!this.server.getCommandManager().execute(this, command)) {
