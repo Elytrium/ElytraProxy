@@ -33,7 +33,7 @@ function applyPatch {
     echo "Resetting $target to $what_name..."
     git remote rm upstream > /dev/null 2>&1
     git remote add upstream "$basedir/$what" >/dev/null 2>&1
-    git checkout dev/1.1.0 2>/dev/null || git checkout -b dev/1.1.0
+    git checkout dev/3.0.0 2>/dev/null || git checkout -b dev/3.0.0
     git fetch upstream >/dev/null 2>&1
     git reset --hard upstream/upstream
 

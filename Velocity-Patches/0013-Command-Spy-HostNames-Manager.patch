@@ -1,4 +1,4 @@
-From 800435a5dac5fd0ecd068f20aba521647f9a7ed1 Mon Sep 17 00:00:00 2001
+From 56f6080a703aee0d8bb6ab22a466cb10afe30089 Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Sat, 5 Jun 2021 04:10:26 +0900
 Subject: [PATCH] Command Spy, HostNames Manager
@@ -53,10 +53,10 @@ index 66cc9e59..f614cb53 100644
      <module name="VariableDeclarationUsageDistance"/>
      <module name="CustomImportOrder">
 diff --git a/proxy/build.gradle b/proxy/build.gradle
-index c8df6e3c..99fd4a7b 100644
+index 474d1331..52e4734f 100644
 --- a/proxy/build.gradle
 +++ b/proxy/build.gradle
-@@ -59,6 +59,7 @@ shadowJar {
+@@ -53,6 +53,7 @@ shadowJar {
  
  tasks.withType(Checkstyle) {
      exclude('**/com/velocitypowered/proxy/protocol/packet/*.java')
@@ -65,10 +65,10 @@ index c8df6e3c..99fd4a7b 100644
  }
  
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftConnection.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftConnection.java
-index 506c6bd8..8e4173cb 100644
+index e457c503..2219b43e 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftConnection.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftConnection.java
-@@ -65,6 +65,7 @@ import javax.crypto.spec.SecretKeySpec;
+@@ -68,6 +68,7 @@ import javax.crypto.spec.SecretKeySpec;
  import org.apache.logging.log4j.LogManager;
  import org.apache.logging.log4j.Logger;
  import org.checkerframework.checker.nullness.qual.Nullable;
@@ -76,7 +76,7 @@ index 506c6bd8..8e4173cb 100644
  
  /**
   * A utility class to make working with the pipeline a little less painful and transparently handles
-@@ -136,6 +137,41 @@ public class MinecraftConnection extends ChannelInboundHandlerAdapter {
+@@ -139,6 +140,41 @@ public class MinecraftConnection extends ChannelInboundHandlerAdapter {
        }
  
        if (msg instanceof MinecraftPacket) {
@@ -118,7 +118,7 @@ index 506c6bd8..8e4173cb 100644
          MinecraftPacket pkt = (MinecraftPacket) msg;
          if (!pkt.handle(sessionHandler)) {
            sessionHandler.handleGeneric((MinecraftPacket) msg);
-@@ -166,7 +202,7 @@ public class MinecraftConnection extends ChannelInboundHandlerAdapter {
+@@ -169,7 +205,7 @@ public class MinecraftConnection extends ChannelInboundHandlerAdapter {
          try {
            // ElytraProxy Start - Fix long message while player disconnect unexpectedly
            if (cause instanceof ReadTimeoutException && association instanceof Player) {
@@ -128,7 +128,7 @@ index 506c6bd8..8e4173cb 100644
              sessionHandler.exception(cause);
            }
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
-index 7c872961..377ae28e 100644
+index 6d4e735f..73d856d5 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
 @@ -71,10 +71,12 @@ import java.util.concurrent.CompletableFuture;

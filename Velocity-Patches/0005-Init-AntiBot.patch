@@ -1,4 +1,4 @@
-From d1b078e20db7f5c484283f76d29d8d5387851cc0 Mon Sep 17 00:00:00 2001
+From 67df4ccb0ff8e531d9de675385730b49e94a4558 Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Tue, 11 May 2021 17:51:21 +0900
 Subject: [PATCH] Init AntiBot
@@ -706,7 +706,7 @@ index 00000000..f288702d
 +Public License instead of this License.  But first, please read
 +<https://www.gnu.org/licenses/why-not-lgpl.html>.
 diff --git a/build.gradle b/build.gradle
-index 2ba73986..0b814d80 100644
+index 91910cd9..3b9ce7db 100644
 --- a/build.gradle
 +++ b/build.gradle
 @@ -15,8 +15,9 @@ plugins {
@@ -720,7 +720,7 @@ index 2ba73986..0b814d80 100644
      version 'ely.su'
  
      ext {
-@@ -64,7 +65,11 @@ allprojects {
+@@ -68,7 +69,11 @@ allprojects {
              junitXml.enabled = true
          }
      }
@@ -734,7 +734,7 @@ index 2ba73986..0b814d80 100644
          reports {
              html {
 diff --git a/proxy/build.gradle b/proxy/build.gradle
-index 8493df39..9f87b2ef 100644
+index c7db12b7..5e43729a 100644
 --- a/proxy/build.gradle
 +++ b/proxy/build.gradle
 @@ -10,6 +10,9 @@ apply from: '../gradle/checkstyle.gradle'
@@ -747,20 +747,20 @@ index 8493df39..9f87b2ef 100644
      header = project.rootProject.file('HEADER.txt')
  }
  
-@@ -31,7 +34,7 @@ jar {
+@@ -26,7 +29,7 @@ jar {
          attributes 'Main-Class': 'com.velocitypowered.proxy.Velocity'
          attributes 'Implementation-Title': "ElytraProxy"
          attributes 'Implementation-Version': version
 -        attributes 'Implementation-Vendor': "Velocity Contributors"
 +        attributes 'Implementation-Vendor': "Velocity Contributors, ElytraProxy Contributors"
          attributes 'Multi-Release': 'true'
-         attributes 'Add-Opens': 'java.base/java.lang'
      }
+ }
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-index 15320bb0..8c85ccac 100644
+index 2d7d3d6b..2e22397a 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-@@ -43,7 +43,7 @@ import com.velocitypowered.proxy.command.VelocityCommandManager;
+@@ -41,7 +41,7 @@ import com.velocitypowered.proxy.command.VelocityCommandManager;
  import com.velocitypowered.proxy.command.builtin.GlistCommand;
  import com.velocitypowered.proxy.command.builtin.ServerCommand;
  import com.velocitypowered.proxy.command.builtin.ShutdownCommand;
@@ -769,7 +769,7 @@ index 15320bb0..8c85ccac 100644
  import com.velocitypowered.proxy.config.VelocityConfiguration;
  import com.velocitypowered.proxy.connection.client.ConnectedPlayer;
  import com.velocitypowered.proxy.connection.player.VelocityResourcePackInfo;
-@@ -103,6 +103,7 @@ import org.checkerframework.checker.nullness.qual.EnsuresNonNull;
+@@ -99,6 +99,7 @@ import org.checkerframework.checker.nullness.qual.EnsuresNonNull;
  import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
  import org.checkerframework.checker.nullness.qual.NonNull;
  import org.checkerframework.checker.nullness.qual.Nullable;
@@ -777,7 +777,7 @@ index 15320bb0..8c85ccac 100644
  
  public class VelocityServer implements ProxyServer, ForwardingAudience {
  
-@@ -212,7 +213,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -199,7 +200,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
      cm.logChannelInformation();
  
      // Initialize commands first
@@ -786,7 +786,7 @@ index 15320bb0..8c85ccac 100644
      commandManager.register("server", new ServerCommand(this));
      commandManager.register("shutdown", new ShutdownCommand(this),"end");
      new GlistCommand(this).register();
-@@ -253,6 +254,8 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -240,6 +241,8 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
      try {
        Path configPath = Paths.get("velocity.toml");
        configuration = VelocityConfiguration.read(configPath);
@@ -1340,10 +1340,10 @@ index 88f42a67..00000000
 -  }
 -}
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftConnection.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftConnection.java
-index ba172db4..d79150e7 100644
+index 773f6d35..7b1c32e3 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftConnection.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftConnection.java
-@@ -55,6 +55,8 @@ import io.netty.channel.EventLoop;
+@@ -58,6 +58,8 @@ import io.netty.channel.EventLoop;
  import io.netty.handler.codec.haproxy.HAProxyMessage;
  import io.netty.handler.timeout.ReadTimeoutException;
  import io.netty.util.ReferenceCountUtil;
@@ -1352,7 +1352,7 @@ index ba172db4..d79150e7 100644
  import java.net.InetSocketAddress;
  import java.net.SocketAddress;
  import java.security.GeneralSecurityException;
-@@ -163,7 +165,13 @@ public class MinecraftConnection extends ChannelInboundHandlerAdapter {
+@@ -166,7 +168,13 @@ public class MinecraftConnection extends ChannelInboundHandlerAdapter {
      if (ctx.channel().isActive()) {
        if (sessionHandler != null) {
          try {

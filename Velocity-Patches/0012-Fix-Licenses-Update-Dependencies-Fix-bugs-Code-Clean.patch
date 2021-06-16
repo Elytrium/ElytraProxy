@@ -1,4 +1,4 @@
-From 9a40d11addd878e0660979e451fd46ffe7b9afa8 Mon Sep 17 00:00:00 2001
+From 07c724a0f81dc4222288a172e25d7e44eac3898b Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Thu, 3 Jun 2021 20:48:12 +0900
 Subject: [PATCH] Fix Licenses, Update Dependencies, Fix bugs, Code Cleanup And
@@ -371,77 +371,8 @@ index f288702d..0ad25db4 100644
 -the library.  If this is what you want to do, use the GNU Lesser General
 -Public License instead of this License.  But first, please read
 -<https://www.gnu.org/licenses/why-not-lgpl.html>.
-diff --git a/api/build.gradle b/api/build.gradle
-index 79f12e47..3af47683 100644
---- a/api/build.gradle
-+++ b/api/build.gradle
-@@ -25,7 +25,7 @@ sourceSets {
- }
- 
- dependencies {
--    api 'com.google.code.gson:gson:2.8.6'
-+    api 'com.google.code.gson:gson:2.8.7'
-     api "com.google.guava:guava:${guavaVersion}"
- 
-     // DEPRECATED: Will be removed in Velocity 2.0.0
-@@ -47,7 +47,7 @@ dependencies {
-     }
- 
-     api "org.slf4j:slf4j-api:${slf4jVersion}"
--    api 'com.google.inject:guice:4.2.3'
-+    api 'com.google.inject:guice:5.0.1'
-     api "org.checkerframework:checker-qual:${checkerFrameworkVersion}"
-     api 'com.velocitypowered:velocity-brigadier:1.0.0-SNAPSHOT'
- 
-@@ -90,8 +90,8 @@ javadoc {
-     options.source = '8'
-     options.links(
-             'http://www.slf4j.org/apidocs/',
--            'https://google.github.io/guava/releases/25.1-jre/api/docs/',
--            'https://google.github.io/guice/api-docs/4.2/javadoc/',
-+            'https://google.github.io/guava/releases/30.1.1-jre/api/docs/',
-+            'https://google.github.io/guice/api-docs/5.0.1/javadoc/',
-             'https://docs.oracle.com/javase/8/docs/api/',
-             'https://jd.adventure.kyori.net/api/4.7.0/'
-     )
-diff --git a/build.gradle b/build.gradle
-index 6ae007af..0fa93a2b 100644
---- a/build.gradle
-+++ b/build.gradle
-@@ -10,7 +10,7 @@ buildscript {
- plugins {
-     id 'java'
-     id "com.github.spotbugs" version "4.2.4" apply false
--    id 'org.cadixdev.licenser' version '0.5.1' apply false
-+    id 'org.cadixdev.licenser' version '0.6.0' apply false
- }
- 
- allprojects {
-@@ -23,15 +23,15 @@ allprojects {
-     ext {
-         // dependency versions
-         textVersion = '3.0.4'
--        adventureVersion = '4.8.0'
-+        adventureVersion = '4.8.0-SNAPSHOT'
-         adventurePlatformVersion = '4.0.0-SNAPSHOT'
--        junitVersion = '5.7.0'
-+        junitVersion = '5.7.2'
-         slf4jVersion = '1.7.30'
--        log4jVersion = '2.13.3'
--        nettyVersion = '4.1.58.Final'
--        guavaVersion = '25.1-jre'
--        checkerFrameworkVersion = '3.6.1'
--        configurateVersion = '3.7.1'
-+        log4jVersion = '2.14.1'
-+        nettyVersion = '4.1.65.Final'
-+        guavaVersion = '30.1.1-jre'
-+        checkerFrameworkVersion = '3.14.0'
-+        configurateVersion = '3.7.2'
- 
-         getCurrentShortRevision = {
-             new ByteArrayOutputStream().withStream { os ->
 diff --git a/proxy/build.gradle b/proxy/build.gradle
-index 02972e88..c8df6e3c 100644
+index 0955c38b..474d1331 100644
 --- a/proxy/build.gradle
 +++ b/proxy/build.gradle
 @@ -10,21 +10,23 @@ apply from: '../gradle/checkstyle.gradle'
@@ -474,44 +405,12 @@ index 02972e88..c8df6e3c 100644
 -    exclude '**/botfilter/**'
  }
  
- java {
-@@ -89,24 +91,24 @@ dependencies {
- 
-     implementation 'net.sf.jopt-simple:jopt-simple:5.0.4' // command-line options
-     implementation 'net.minecrell:terminalconsoleappender:1.2.0'
--    runtimeOnly 'org.jline:jline-terminal-jansi:3.16.0' // Needed for JLine
--    runtimeOnly 'com.lmax:disruptor:3.4.2' // Async loggers
-+    runtimeOnly 'org.jline:jline-terminal-jansi:3.20.0' // Needed for JLine
-+    runtimeOnly 'com.lmax:disruptor:3.4.4' // Async loggers
- 
--    implementation 'it.unimi.dsi:fastutil:8.4.1'
-+    implementation 'it.unimi.dsi:fastutil:8.5.4'
-     implementation 'net.kyori:event-method-asm:4.0.0-SNAPSHOT'
- 
-     implementation(platform("net.kyori:adventure-bom:${adventureVersion}"))
-     implementation("net.kyori:adventure-nbt")
- 
--    implementation 'org.asynchttpclient:async-http-client:2.12.1'
-+    implementation 'org.asynchttpclient:async-http-client:2.12.3'
- 
--    implementation 'com.spotify:completable-futures:0.3.3'
-+    implementation 'com.spotify:completable-futures:0.3.4'
- 
-     implementation 'com.electronwill.night-config:toml:3.6.3'
- 
--    implementation 'org.bstats:bstats-base:2.2.0'
-+    implementation 'org.bstats:bstats-base:2.2.1'
- 
--    compileOnly 'com.github.spotbugs:spotbugs-annotations:4.1.2'
-+    compileOnly 'com.github.spotbugs:spotbugs-annotations:4.2.3'
- 
-     testImplementation "org.junit.jupiter:junit-jupiter-api:${junitVersion}"
-     testImplementation "org.junit.jupiter:junit-jupiter-engine:${junitVersion}"
+ jar {
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/config/VelocityConfiguration.java b/proxy/src/main/java/com/velocitypowered/proxy/config/VelocityConfiguration.java
-index 09e75a1e..034aa72a 100644
+index f76764ab..307ba6b6 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/config/VelocityConfiguration.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/config/VelocityConfiguration.java
-@@ -334,7 +334,7 @@ public class VelocityConfiguration implements ProxyConfig {
+@@ -323,7 +323,7 @@ public class VelocityConfiguration implements ProxyConfig {
    //BotFilter - global rate limiter
    @Override
    public int getLoginRatelimitAttempts() {
@@ -551,10 +450,10 @@ index 713c3cf5..3e7d5ac4 100644
              ImmutableList.of()),
          configuration.getMotd(),
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/protocol/util/PluginMessageUtil.java b/proxy/src/main/java/com/velocitypowered/proxy/protocol/util/PluginMessageUtil.java
-index e48d1f13..5d27f801 100644
+index 7e05327f..8c549b8c 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/protocol/util/PluginMessageUtil.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/protocol/util/PluginMessageUtil.java
-@@ -149,7 +149,7 @@ public final class PluginMessageUtil {
+@@ -128,7 +128,7 @@ public final class PluginMessageUtil {
      checkArgument(isMcBrand(message), "message is not a brand plugin message");
  
      String currentBrand = readBrandMessage(message.content());

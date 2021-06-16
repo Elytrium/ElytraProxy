@@ -1,14 +1,14 @@
-From abbfbf736cdeb63ec97a1c56a799ccc6c921fff3 Mon Sep 17 00:00:00 2001
+From 872c61d8a24d6553128d207f052cd747246801ca Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Wed, 2 Jun 2021 23:35:32 +0900
 Subject: [PATCH] Protocol Blocker, Fix bugs, Code Cleanup And More
 
 
 diff --git a/build.gradle b/build.gradle
-index 63a1dc04..fbf2af18 100644
+index 4c62bd0d..3b9ce7db 100644
 --- a/build.gradle
 +++ b/build.gradle
-@@ -58,11 +58,6 @@ allprojects {
+@@ -62,11 +62,6 @@ allprojects {
          maven {
              url "https://nexus.velocitypowered.com/repository/maven-public/"
          }
@@ -85,7 +85,7 @@ index 08a2b373..66cc9e59 100644
        <property name="format" value="^[a-z][a-z0-9][a-zA-Z0-9_]*$"/>
        <message key="name.invalidPattern"
 diff --git a/proxy/build.gradle b/proxy/build.gradle
-index 4b7745c7..e8832066 100644
+index 56128db4..c1cb717f 100644
 --- a/proxy/build.gradle
 +++ b/proxy/build.gradle
 @@ -2,11 +2,11 @@ import com.github.jengelman.gradle.plugins.shadow.transformers.Log4j2PluginsCach
@@ -102,7 +102,7 @@ index 4b7745c7..e8832066 100644
  apply plugin: 'com.github.johnrengelman.shadow'
  
  license {
-@@ -68,8 +68,6 @@ dependencies {
+@@ -62,8 +62,6 @@ dependencies {
      testCompileOnly 'org.projectlombok:lombok:1.18.20'
      testAnnotationProcessor 'org.projectlombok:lombok:1.18.20'
  
@@ -111,9 +111,9 @@ index 4b7745c7..e8832066 100644
      // Note: we depend on the API twice, first the main sourceset, and then the annotation processor.
      implementation project(':elytraproxy-api')
      implementation project(':elytraproxy-api').sourceSets.ap.output
-@@ -108,15 +106,10 @@ dependencies {
+@@ -104,15 +102,10 @@ dependencies {
  
-     implementation 'org.bstats:bstats-base:2.2.0'
+     implementation 'com.github.ben-manes.caffeine:caffeine:3.0.2'
  
 -    // ElytraProxy - add mysql driver
 -    implementation 'org.mariadb.jdbc:mariadb-java-client:2.7.3'
@@ -128,10 +128,10 @@ index 4b7745c7..e8832066 100644
  
  test {
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-index 9bc7fb68..0c22d2b8 100644
+index c8877b4a..136483bc 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-@@ -138,7 +138,8 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -134,7 +134,8 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
    private final VelocityPluginManager pluginManager;
    private final AdventureBossBarManager bossBarManager;
  
@@ -142,10 +142,10 @@ index 9bc7fb68..0c22d2b8 100644
    private final VelocityConsole console;
    private @MonotonicNonNull Ratelimiter ipAttemptLimiter;
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/config/VelocityConfiguration.java b/proxy/src/main/java/com/velocitypowered/proxy/config/VelocityConfiguration.java
-index 555dfea3..eb92cb80 100644
+index 39f154cd..cd4d4fcb 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/config/VelocityConfiguration.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/config/VelocityConfiguration.java
-@@ -334,7 +334,7 @@ public class VelocityConfiguration implements ProxyConfig {
+@@ -323,7 +323,7 @@ public class VelocityConfiguration implements ProxyConfig {
    //BotFilter - global rate limiter
    @Override
    public int getLoginRatelimitAttempts() {
@@ -224,10 +224,10 @@ index 50ec438a..67f890ea 100644
    }
  
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/protocol/StateRegistry.java b/proxy/src/main/java/com/velocitypowered/proxy/protocol/StateRegistry.java
-index ffbb5d45..5fb51bbf 100644
+index b50754f8..1d786691 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/protocol/StateRegistry.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/protocol/StateRegistry.java
-@@ -437,6 +437,7 @@ public enum StateRegistry {
+@@ -438,6 +438,7 @@ public enum StateRegistry {
          }
          return id;
        }

@@ -1,11 +1,11 @@
-From 42f899da790d53e480817267f226783ac6a10b4b Mon Sep 17 00:00:00 2001
+From 5557500166b6ae78848cfd2f02f3dc02951242c0 Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Sat, 5 Jun 2021 17:50:10 +0900
 Subject: [PATCH] Improve HostNames Manager, Code Cleanup, Fix Bugs
 
 
 diff --git a/build.gradle b/build.gradle
-index 0fa93a2b..82b2812b 100644
+index 7bafaba4..5512c589 100644
 --- a/build.gradle
 +++ b/build.gradle
 @@ -18,7 +18,7 @@ allprojects {
@@ -18,10 +18,10 @@ index 0fa93a2b..82b2812b 100644
      ext {
          // dependency versions
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-index ff71cb19..11eedb03 100644
+index c197d17c..f3cd20b5 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-@@ -224,8 +224,6 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -211,8 +211,6 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
  
      this.doStartupConfigLoad();
  
@@ -30,7 +30,7 @@ index ff71cb19..11eedb03 100644
      for (Map.Entry<String, String> entry : configuration.getServers().entrySet()) {
        servers.register(new ServerInfo(entry.getKey(), AddressUtil.parseAddress(entry.getValue())));
      }
-@@ -254,6 +252,8 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -241,6 +239,8 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
      }
  
      Metrics.VelocityMetrics.startMetrics(this, configuration.getMetrics());
@@ -40,10 +40,10 @@ index ff71cb19..11eedb03 100644
  
    @SuppressFBWarnings("DM_EXIT")
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftConnection.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftConnection.java
-index 8e4173cb..c5b252ef 100644
+index 2219b43e..fa51244f 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftConnection.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftConnection.java
-@@ -140,34 +140,48 @@ public class MinecraftConnection extends ChannelInboundHandlerAdapter {
+@@ -143,34 +143,48 @@ public class MinecraftConnection extends ChannelInboundHandlerAdapter {
          // ElytraProxy Start
          if (Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.ENABLE) {
            InetSocketAddress adr = (InetSocketAddress) ctx.channel().localAddress();
@@ -121,7 +121,7 @@ index 8e4173cb..c5b252ef 100644
            }
          }
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
-index 377ae28e..0d9a6f97 100644
+index 73d856d5..4ac74d9d 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
 @@ -169,8 +169,6 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {

@@ -1,11 +1,11 @@
-From 2c37b26f80a75af224d02289203aec13845cdbe8 Mon Sep 17 00:00:00 2001
+From d705aee37eaa5198f257b8805ebb559eda6d300b Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Thu, 3 Jun 2021 02:23:42 +0900
 Subject: [PATCH] Fix bugs, Code Cleanup And More
 
 
 diff --git a/build.gradle b/build.gradle
-index fbf2af18..c812de11 100644
+index 3b9ce7db..7bafaba4 100644
 --- a/build.gradle
 +++ b/build.gradle
 @@ -18,7 +18,7 @@ allprojects {
@@ -18,10 +18,10 @@ index fbf2af18..c812de11 100644
      ext {
          // dependency versions
 diff --git a/proxy/build.gradle b/proxy/build.gradle
-index e8832066..02972e88 100644
+index c1cb717f..0955c38b 100644
 --- a/proxy/build.gradle
 +++ b/proxy/build.gradle
-@@ -57,7 +57,7 @@ shadowJar {
+@@ -51,7 +51,7 @@ shadowJar {
  
  tasks.withType(Checkstyle) {
      exclude('**/com/velocitypowered/proxy/protocol/packet/*.java')
@@ -31,10 +31,10 @@ index e8832066..02972e88 100644
  
  dependencies {
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-index 0c22d2b8..ff71cb19 100644
+index 136483bc..c197d17c 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-@@ -209,7 +209,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -196,7 +196,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
    @EnsuresNonNull({"serverKeyPair", "servers", "pluginManager", "eventManager", "scheduler",
        "console", "cm", "configuration"})
    void start() {
@@ -97,10 +97,10 @@ index 47394384..2d855e7a 100644
    }
  }
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/config/VelocityConfiguration.java b/proxy/src/main/java/com/velocitypowered/proxy/config/VelocityConfiguration.java
-index eb92cb80..09e75a1e 100644
+index cd4d4fcb..f76764ab 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/config/VelocityConfiguration.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/config/VelocityConfiguration.java
-@@ -334,7 +334,7 @@ public class VelocityConfiguration implements ProxyConfig {
+@@ -323,7 +323,7 @@ public class VelocityConfiguration implements ProxyConfig {
    //BotFilter - global rate limiter
    @Override
    public int getLoginRatelimitAttempts() {
@@ -144,7 +144,7 @@ index 214a196d..713c3cf5 100644
              ImmutableList.of()),
          configuration.getMotd(),
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/protocol/util/PluginMessageUtil.java b/proxy/src/main/java/com/velocitypowered/proxy/protocol/util/PluginMessageUtil.java
-index 5e30c135..e48d1f13 100644
+index 51787428..7e05327f 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/protocol/util/PluginMessageUtil.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/protocol/util/PluginMessageUtil.java
 @@ -32,6 +32,7 @@ import java.util.Collection;
@@ -155,7 +155,7 @@ index 5e30c135..e48d1f13 100644
  
  public final class PluginMessageUtil {
  
-@@ -148,7 +149,8 @@ public final class PluginMessageUtil {
+@@ -127,7 +128,8 @@ public final class PluginMessageUtil {
      checkArgument(isMcBrand(message), "message is not a brand plugin message");
  
      String currentBrand = readBrandMessage(message.content());

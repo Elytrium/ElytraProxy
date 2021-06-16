@@ -1,16 +1,16 @@
-From caf5086b8c9c9229fefa1f8473a603ef123ba216 Mon Sep 17 00:00:00 2001
+From fcf5dbf40d7e0965e643d17422d93501f599a95c Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Sat, 22 May 2021 04:39:59 +0900
 Subject: [PATCH] Commands from bungee
 
 
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-index 8c85ccac..006b32f4 100644
+index 2e22397a..c83eb59e 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-@@ -40,10 +40,10 @@ import com.velocitypowered.api.util.bossbar.BossBar;
- import com.velocitypowered.api.util.bossbar.BossBarColor;
- import com.velocitypowered.api.util.bossbar.BossBarOverlay;
+@@ -38,10 +38,10 @@ import com.velocitypowered.api.util.Favicon;
+ import com.velocitypowered.api.util.GameProfile;
+ import com.velocitypowered.api.util.ProxyVersion;
  import com.velocitypowered.proxy.command.VelocityCommandManager;
 +import com.velocitypowered.proxy.command.builtin.ElytraProxyCommand;
  import com.velocitypowered.proxy.command.builtin.GlistCommand;
@@ -20,7 +20,7 @@ index 8c85ccac..006b32f4 100644
  import com.velocitypowered.proxy.config.VelocityConfiguration;
  import com.velocitypowered.proxy.connection.client.ConnectedPlayer;
  import com.velocitypowered.proxy.connection.player.VelocityResourcePackInfo;
-@@ -104,6 +104,9 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
+@@ -100,6 +100,9 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
  import org.checkerframework.checker.nullness.qual.NonNull;
  import org.checkerframework.checker.nullness.qual.Nullable;
  import ru.mdxd44.elytraproxy.ElytraProxy;
@@ -30,7 +30,7 @@ index 8c85ccac..006b32f4 100644
  
  public class VelocityServer implements ProxyServer, ForwardingAudience {
  
-@@ -215,6 +218,9 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -202,6 +205,9 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
      // Initialize commands first
      commandManager.register("elytraproxy", new ElytraProxyCommand(this));
      commandManager.register("server", new ServerCommand(this));
@@ -41,10 +41,10 @@ index 8c85ccac..006b32f4 100644
      new GlistCommand(this).register();
  
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftConnection.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftConnection.java
-index d79150e7..8436789b 100644
+index 7b1c32e3..519a4687 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftConnection.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftConnection.java
-@@ -166,10 +166,10 @@ public class MinecraftConnection extends ChannelInboundHandlerAdapter {
+@@ -169,10 +169,10 @@ public class MinecraftConnection extends ChannelInboundHandlerAdapter {
        if (sessionHandler != null) {
          try {
            // ElytraProxy Start - Try to fix long message while player disconnect unexpectedly

@@ -1,4 +1,4 @@
-From afec083bbc6e9cd51b84f1677aef2d858199514f Mon Sep 17 00:00:00 2001
+From 9c3cc75f574210afbd15a93076c5a6c859507799 Mon Sep 17 00:00:00 2001
 From: Petr Ilin <hevav@hevav.dev>
 Date: Mon, 24 May 2021 04:19:59 +0900
 Subject: [PATCH] Init Skins System, Many Config Options, Fix bugs, Code
@@ -19,7 +19,7 @@ index fbdf3cea..2ffb4fd0 100644
  ### Natives stuff ###
  native/mbedtls
 diff --git a/proxy/build.gradle b/proxy/build.gradle
-index fb75015d..aaef1279 100644
+index a2abafc4..041094ef 100644
 --- a/proxy/build.gradle
 +++ b/proxy/build.gradle
 @@ -10,9 +10,12 @@ apply from: '../gradle/checkstyle.gradle'
@@ -36,7 +36,7 @@ index fb75015d..aaef1279 100644
      header = project.rootProject.file('HEADER.txt')
  }
  
-@@ -46,6 +49,7 @@ shadowJar {
+@@ -40,6 +43,7 @@ shadowJar {
  
  tasks.withType(Checkstyle) {
      exclude('**/com/velocitypowered/proxy/protocol/packet/*.java')

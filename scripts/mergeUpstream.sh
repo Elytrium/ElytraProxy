@@ -5,7 +5,7 @@ basedir=`pwd`
 
 function update {
     cd "$basedir/$1"
-    git fetch && git reset --hard origin/dev/1.1.0
+    git fetch && git reset --hard origin/dev/3.0.0
     cd "$basedir/$1/.."
     git add $1
 }
