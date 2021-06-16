@@ -1,4 +1,4 @@
-From 36ce7c83f8085547bc4a9457433332c732874448 Mon Sep 17 00:00:00 2001
+From 5b558f818b2b35100cf3e7de03b9acfdb8771ba5 Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Thu, 17 Jun 2021 04:09:51 +0900
 Subject: [PATCH] Many-many shiiiiiit
@@ -43,15 +43,16 @@ index 00000000..46401d2f
 +lombok.extern.findbugs.addSuppressFBWarnings = true
 \ No newline at end of file
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-index f3cd20b5..fa6b0998 100644
+index f3cd20b5..ad103cca 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-@@ -599,7 +599,8 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -599,7 +599,9 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
  
    @Override
    public int getPlayerCount() {
 -    return connectionsByUuid.size();
-+    return (int) getAllPlayers().stream().filter(p -> !Settings.IMP.MAIN_SETTINGS.IGNORE_ONLINE_AT.contains(p.getCurrentServer()
++    return (int) getAllPlayers().stream().filter(p ->
++        !Settings.IMP.MAIN_SETTINGS.IGNORE_ONLINE_AT.contains(p.getCurrentServer()
 +        .get().getServerInfo().getName())).count();
    }
  
@@ -367,19 +368,10 @@ index e9d64d40..8328752a 100644
                  }
                }
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/backend/TransitionSessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/backend/TransitionSessionHandler.java
-index 35682584..fa338776 100644
+index 35682584..1f98ec38 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/backend/TransitionSessionHandler.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/backend/TransitionSessionHandler.java
-@@ -18,6 +18,8 @@
- package com.velocitypowered.proxy.connection.backend;
- 
- import static com.velocitypowered.proxy.connection.backend.BackendConnectionPhases.IN_TRANSITION;
-+import static com.velocitypowered.proxy.connection.client.ClientPlaySessionHandler.getVerifiedByBrandCheck;
-+import static com.velocitypowered.proxy.connection.client.ClientPlaySessionHandler.getVerifiedBySettingsCheck;
- import static com.velocitypowered.proxy.connection.forge.legacy.LegacyForgeHandshakeBackendPhase.HELLO;
- 
- import com.velocitypowered.api.event.player.ServerConnectedEvent;
-@@ -37,9 +39,13 @@ import com.velocitypowered.proxy.protocol.packet.KeepAlive;
+@@ -37,9 +37,13 @@ import com.velocitypowered.proxy.protocol.packet.KeepAlive;
  import com.velocitypowered.proxy.protocol.packet.PluginMessage;
  import com.velocitypowered.proxy.protocol.util.PluginMessageUtil;
  import java.io.IOException;
@@ -393,47 +385,8 @@ index 35682584..fa338776 100644
  
  /**
   * A special session handler that catches "last minute" disconnects.
-@@ -142,6 +148,38 @@ public class TransitionSessionHandler implements MinecraftSessionHandler {
-               player.getUsername(), exc);
-           player.disconnect(ConnectionMessages.INTERNAL_SERVER_CONNECTION_ERROR);
-           resultFuture.completeExceptionally(exc);
-+          new Timer().scheduleAtFixedRate(new TimerTask() {
-+            @Override
-+            public void run() {
-+              try {
-+                if (server.getElytraProxy() == null) {
-+                  return;
-+                }
-+                for (ConnectedPlayer player : getVerifiedBySettingsCheck()) {
-+                  player.disconnect(
-+                      LegacyComponentSerializer
-+                          .legacyAmpersand()
-+                          .deserialize((
-+                              "&5Elytrium%nl%%nl%&fВаш клиент не отправляет настроек."
-+                              + "%nl%&fЕсли вы считаете что это ошибка, свяжитесь с администрацией. (ely.su/discord)")
-+                                  .replace("%nl%", "\n")
-+                          ));
-+                }
-+                for (ConnectedPlayer player : getVerifiedByBrandCheck()) {
-+                  player.disconnect(
-+                      LegacyComponentSerializer
-+                          .legacyAmpersand()
-+                          .deserialize((
-+                              "&5Elytrium%nl%%nl%&fВаш клиент не отправляет бренд."
-+                              + "%nl%&fЕсли вы считаете что это ошибка, свяжитесь с администрацией. (ely.su/discord)")
-+                                  .replace("%nl%", "\n")
-+                          ));
-+                }
-+              } catch (Exception e) {
-+                e.printStackTrace();
-+              }
-+            }
-+          }, 120, 120);
-           return null;
-         });
- 
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
-index db97ab23..3d74f711 100644
+index db97ab23..964b6166 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
 @@ -27,13 +27,11 @@ import com.velocitypowered.api.event.command.CommandExecuteEvent.CommandResult;
@@ -465,7 +418,7 @@ index db97ab23..3d74f711 100644
  import ru.elytrium.elytraproxy.config.Settings;
  
  /**
-@@ -86,10 +85,15 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+@@ -86,10 +85,13 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
  
    private final ConnectedPlayer player;
    private boolean spawned = false;
@@ -475,100 +428,84 @@ index db97ab23..3d74f711 100644
    private final VelocityServer server;
    private @Nullable TabCompleteRequest outstandingTabComplete;
 +  @Getter
-+  private static final List<ConnectedPlayer> verifiedBySettingsCheck = new ArrayList<>();
-+  @Getter
 +  private static final List<ConnectedPlayer> verifiedByBrandCheck = new ArrayList<>();
  
    /**
     * Constructs a client play session handler.
-@@ -138,6 +142,86 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+@@ -137,7 +139,72 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+ 
    @Override
    public boolean handle(ClientSettings packet) {
-     player.setPlayerSettings(packet);
++    // TODO: Move to botfilter check
++    String toStringPacket = "{} send settings \"locale= '"
++        + packet.getLocale() + '\''
++        + ", viewDistance= " + packet.getViewDistance()
++        + ", chatVisibility= " + packet.getChatVisibility()
++        + ", chatColors= " + packet.isChatColors()
++        + ", skinParts= " + packet.getSkinParts()
++        + ", mainHand= " + packet.getMainHand()
++        + ", chatFilteringEnabled= " + packet.isChatFilteringEnabled() + '"';
 +    if (!checked) {
 +      if (Settings.IMP.ANTIBOT.ENABLE) {
-+        // TODO: Move to botfilter check
-+        if (Settings.IMP.ANTIBOT.CHECK_CLIENT_SETTINGS) {
-+          logger.info("{} send settings \"locale='"
-+              + packet.getLocale() + '\''
-+              + ", viewDistance=" + packet.getViewDistance()
-+              + "chatVisibility=" + packet.getChatVisibility()
-+              + "chatColors=" + packet.isChatColors()
-+              + "skinParts=" + packet.getSkinParts()
-+              + "mainHand=" + packet.getMainHand()
-+              + "chatFilteringEnabled" + packet.isChatFilteringEnabled() + '"', player);
-+          if (packet.toString().contains("null")) {
-+            logger.error("{} send settings \"locale='"
-+                + packet.getLocale() + '\''
-+                + ", viewDistance=" + packet.getViewDistance()
-+                + "chatVisibility=" + packet.getChatVisibility()
-+                + "chatColors=" + packet.isChatColors()
-+                + "skinParts=" + packet.getSkinParts()
-+                + "mainHand=" + packet.getMainHand()
-+                + "chatFilteringEnabled" + packet.isChatFilteringEnabled() + '"', player);
++        if (Settings.IMP.ANTIBOT.CHECK_CLIENT_BRAND) {
++          if (!ClientPlaySessionHandler.getVerifiedByBrandCheck().contains(player)) {
 +            player.disconnect(
 +                LegacyComponentSerializer
 +                    .legacyAmpersand()
 +                    .deserialize((
-+                        "&5Elytrium%nl%%nl%&fУ вас не отправляются настройки"
-+                        + " клиента при подключении.%nl%"
-+                        + "&fЕсли это ошибка, свяжитесь с администрацией. (ely.su/discord)")
++                        Settings.IMP.MESSAGES.ELYTRAPROXY.CLIENT_CHECK_BRAND)
++                        .replace("%nl%", "\n")
++                    ));
++            server.getElytraProxy().getStatistics().addBlockedConnection();
++          }
++        }
++        if (Settings.IMP.ANTIBOT.CHECK_CLIENT_SETTINGS) {
++          if (packet.toString().contains("null")) {
++            logger.error(toStringPacket, player);
++            player.disconnect(
++                LegacyComponentSerializer
++                    .legacyAmpersand()
++                    .deserialize((
++                        Settings.IMP.MESSAGES.ELYTRAPROXY.CLIENT_CHECK_SETTINGS)
 +                            .replace("%nl%", "\n")
 +                    ));
 +            server.getElytraProxy().getLogger().error("{} has null in settings packet", player);
 +            server.getElytraProxy().getStatistics().addBlockedConnection();
 +          } else if (!packet.isChatColors()) {
-+            logger.error("{} send settings \"locale='"
-+                + packet.getLocale() + '\''
-+                + ", viewDistance=" + packet.getViewDistance()
-+                + "chatVisibility=" + packet.getChatVisibility()
-+                + "chatColors=" + packet.isChatColors()
-+                + "skinParts=" + packet.getSkinParts()
-+                + "mainHand=" + packet.getMainHand()
-+                + "chatFilteringEnabled" + packet.isChatFilteringEnabled() + '"', player);
++            logger.error(toStringPacket, player);
 +            player.disconnect(
 +                LegacyComponentSerializer
 +                    .legacyAmpersand()
 +                    .deserialize((
-+                        "&5Elytrium%nl%%nl%&fПожалуйста включите цвета в настройках чата."
-+                        + "%nl%&eНастройки > Настройки чата > Цвета"
-+                        + "%nl%&fЕсли это не помогает, свяжитесь с администрацией. (ely.su/discord)")
++                        Settings.IMP.MESSAGES.ELYTRAPROXY.CLIENT_CHECK_SETTINGS_CHAT_COLOR)
 +                            .replace("%nl%", "\n")
 +                    ));
 +            server.getElytraProxy().getLogger().error("{} doesn't send isChatColors packet",
 +                player);
 +            server.getElytraProxy().getStatistics().addBlockedConnection();
 +          } else if (packet.getSkinParts() == 0) {
-+            logger.error("{} send settings \"locale='"
-+                + packet.getLocale() + '\''
-+                + ", viewDistance=" + packet.getViewDistance()
-+                + "chatVisibility=" + packet.getChatVisibility()
-+                + "chatColors=" + packet.isChatColors()
-+                + "skinParts=" + packet.getSkinParts()
-+                + "mainHand=" + packet.getMainHand()
-+                + "chatFilteringEnabled" + packet.isChatFilteringEnabled() + '"', player);
++            logger.error(toStringPacket, player);
 +            player.disconnect(
 +                LegacyComponentSerializer
 +                    .legacyAmpersand()
 +                    .deserialize((
-+                        "&5Elytrium%nl%%nl%&fПожалуйста включите любой параметр"
-+                        + " из настроек внешнего вида.%nl%&eНастройки > Внешний вид"
-+                        + "%nl%&fЕсли это не помогает, свяжитесь с администрацией. (ely.su/discord)")
++                        Settings.IMP.MESSAGES.ELYTRAPROXY.CLIENT_CHECK_SETTINGS_SKIN_PARTS)
 +                            .replace("%nl%", "\n")
 +                    ));
 +            server.getElytraProxy().getLogger().error("{} doesn't send skin parts packet",
 +                player);
 +            server.getElytraProxy().getStatistics().addBlockedConnection();
 +          }
++          logger.info(toStringPacket, player);
 +        }
 +      }
 +    }
+     player.setPlayerSettings(packet);
 +    checked = true;
-+    verifiedBySettingsCheck.add(player);
      return false; // will forward onto the server
    }
  
-@@ -159,40 +243,42 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+@@ -159,40 +226,42 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
            .thenComposeAsync(event -> processCommandExecuteResult(originalCommand,
                event.getResult()))
            .whenComplete((ignored, throwable) -> {
@@ -635,7 +572,7 @@ index db97ab23..3d74f711 100644
              return null;
            });
      } else {
-@@ -248,7 +334,7 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+@@ -248,7 +317,7 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
            }
          }
          server.getEventManager().fireAndForget(new PlayerChannelRegisterEvent(player,
@@ -644,16 +581,17 @@ index db97ab23..3d74f711 100644
          backendConn.write(packet.retain());
        } else if (PluginMessageUtil.isUnregister(packet)) {
          player.getKnownChannels().removeAll(PluginMessageUtil.getChannels(packet));
-@@ -257,6 +343,8 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+@@ -257,6 +326,9 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
          player.setClientBrand(PluginMessageUtil.readBrandMessage(packet.content()));
          backendConn.write(PluginMessageUtil
              .rewriteMinecraftBrand(packet, server.getVersion(), player.getProtocolVersion()));
-+        logger.info("{} has brand {}", player, PluginMessageUtil.readBrandMessage(packet.content()));
++        logger.info("{} has client brand {}", player,
++            PluginMessageUtil.readBrandMessage(packet.content()));
 +        verifiedByBrandCheck.add(player);
        } else if (BungeeCordMessageResponder.isBungeeCordMessage(packet)) {
          return true;
        } else {
-@@ -355,8 +443,9 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+@@ -355,8 +427,9 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
          LegacyComponentSerializer
              .legacyAmpersand()
              .deserialize((
@@ -844,7 +782,7 @@ index ed8765e1..5914c277 100644
      }
  
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
-index 64ce1cfe..965c1ba1 100644
+index 64ce1cfe..dc40ef8b 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
 @@ -44,6 +44,7 @@ import com.velocitypowered.proxy.config.VelocityConfiguration;
@@ -881,11 +819,12 @@ index 64ce1cfe..965c1ba1 100644
          return;
        }
        /*
-@@ -269,15 +272,16 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+@@ -269,15 +272,17 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
        }
        */
        logger.info("{} has connected", player);
 -      // ElytraProxy Start - Init antibot & protocol blocker
++      server.getElytraProxy().getStatistics().addConnectionPerSecond();
 +      // ElytraProxy Start
        if (Settings.IMP.MAIN_SETTINGS.BANNED_PROTOCOLS
 -              .contains(mcConnection.getProtocolVersion().getProtocol())) {
@@ -905,7 +844,7 @@ index 64ce1cfe..965c1ba1 100644
          return;
        }
        if (Settings.IMP.ANTIBOT.ENABLE) {
-@@ -295,24 +299,26 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+@@ -295,24 +300,25 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
  
    private void preLoginCheck(ConnectedPlayer player) {
      String formattedNickname = player.getUsername().toLowerCase();
@@ -937,12 +876,11 @@ index 64ce1cfe..965c1ba1 100644
 +      server.getElytraProxy().getStatistics().addBlockedConnection();
 +      return;
      }
-+    //injectBotFilterOrFinishLogin(player);
++    injectBotFilterOrFinishLogin(player);
 +
 +    // temp
-+    server.getElytraProxy().getStatistics().addConnectionPerSecond();
-+    completeLoginProtocol(player, true);
-+    initialize(player);
++    // completeLoginProtocol(player, true);
++    // initialize(player);
    }
  
    private void injectBotFilterOrFinishLogin(ConnectedPlayer player) {
@@ -1037,7 +975,7 @@ index a0ae648c..ca1c8619 100644
      if (isProxyProtocol) { //BotFilter - reuse variable
        ch.pipeline().addFirst(new HAProxyMessageDecoder());
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/protocol/netty/GS4QueryHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/protocol/netty/GS4QueryHandler.java
-index ff4a63b2..8e41b497 100644
+index ff4a63b2..4889bfbe 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/protocol/netty/GS4QueryHandler.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/protocol/netty/GS4QueryHandler.java
 @@ -24,7 +24,6 @@ import com.google.common.cache.Cache;
@@ -1056,7 +994,7 @@ index ff4a63b2..8e41b497 100644
  
  public class GS4QueryHandler extends SimpleChannelInboundHandler<DatagramPacket> {
  
-@@ -84,15 +84,17 @@ public class GS4QueryHandler extends SimpleChannelInboundHandler<DatagramPacket>
+@@ -84,15 +84,18 @@ public class GS4QueryHandler extends SimpleChannelInboundHandler<DatagramPacket>
    private QueryResponse createInitialResponse() {
      return QueryResponse.builder()
          .hostname(PlainComponentSerializer.plain().serialize(server.getConfiguration().getMotd()))
@@ -1068,7 +1006,8 @@ index ff4a63b2..8e41b497 100644
          .proxyPort(server.getConfiguration().getBind().getPort())
          .proxyHost(server.getConfiguration().getBind().getHostString())
 -        .players(server.getAllPlayers().stream().map(Player::getUsername)
-+        .players(server.getAllPlayers().stream().filter(p -> !Settings.IMP.MAIN_SETTINGS.IGNORE_ONLINE_AT.contains(p.getCurrentServer()
++        .players(server.getAllPlayers().stream().filter(p ->
++            !Settings.IMP.MAIN_SETTINGS.IGNORE_ONLINE_AT.contains(p.getCurrentServer()
 +                .get().getServerInfo().getName()))
 +            .map(Player::getUsername)
              .collect(Collectors.toList()))
@@ -1077,7 +1016,7 @@ index ff4a63b2..8e41b497 100644
          .plugins(
              server.getConfiguration().shouldQueryShowPlugins() ? getRealPluginInformation()
                  : Collections.emptyList())
-@@ -179,6 +181,7 @@ public class GS4QueryHandler extends SimpleChannelInboundHandler<DatagramPacket>
+@@ -179,6 +182,7 @@ public class GS4QueryHandler extends SimpleChannelInboundHandler<DatagramPacket>
  
                // Send the response
                DatagramPacket responsePacket = new DatagramPacket(queryResponse, msg.sender());
@@ -5626,10 +5565,10 @@ index 69861ff3..06720f23 100644
          Field[] fields = (Field[]) getDeclaredFields0.invoke(Field.class, false);
          for (Field classField : fields) {
 diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/config/Settings.java b/proxy/src/main/java/ru/elytrium/elytraproxy/config/Settings.java
-index 5115678e..fc9efb38 100644
+index 5115678e..7bca10a4 100644
 --- a/proxy/src/main/java/ru/elytrium/elytraproxy/config/Settings.java
 +++ b/proxy/src/main/java/ru/elytrium/elytraproxy/config/Settings.java
-@@ -39,22 +39,28 @@ public class Settings extends Config {
+@@ -39,22 +39,31 @@ public class Settings extends Config {
      @Create
      public MESSAGES.VELOCITY VELOCITY;
  
@@ -5655,11 +5594,14 @@ index 5115678e..fc9efb38 100644
        public String CONSOLE_LOG_COMMAND_EXECUTIONS_FORMAT = "{0} -> executed command {1}";
        public String PROTOCOL_BLOCKED = "&c1.7.x not supported";
        public String NICK_BLOCKED = "&cYour nickname contains forbidden phrases.";
-+      public String SETTINGS_PACKETS_CHECK = "&cYou doesn't send settings packets.";
++      public String CLIENT_CHECK_SETTINGS = "&cYour client doesn't send settings packets.";
++      public String CLIENT_CHECK_SETTINGS_CHAT_COLOR = "&cPlease enable colors in chat settings to join the server.%nl%Options > Chat Settings.";
++      public String CLIENT_CHECK_SETTINGS_SKIN_PARTS = "&cPlease enable any option from the skin customization to join the server.%nl%Options > Skin Customization.";
++      public String CLIENT_CHECK_BRAND = "&cYour client doesn't send brand packets.";
        public String RELOAD_SUCCESS = "ElytraProxy configuration successfully reloaded.";
        public String RELOAD_FAILURE = "&cUnable to reload your ElytraProxy configuration. Check the console for more details.";
        /*
-@@ -63,8 +69,8 @@ public class Settings extends Config {
+@@ -63,8 +72,8 @@ public class Settings extends Config {
      }
  
      @Comment({
@@ -5670,7 +5612,7 @@ index 5115678e..fc9efb38 100644
      })
      public static class VELOCITY {
        @Create
-@@ -119,29 +125,27 @@ public class Settings extends Config {
+@@ -119,29 +128,27 @@ public class Settings extends Config {
      @Comment("How many attempts are allowed before rate limiting?")
      public int LOGIN_RATELIMIT_ATTEMPTS = 4;
      @Comment({
@@ -5709,7 +5651,7 @@ index 5115678e..fc9efb38 100644
      })
      public static class HOSTNAMES_MANAGER {
        public boolean ENABLE = false;
-@@ -153,6 +157,8 @@ public class Settings extends Config {
+@@ -153,6 +160,8 @@ public class Settings extends Config {
        @Comment("IP's in this list will be ignored in check.")
        public List<String> IGNORED_IPS = Arrays.asList("127.0.0.1", "your-haproxy-ip");
      }
@@ -5718,12 +5660,12 @@ index 5115678e..fc9efb38 100644
    }
  
    @Create
-@@ -160,12 +166,14 @@ public class Settings extends Config {
+@@ -160,12 +169,14 @@ public class Settings extends Config {
  
    public static class ANTIBOT {
      public boolean ENABLE = true;
 +    public boolean CHECK_CLIENT_SETTINGS = true;
-+    // TODO: public boolean CHECK_CLIENT_BRAND = true;
++    public boolean CHECK_CLIENT_BRAND = true;
      @Comment({
 -            "If the player's nickname contains something from this list, hes connection will be rejected",
 -            "In lowercase"
