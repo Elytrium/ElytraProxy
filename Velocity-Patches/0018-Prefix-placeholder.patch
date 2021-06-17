@@ -1,0 +1,1421 @@
+From 7724fa16bef0f043b8ecc03f5923f93a8701a868 Mon Sep 17 00:00:00 2001
+From: mdxd44 <mdxd44@ely.su>
+Date: Fri, 18 Jun 2021 06:16:26 +0900
+Subject: [PATCH] Prefix placeholder
+
+
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/CommandMessages.java b/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/CommandMessages.java
+index d54444a1..0c407be7 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/CommandMessages.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/CommandMessages.java
+@@ -25,20 +25,18 @@ public class CommandMessages {
+ 
+   public static final Component PLAYERS_ONLY = LegacyComponentSerializer
+       .legacyAmpersand()
+-      .deserialize((
+-          Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX
+-          + Settings.IMP.MESSAGES.VELOCITY.COMMAND.PLAYERS_ONLY)
+-              .replace("%nl%", "\n")
++      .deserialize(Settings.IMP.MESSAGES.VELOCITY.COMMAND.PLAYERS_ONLY
++          .replace("{NL}", "\n")
++          .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
+       );
+ 
+   public static Component SERVER_DOES_NOT_EXIST(String serverName) {
+     return LegacyComponentSerializer
+         .legacyAmpersand()
+-        .deserialize((
+-            Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX
+-            + Settings.IMP.MESSAGES.VELOCITY.COMMAND.SERVER_DOES_NOT_EXIST)
+-                .replace("%nl%", "\n")
+-                .replace("{0}", serverName)
++        .deserialize(Settings.IMP.MESSAGES.VELOCITY.COMMAND.SERVER_DOES_NOT_EXIST
++            .replace("{NL}", "\n")
++            .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
++            .replace("{0}", serverName)
+         );
+   }
+ }
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/GlistCommand.java b/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/GlistCommand.java
+index 6c2f2237..4ab3d464 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/GlistCommand.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/GlistCommand.java
+@@ -55,22 +55,21 @@ public class GlistCommand {
+    */
+   public void register() {
+     LiteralCommandNode<CommandSource> totalNode = LiteralArgumentBuilder
+-            .<CommandSource>literal("glist")
+-            .requires(source ->
+-                    source.hasPermission("velocity.command.glist"))
+-            .executes(this::totalCount)
+-            .build();
++        .<CommandSource>literal("glist")
++        .requires(source -> source.hasPermission("velocity.command.glist"))
++        .executes(this::totalCount)
++        .build();
+     ArgumentCommandNode<CommandSource, String> serverNode = RequiredArgumentBuilder
+-            .<CommandSource, String>argument(SERVER_ARG, StringArgumentType.string())
+-            .suggests((context, builder) -> {
+-              for (RegisteredServer server : server.getAllServers()) {
+-                builder.suggest(server.getServerInfo().getName());
+-              }
+-              builder.suggest("all");
+-              return builder.buildFuture();
+-            })
+-            .executes(this::serverCount)
+-            .build();
++        .<CommandSource, String>argument(SERVER_ARG, StringArgumentType.string())
++        .suggests((context, builder) -> {
++          for (RegisteredServer server : server.getAllServers()) {
++            builder.suggest(server.getServerInfo().getName());
++          }
++          builder.suggest("all");
++          return builder.buildFuture();
++        })
++        .executes(this::serverCount)
++        .build();
+     totalNode.addChild(serverNode);
+     server.getCommandManager().register(new BrigadierCommand(totalNode));
+   }
+@@ -81,10 +80,9 @@ public class GlistCommand {
+     source.sendMessage(Identity.nil(),
+         LegacyComponentSerializer
+             .legacyAmpersand()
+-            .deserialize((
+-                Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX
+-                + Settings.IMP.MESSAGES.VELOCITY.COMMAND.GLIST_VIEW_ALL)
+-                    .replace("%nl%", "\n")
++            .deserialize(Settings.IMP.MESSAGES.VELOCITY.COMMAND.GLIST_VIEW_ALL
++                .replace("{NL}", "\n")
++                .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
+             ));
+     return 1;
+   }
+@@ -114,19 +112,17 @@ public class GlistCommand {
+     Component msg = online == 1
+         ? LegacyComponentSerializer
+             .legacyAmpersand()
+-            .deserialize((
+-                Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX
+-                + Settings.IMP.MESSAGES.VELOCITY.COMMAND.GLIST_PLAYER_SINGULAR)
+-                    .replace("%nl%", "\n")
+-                    .replace("{0}", Integer.toString(online)
++            .deserialize(Settings.IMP.MESSAGES.VELOCITY.COMMAND.GLIST_PLAYER_SINGULAR
++                .replace("{NL}", "\n")
++                .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
++                .replace("{0}", Integer.toString(online)
+         ))
+             : LegacyComponentSerializer
+                 .legacyAmpersand()
+-                .deserialize((
+-                    Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX
+-                    + Settings.IMP.MESSAGES.VELOCITY.COMMAND.GLIST_PLAYER_PLURAL)
+-                        .replace("%nl%", "\n")
+-                        .replace("{0}", Integer.toString(online)
++                .deserialize(Settings.IMP.MESSAGES.VELOCITY.COMMAND.GLIST_PLAYER_PLURAL
++                    .replace("{NL}", "\n")
++                    .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
++                    .replace("{0}", Integer.toString(online)
+         ));
+     target.sendMessage(msg);
+   }
+@@ -141,11 +137,11 @@ public class GlistCommand {
+         .text().append(
+             LegacyComponentSerializer
+                 .legacyAmpersand()
+-                .deserialize((
+-                    Settings.IMP.MESSAGES.VELOCITY.COMMAND.GLIST_FORMAT_VIEW_ALL)
+-                        .replace("%nl%", "\n")
+-                        .replace("{0}", server.getServerInfo().getName())
+-                        .replace("{1}", Integer.toString(onServer.size())
++                .deserialize(Settings.IMP.MESSAGES.VELOCITY.COMMAND.GLIST_FORMAT_VIEW_ALL
++                    .replace("{NL}", "\n")
++                    .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
++                    .replace("{0}", server.getServerInfo().getName())
++                    .replace("{1}", Integer.toString(onServer.size())
+         ))).resetStyle();
+ 
+     for (int i = 0; i < onServer.size(); i++) {
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/ServerCommand.java b/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/ServerCommand.java
+index 756acb8e..88305e80 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/ServerCommand.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/ServerCommand.java
+@@ -82,11 +82,10 @@ public class ServerCommand implements SimpleCommand {
+     executor.sendMessage(Identity.nil(),
+         LegacyComponentSerializer
+             .legacyAmpersand()
+-            .deserialize((
+-                Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX
+-                + Settings.IMP.MESSAGES.VELOCITY.COMMAND.SERVER_CURRENT_SERVER)
+-                    .replace("%nl%", "\n")
+-                    .replace("{0}", currentServer)
++            .deserialize(Settings.IMP.MESSAGES.VELOCITY.COMMAND.SERVER_CURRENT_SERVER
++                .replace("{NL}", "\n")
++                .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
++                .replace("{0}", currentServer)
+             ));
+ 
+     List<RegisteredServer> servers = BuiltinCommandUtil.sortedServerList(server);
+@@ -94,10 +93,9 @@ public class ServerCommand implements SimpleCommand {
+       executor.sendMessage(Identity.nil(),
+           LegacyComponentSerializer
+               .legacyAmpersand()
+-              .deserialize((
+-                  Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX
+-                  + Settings.IMP.MESSAGES.VELOCITY.COMMAND.SERVER_TOO_MANY)
+-                      .replace("%nl%", "\n")
++              .deserialize(Settings.IMP.MESSAGES.VELOCITY.COMMAND.SERVER_TOO_MANY
++                  .replace("{NL}", "\n")
++                  .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
+               ));
+       return;
+     }
+@@ -107,10 +105,9 @@ public class ServerCommand implements SimpleCommand {
+         .text().append(
+             LegacyComponentSerializer
+                 .legacyAmpersand()
+-                .deserialize((
+-                    Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX
+-                    + Settings.IMP.MESSAGES.VELOCITY.COMMAND.SERVER_AVAILABLE)
+-                        .replace("%nl%", "\n")
++                .deserialize(Settings.IMP.MESSAGES.VELOCITY.COMMAND.SERVER_AVAILABLE
++                    .replace("{NL}", "\n")
++                    .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
+                 ));
+     for (int i = 0; i < servers.size(); i++) {
+       RegisteredServer rs = servers.get(i);
+@@ -132,20 +129,18 @@ public class ServerCommand implements SimpleCommand {
+     if (connectedPlayers == 1) {
+       playersTextComponent = LegacyComponentSerializer
+           .legacyAmpersand()
+-          .deserialize((
+-              Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX
+-              + Settings.IMP.MESSAGES.VELOCITY.COMMAND.SERVER_TOOLTIP_PLAYER_ONLINE)
+-                  .replace("%nl%", "\n")
+-                  .replace("{0}", String.valueOf(connectedPlayers))
++          .deserialize(Settings.IMP.MESSAGES.VELOCITY.COMMAND.SERVER_TOOLTIP_PLAYER_ONLINE
++              .replace("{NL}", "\n")
++              .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
++              .replace("{0}", String.valueOf(connectedPlayers))
+           );
+     } else {
+       playersTextComponent = LegacyComponentSerializer
+           .legacyAmpersand()
+-          .deserialize((
+-              Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX
+-              + Settings.IMP.MESSAGES.VELOCITY.COMMAND.SERVER_TOOLTIP_PLAYERS_ONLINE)
+-                  .replace("%nl%", "\n")
+-                  .replace("{0}", String.valueOf(connectedPlayers))
++          .deserialize(Settings.IMP.MESSAGES.VELOCITY.COMMAND.SERVER_TOOLTIP_PLAYERS_ONLINE
++              .replace("{NL}", "\n")
++              .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
++              .replace("{0}", String.valueOf(connectedPlayers))
+           );
+     }
+ 
+@@ -155,15 +150,13 @@ public class ServerCommand implements SimpleCommand {
+               showText(
+                   LegacyComponentSerializer
+                       .legacyAmpersand()
+-                      .deserialize((
+-                          Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX
+-                          + Settings.IMP.MESSAGES.VELOCITY.COMMAND.SERVER_TOOLTIP_CURRENT_SERVER)
+-                              .replace("%nl%", "\n")
+-                              .replace("{0}",
+-                                  LegacyComponentSerializer
+-                                      .legacySection()
+-                                      .serialize(
+-                                          playersTextComponent))
++                      .deserialize(Settings.IMP.MESSAGES.VELOCITY.COMMAND
++                              .SERVER_TOOLTIP_CURRENT_SERVER
++                          .replace("{NL}", "\n")
++                          .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
++                          .replace("{0}", LegacyComponentSerializer
++                              .legacySection()
++                              .serialize(playersTextComponent))
+                       )));
+     } else {
+       serverTextComponent = serverTextComponent.color(NamedTextColor.GRAY)
+@@ -172,16 +165,13 @@ public class ServerCommand implements SimpleCommand {
+               showText(
+                   LegacyComponentSerializer
+                       .legacyAmpersand()
+-                      .deserialize((
+-                          Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX
+-                          + Settings.IMP.MESSAGES.VELOCITY.COMMAND
+-                              .SERVER_TOOLTIP_OFFER_CONNECT_SERVER)
+-                              .replace("%nl%", "\n")
+-                              .replace("{0}",
+-                                  LegacyComponentSerializer
+-                                      .legacySection()
+-                                      .serialize(
+-                                          playersTextComponent))
++                      .deserialize(Settings.IMP.MESSAGES.VELOCITY.COMMAND
++                              .SERVER_TOOLTIP_OFFER_CONNECT_SERVER
++                          .replace("{NL}", "\n")
++                          .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
++                          .replace("{0}", LegacyComponentSerializer
++                              .legacySection()
++                              .serialize(playersTextComponent))
+                       )));
+     }
+     return serverTextComponent;
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/backend/LoginSessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/backend/LoginSessionHandler.java
+index 298552e3..56767d04 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/connection/backend/LoginSessionHandler.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/backend/LoginSessionHandler.java
+@@ -53,9 +53,9 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+ 
+   private static final TextComponent MODERN_IP_FORWARDING_FAILURE = LegacyComponentSerializer
+       .legacyAmpersand()
+-      .deserialize((
+-          Settings.IMP.MESSAGES.VELOCITY.ERROR.MODERN_FORWARDING_FAILED)
+-              .replace("%nl%", "\n")
++      .deserialize(Settings.IMP.MESSAGES.VELOCITY.ERROR.MODERN_FORWARDING_FAILED
++          .replace("{NL}", "\n")
++          .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
+       );
+ 
+   private final VelocityServer server;
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
+index f69cf6b7..3a61616b 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
+@@ -66,7 +66,6 @@ import java.util.Optional;
+ import java.util.Queue;
+ import java.util.UUID;
+ import java.util.concurrent.CompletableFuture;
+-import lombok.Getter;
+ import net.kyori.adventure.identity.Identity;
+ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+ import org.apache.logging.log4j.LogManager;
+@@ -87,6 +86,8 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+   private boolean spawned = false;
+   private boolean checkedBySettings = false;
+   private boolean checkedByBrand = false;
++  private boolean willBeKickedChat = false;
++  private boolean willBeKickedUnk = false;
+   private final List<UUID> serverBossBars = new ArrayList<>();
+   private final Queue<PluginMessage> loginPluginMessages = new ArrayDeque<>();
+   private final VelocityServer server;
+@@ -120,6 +121,31 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+     }
+   }
+ 
++  private void kickIfCheckNotPassed() {
++    if (Settings.IMP.ANTIBOT.ENABLE) {
++      if ((!checkedBySettings) && Settings.IMP.ANTIBOT.CHECK_CLIENT_SETTINGS) {
++        player.disconnect(
++            LegacyComponentSerializer
++                .legacyAmpersand()
++                .deserialize(Settings.IMP.MESSAGES.ELYTRAPROXY.KICK.CLIENT_CHECK_SETTINGS
++                    .replace("{NL}", "\n")
++                    .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
++                ));
++        server.getElytraProxy().getStatistics().addBlockedConnection();
++      }
++      if ((!checkedByBrand) && Settings.IMP.ANTIBOT.CHECK_CLIENT_BRAND) {
++        player.disconnect(
++            LegacyComponentSerializer
++                .legacyAmpersand()
++                .deserialize(Settings.IMP.MESSAGES.ELYTRAPROXY.KICK.CLIENT_CHECK_BRAND
++                    .replace("{NL}", "\n")
++                    .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
++                ));
++        server.getElytraProxy().getStatistics().addBlockedConnection();
++      }
++    }
++  }
++
+   @Override
+   public boolean handle(KeepAlive packet) {
+     VelocityServerConnection serverConnection = player.getConnectedServer();
+@@ -155,9 +181,9 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+           player.disconnect(
+               LegacyComponentSerializer
+                   .legacyAmpersand()
+-                  .deserialize((
+-                      Settings.IMP.MESSAGES.ELYTRAPROXY.CLIENT_CHECK_SETTINGS)
+-                      .replace("%nl%", "\n")
++                  .deserialize(Settings.IMP.MESSAGES.ELYTRAPROXY.KICK.CLIENT_CHECK_SETTINGS
++                      .replace("{NL}", "\n")
++                      .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
+                   ));
+           server.getElytraProxy().getLogger().error("{} has null in settings packet", player);
+           server.getElytraProxy().getStatistics().addBlockedConnection();
+@@ -166,9 +192,10 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+           player.disconnect(
+               LegacyComponentSerializer
+                   .legacyAmpersand()
+-                  .deserialize((
+-                      Settings.IMP.MESSAGES.ELYTRAPROXY.CLIENT_CHECK_SETTINGS_CHAT_COLOR)
+-                      .replace("%nl%", "\n")
++                  .deserialize(Settings.IMP.MESSAGES.ELYTRAPROXY.KICK
++                          .CLIENT_CHECK_SETTINGS_CHAT_COLOR
++                      .replace("{NL}", "\n")
++                      .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
+                   ));
+           server.getElytraProxy().getLogger().error("{} doesn't send isChatColors packet",
+               player);
+@@ -178,9 +205,10 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+           player.disconnect(
+               LegacyComponentSerializer
+                   .legacyAmpersand()
+-                  .deserialize((
+-                      Settings.IMP.MESSAGES.ELYTRAPROXY.CLIENT_CHECK_SETTINGS_SKIN_PARTS)
+-                      .replace("%nl%", "\n")
++                  .deserialize(Settings.IMP.MESSAGES.ELYTRAPROXY.KICK
++                          .CLIENT_CHECK_SETTINGS_SKIN_PARTS
++                      .replace("{NL}", "\n")
++                      .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
+                   ));
+           server.getElytraProxy().getLogger().error("{} doesn't send skin parts packet",
+               player);
+@@ -196,7 +224,10 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+   @Override
+   public boolean handle(Chat packet) {
+     // TODO: Move to botfilter check
+-    kickIfCheckNotPassed();
++    if (!willBeKickedChat) {
++      kickIfCheckNotPassed();
++      willBeKickedChat = true;
++    }
+     VelocityServerConnection serverConnection = player.getConnectedServer();
+     if (serverConnection == null) {
+       return true;
+@@ -219,22 +250,22 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+                   player1.sendMessage(
+                       LegacyComponentSerializer
+                           .legacyAmpersand()
+-                          .deserialize((
+-                              Settings.IMP.MESSAGES.ELYTRAPROXY.COMMAND_SPY_FORMAT)
+-                                  .replace("%nl%", "\n")
+-                                  .replace("{0}", player.getUsername())
+-                                  .replace("{1}", "/" + originalCommand)
++                          .deserialize(Settings.IMP.MESSAGES.ELYTRAPROXY.COMMAND_SPY_FORMAT
++                              .replace("{NL}", "\n")
++                              .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
++                              .replace("{0}", player.getUsername())
++                              .replace("{1}", "/" + originalCommand)
+                           ));
+                 }
+               }
+             }
+             if (server.getConfiguration().isLogCommandExecutions()) {
+-              logger.info((
+-                  Settings.IMP.MESSAGES.ELYTRAPROXY.CONSOLE_LOG_COMMAND_EXECUTIONS_FORMAT)
+-                      .replace("%nl%", "\n")
+-                      .replace("&", "§")
+-                      .replace("{0}", String.valueOf(player))
+-                      .replace("{1}", "/" + originalCommand)
++              logger.info(Settings.IMP.MESSAGES.ELYTRAPROXY.CONSOLE_LOG_COMMAND_EXECUTIONS_FORMAT
++                  .replace("{NL}", "\n")
++                  .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
++                  .replace("&", "§")
++                  .replace("{0}", String.valueOf(player))
++                  .replace("{1}", "/" + originalCommand)
+               );
+             }
+           })
+@@ -244,10 +275,9 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+             player.sendMessage(Identity.nil(),
+                 LegacyComponentSerializer
+                     .legacyAmpersand()
+-                    .deserialize((
+-                        Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX
+-                        + Settings.IMP.MESSAGES.VELOCITY.COMMAND.GENERIC_ERROR)
+-                            .replace("%nl%", "\n")
++                    .deserialize(Settings.IMP.MESSAGES.VELOCITY.COMMAND.GENERIC_ERROR
++                        .replace("{NL}", "\n")
++                        .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
+                     ));
+             return null;
+           });
+@@ -273,31 +303,6 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+     return true;
+   }
+ 
+-  private void kickIfCheckNotPassed() {
+-    if (Settings.IMP.ANTIBOT.ENABLE) {
+-      if ((!checkedBySettings) && Settings.IMP.ANTIBOT.CHECK_CLIENT_SETTINGS) {
+-        player.disconnect(
+-            LegacyComponentSerializer
+-                .legacyAmpersand()
+-                .deserialize((
+-                    Settings.IMP.MESSAGES.ELYTRAPROXY.CLIENT_CHECK_BRAND)
+-                    .replace("%nl%", "\n")
+-                ));
+-        server.getElytraProxy().getStatistics().addBlockedConnection();
+-      }
+-      if ((!checkedByBrand) && Settings.IMP.ANTIBOT.CHECK_CLIENT_BRAND) {
+-        player.disconnect(
+-            LegacyComponentSerializer
+-                .legacyAmpersand()
+-                .deserialize((
+-                    Settings.IMP.MESSAGES.ELYTRAPROXY.CLIENT_CHECK_BRAND)
+-                    .replace("%nl%", "\n")
+-                ));
+-        server.getElytraProxy().getStatistics().addBlockedConnection();
+-      }
+-    }
+-  }
+-
+   @Override
+   public boolean handle(TabCompleteRequest packet) {
+     boolean isCommand = !packet.isAssumeCommand() && packet.getCommand().startsWith("/");
+@@ -429,7 +434,10 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+       smc.write(buf.retain());
+     }
+     // TODO: Move to botfilter check
+-    kickIfCheckNotPassed();
++    if (!willBeKickedUnk) {
++      kickIfCheckNotPassed();
++      willBeKickedUnk = true;
++    }
+   }
+ 
+   @Override
+@@ -442,9 +450,9 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+     player.disconnect(
+         LegacyComponentSerializer
+             .legacyAmpersand()
+-            .deserialize((
+-                Settings.IMP.MESSAGES.VELOCITY.ERROR.PLAYER_CONNECTION_ERROR)
+-                    .replace("%nl%", "\n")
++            .deserialize(Settings.IMP.MESSAGES.VELOCITY.ERROR.PLAYER_CONNECTION_ERROR
++                .replace("{NL}", "\n")
++                .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
+             ));
+   }
+ 
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
+index b6a80944..fd9aa13b 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
+@@ -474,20 +474,20 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
+     if (connectedServer != null && connectedServer.getServerInfo().equals(server.getServerInfo())) {
+       friendlyError = LegacyComponentSerializer
+           .legacyAmpersand()
+-          .deserialize((
+-              Settings.IMP.MESSAGES.VELOCITY.ERROR.CONNECTED_SERVER_ERROR)
+-                  .replace("%nl%", "\n")
+-                  .replace("{0}", server.getServerInfo().getName())
++          .deserialize(Settings.IMP.MESSAGES.VELOCITY.ERROR.CONNECTED_SERVER_ERROR
++              .replace("{NL}", "\n")
++              .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
++              .replace("{0}", server.getServerInfo().getName())
+           );
+     } else {
+       logger.error("{}: unable to connect to server {}", this, server.getServerInfo().getName(),
+           wrapped);
+       friendlyError = LegacyComponentSerializer
+           .legacyAmpersand()
+-          .deserialize((
+-              Settings.IMP.MESSAGES.VELOCITY.ERROR.CONNECTING_SERVER_ERROR)
+-                  .replace("%nl%", "\n")
+-                  .replace("{0}", server.getServerInfo().getName())
++          .deserialize(Settings.IMP.MESSAGES.VELOCITY.ERROR.CONNECTING_SERVER_ERROR
++              .replace("{NL}", "\n")
++              .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
++              .replace("{0}", server.getServerInfo().getName())
+           );
+     }
+     handleConnectionException(server, null, friendlyError, safe);
+@@ -512,43 +512,35 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
+       logger.info("{}: kicked from server {}: {}", this, server.getServerInfo().getName(),
+           LegacyComponentSerializer
+               .legacySection()
+-              .serialize(
+-                  disconnectReason
+-              ));
++              .serialize(disconnectReason));
+       // TODO: rewrite this shit
+       handleConnectionException(server, disconnectReason,
+           LegacyComponentSerializer
+               .legacyAmpersand()
+-              .deserialize((
+-                  Settings.IMP.MESSAGES.VELOCITY.ERROR.MOVED_TO_NEW_SERVER)
+-                      .replace("%nl%", "\n")
+-                      .replace("{0}", server.getServerInfo().getName())
+-                      .replace("{1}",
+-                          LegacyComponentSerializer
+-                              .legacySection()
+-                              .serialize(
+-                                  disconnectReason))
++              .deserialize(Settings.IMP.MESSAGES.VELOCITY.ERROR.MOVED_TO_NEW_SERVER
++                  .replace("{NL}", "\n")
++                  .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
++                  .replace("{0}", server.getServerInfo().getName())
++                  .replace("{1}", LegacyComponentSerializer
++                      .legacySection()
++                      .serialize(disconnectReason))
+               ), safe);
+     } else {
+       logger.error("{}: disconnected while connecting to {}: {}", this,
+           server.getServerInfo().getName(),
+               LegacyComponentSerializer
+                   .legacySection()
+-                  .serialize(
+-                      disconnectReason
+-                  ));
++                  .serialize(disconnectReason));
+       handleConnectionException(server, disconnectReason,
+           LegacyComponentSerializer
+               .legacyAmpersand()
+-              .deserialize((
+-                  Settings.IMP.MESSAGES.VELOCITY.ERROR.CANT_CONNECT)
+-                      .replace("%nl%", "\n")
+-                      .replace("{0}", server.getServerInfo().getName())
+-                      .replace("{1}",
+-                          LegacyComponentSerializer
+-                              .legacySection()
+-                              .serialize(
+-                                  disconnectReason))
++              .deserialize(Settings.IMP.MESSAGES.VELOCITY.ERROR.CANT_CONNECT
++                  .replace("{NL}", "\n")
++                  .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
++                  .replace("{0}", server.getServerInfo().getName())
++                  .replace("{1}", LegacyComponentSerializer
++                      .legacySection()
++                      .serialize(disconnectReason))
+               ), safe);
+     }
+   }
+@@ -636,18 +628,14 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
+                       sendMessage(Identity.nil(),
+                           LegacyComponentSerializer
+                               .legacyAmpersand()
+-                              .deserialize((
+-                                  Settings.IMP.MESSAGES.VELOCITY.ERROR.MOVED_TO_NEW_SERVER)
+-                                      .replace("%nl%","\n")
+-                                      .replace("{0}", originalEvent
+-                                                                          .getServer()
+-                                                                              .getServerInfo()
+-                                                                                      .getName())
+-                                      .replace("{1}",
+-                                          LegacyComponentSerializer
+-                                              .legacySection()
+-                                              .serialize(
+-                                                  friendlyReason))
++                              .deserialize(Settings.IMP.MESSAGES.VELOCITY.ERROR.MOVED_TO_NEW_SERVER
++                                  .replace("{NL}", "\n")
++                                  .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
++                                  .replace("{0}", originalEvent
++                                      .getServer().getServerInfo().getName())
++                                  .replace("{1}", LegacyComponentSerializer
++                                      .legacySection()
++                                      .serialize(friendlyReason))
+                               ));
+                       break;
+                     default:
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/HandshakeSessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/HandshakeSessionHandler.java
+index 5914c277..f1445de5 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/HandshakeSessionHandler.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/HandshakeSessionHandler.java
+@@ -74,10 +74,13 @@ public class HandshakeSessionHandler implements MinecraftSessionHandler {
+   @Override
+   public boolean handle(LegacyHandshake packet) {
+     connection.closeWith(LegacyDisconnect
+-        .from(Component.text(
+-            "Your client is extremely old. Please update to a newer version of Minecraft.",
+-            NamedTextColor.RED)
+-        ));
++        .from(
++            LegacyComponentSerializer
++                .legacyAmpersand()
++                .deserialize(Settings.IMP.MESSAGES.VELOCITY.ERROR.EXTREMELY_OLD_CLIENT
++                    .replace("{NL}", "\n")
++                    .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
++                )));
+     return true;
+   }
+ 
+@@ -133,11 +136,12 @@ public class HandshakeSessionHandler implements MinecraftSessionHandler {
+     InetAddress address = ((InetSocketAddress) connection.getRemoteAddress()).getAddress();
+     if (!server.getIpAttemptLimiter().attempt(address)) {
+       ic.disconnectQuietly(
+-              LegacyComponentSerializer
+-                      .legacyAmpersand()
+-                      .deserialize((
+-                              Settings.IMP.MESSAGES.VELOCITY.ERROR.LOGGING_IN_TOO_FAST)
+-                                      .replace("%nl%", "\n")));
++          LegacyComponentSerializer
++              .legacyAmpersand()
++              .deserialize(Settings.IMP.MESSAGES.VELOCITY.ERROR.LOGGING_IN_TOO_FAST
++                  .replace("{NL}", "\n")
++                  .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
++              ));
+       return;
+     }
+     */
+@@ -152,9 +156,9 @@ public class HandshakeSessionHandler implements MinecraftSessionHandler {
+       ic.disconnectQuietly(
+           LegacyComponentSerializer
+               .legacyAmpersand()
+-              .deserialize((
+-                  Settings.IMP.MESSAGES.VELOCITY.ERROR.MODERN_FORWARDING_NEEDS_NEW_CLIENT)
+-                      .replace("%nl%", "\n")
++              .deserialize(Settings.IMP.MESSAGES.VELOCITY.ERROR.MODERN_FORWARDING_NEEDS_NEW_CLIENT
++                  .replace("{NL}", "\n")
++                  .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
+               ));
+       return;
+     }
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
+index 252765ad..f6856f57 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
+@@ -154,9 +154,9 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+             inbound.disconnect(
+                 LegacyComponentSerializer
+                     .legacyAmpersand()
+-                    .deserialize((
+-                        Settings.IMP.MESSAGES.VELOCITY.ERROR.ONLINE_MODE_ONLY)
+-                            .replace("%nl%", "\n")
++                    .deserialize(Settings.IMP.MESSAGES.VELOCITY.ERROR.ONLINE_MODE_ONLY
++                        .replace("{NL}", "\n")
++                        .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
+                     ));
+           } else {
+             // Something else went wrong
+@@ -251,25 +251,20 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+         player.disconnect0(
+             LegacyComponentSerializer
+                 .legacyAmpersand()
+-                .deserialize((
+-                    Settings.IMP.MESSAGES.VELOCITY.ERROR.ALREADY_CONNECTED_PROXY)
+-                        .replace("%nl%", "\n")
++                .deserialize(Settings.IMP.MESSAGES.VELOCITY.ERROR.ALREADY_CONNECTED_PROXY
++                    .replace("{NL}", "\n")
++                    .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
+                 ), true);
+         return;
+       }
+       /*
+-      SkinSetup setup = elytraProxy
+-              .getDatabase()
+-              .getItem(
+-                      "skins",
+-                      ImmutableMap.of("uuid", player.getUniqueId()),
+-                      SkinSetup.class
+-              );
++      SkinSetup setup = server.getElytraProxy()
++          .getDatabase()
++          .getItem("skins", ImmutableMap.of("uuid", player.getUniqueId()), SkinSetup.class);
+       if (setup != null) {
+         List<GameProfile.Property> playerProfile = player.getGameProfileProperties();
+         playerProfile.add(new GameProfile.Property("textures", setup.texture, setup.signature));
+         player.setGameProfileProperties(playerProfile);
+-
+       }
+       */
+       logger.info("{} has connected", player);
+@@ -280,9 +275,9 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+         player.disconnect0(
+             LegacyComponentSerializer
+                 .legacyAmpersand()
+-                .deserialize((
+-                    Settings.IMP.MESSAGES.ELYTRAPROXY.PROTOCOL_BLOCKED)
+-                        .replace("%nl%", "\n")
++                .deserialize(Settings.IMP.MESSAGES.ELYTRAPROXY.KICK.PROTOCOL_BLOCKED
++                    .replace("{NL}", "\n")
++                    .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
+                 ), true);
+         return;
+       }
+@@ -306,10 +301,9 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+       player.disconnect0(
+           LegacyComponentSerializer
+               .legacyAmpersand()
+-              .deserialize((
+-                  Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX
+-                  + Settings.IMP.MESSAGES.ELYTRAPROXY.NICK_BLOCKED)
+-                      .replace("%nl%", "\n")
++              .deserialize(Settings.IMP.MESSAGES.ELYTRAPROXY.KICK.NICK_BLOCKED
++                  .replace("{NL}", "\n")
++                  .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
+               ), true);
+       server.getElytraProxy().getStatistics().addBlockedConnection();
+       return;
+@@ -389,9 +383,9 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+               player.disconnect0(
+                   LegacyComponentSerializer
+                       .legacyAmpersand()
+-                      .deserialize((
+-                          Settings.IMP.MESSAGES.VELOCITY.ERROR.ALREADY_CONNECTED_PROXY)
+-                              .replace("%nl%", "\n")
++                      .deserialize(Settings.IMP.MESSAGES.VELOCITY.ERROR.ALREADY_CONNECTED_PROXY
++                          .replace("{NL}", "\n")
++                          .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
+                       ), true);
+               return;
+             }
+@@ -424,9 +418,9 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+             player.disconnect0(
+                 LegacyComponentSerializer
+                     .legacyAmpersand()
+-                    .deserialize((
+-                        Settings.IMP.MESSAGES.VELOCITY.ERROR.NO_AVAILABLE_SERVERS)
+-                            .replace("%nl%", "\n")
++                    .deserialize(Settings.IMP.MESSAGES.VELOCITY.ERROR.NO_AVAILABLE_SERVERS
++                        .replace("{NL}", "\n")
++                        .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
+                     ), true);
+             return;
+           }
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/util/ConnectionMessages.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/util/ConnectionMessages.java
+index f38650b1..ba820796 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/connection/util/ConnectionMessages.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/util/ConnectionMessages.java
+@@ -17,27 +17,30 @@
+ 
+ package com.velocitypowered.proxy.connection.util;
+ 
+-import net.kyori.adventure.text.TextComponent;
++import net.kyori.adventure.text.Component;
+ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+ import ru.elytrium.elytraproxy.config.Settings;
+ 
+ public class ConnectionMessages {
+ 
+-  public static final TextComponent ALREADY_CONNECTED = LegacyComponentSerializer
+-          .legacyAmpersand()
+-          .deserialize((
+-                  Settings.IMP.MESSAGES.VELOCITY.ERROR.ALREADY_CONNECTED)
+-                          .replace("%nl%", "\n"));
+-  public static final TextComponent IN_PROGRESS = LegacyComponentSerializer
+-          .legacyAmpersand()
+-          .deserialize((
+-                  Settings.IMP.MESSAGES.VELOCITY.ERROR.ALREADY_CONNECTING)
+-                          .replace("%nl%", "\n"));
+-  public static final TextComponent INTERNAL_SERVER_CONNECTION_ERROR = LegacyComponentSerializer
+-          .legacyAmpersand()
+-          .deserialize((
+-                  Settings.IMP.MESSAGES.VELOCITY.ERROR.INTERNAL_SERVER_CONNECTION_ERROR)
+-                          .replace("%nl%", "\n"));
++  public static final Component ALREADY_CONNECTED = LegacyComponentSerializer
++      .legacyAmpersand()
++      .deserialize(Settings.IMP.MESSAGES.VELOCITY.ERROR.ALREADY_CONNECTED
++          .replace("{NL}", "\n")
++          .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
++      );
++  public static final Component IN_PROGRESS = LegacyComponentSerializer
++      .legacyAmpersand()
++      .deserialize(Settings.IMP.MESSAGES.VELOCITY.ERROR.ALREADY_CONNECTING
++          .replace("{NL}", "\n")
++          .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
++      );
++  public static final Component INTERNAL_SERVER_CONNECTION_ERROR = LegacyComponentSerializer
++      .legacyAmpersand()
++      .deserialize(Settings.IMP.MESSAGES.VELOCITY.ERROR.INTERNAL_SERVER_CONNECTION_ERROR
++          .replace("{NL}", "\n")
++          .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
++      );
+ 
+   private ConnectionMessages() {
+     throw new AssertionError();
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/console/VelocityConsole.java b/proxy/src/main/java/com/velocitypowered/proxy/console/VelocityConsole.java
+index 44172ba7..aca38aa0 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/console/VelocityConsole.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/console/VelocityConsole.java
+@@ -120,12 +120,12 @@ public final class VelocityConsole extends SimpleTerminalConsole implements Cons
+     try {
+       if (!this.server.getCommandManager().executeAsync(this, command).join()) {
+         sendMessage(
+-                LegacyComponentSerializer
+-                        .legacyAmpersand()
+-                        .deserialize((
+-                                Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX
+-                                + Settings.IMP.MESSAGES.VELOCITY.COMMAND.COMMAND_DOES_NOT_EXIST)
+-                                        .replace("%nl%", "\n")));
++            LegacyComponentSerializer
++                .legacyAmpersand()
++                .deserialize(Settings.IMP.MESSAGES.VELOCITY.COMMAND.COMMAND_DOES_NOT_EXIST
++                    .replace("{NL}", "\n")
++                    .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
++                ));
+       }
+     } catch (Exception e) {
+       logger.error("An error occurred while running this command.", e);
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/ElytraProxy.java b/proxy/src/main/java/ru/elytrium/elytraproxy/ElytraProxy.java
+index 83efc010..eed9202c 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/ElytraProxy.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/ElytraProxy.java
+@@ -116,9 +116,9 @@ public class ElytraProxy {
+     manager.unregister("send");
+ 
+     manager.register("elytraproxy", new ElytraProxyCommand(server, this));
+-    manager.register("alert", new AlertCommand(server, Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX));
+-    manager.register("find", new FindCommand(server, Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX));
+-    manager.register("send", new SendCommand(server, Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX));
++    manager.register("alert", new AlertCommand(server));
++    manager.register("find", new FindCommand(server));
++    manager.register("send", new SendCommand(server));
+   }
+ 
+   public boolean shouldCheck(ConnectedPlayer player) {
+@@ -162,7 +162,7 @@ public class ElytraProxy {
+               .deserialize((
+                   Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX
+                   + Settings.IMP.MESSAGES.ELYTRAPROXY.RELOAD_SUCCESS)
+-                      .replace("%nl%", "\n")
++                      .replace("{NL}", "\n")
+               ));
+     } catch (Exception e) {
+       logger.error("Unable to reload configuration", e);
+@@ -172,7 +172,7 @@ public class ElytraProxy {
+               .deserialize((
+                   Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX
+                   + Settings.IMP.MESSAGES.ELYTRAPROXY.RELOAD_FAILURE)
+-                      .replace("%nl%", "\n")
++                      .replace("{NL}", "\n")
+               ));
+     }
+   }
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/AlertCommand.java b/proxy/src/main/java/ru/elytrium/elytraproxy/commands/AlertCommand.java
+index e8adb4c3..2f925d91 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/AlertCommand.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/commands/AlertCommand.java
+@@ -30,11 +30,9 @@ import ru.elytrium.elytraproxy.config.Settings;
+ public class AlertCommand implements SimpleCommand {
+ 
+   private final ProxyServer server;
+-  private final String prefix;
+ 
+-  public AlertCommand(ProxyServer server, String prefix) {
++  public AlertCommand(ProxyServer server) {
+     this.server = server;
+-    this.prefix = prefix;
+   }
+ 
+   @Override
+@@ -46,28 +44,25 @@ public class AlertCommand implements SimpleCommand {
+       source.sendMessage(
+           LegacyComponentSerializer
+               .legacyAmpersand()
+-              .deserialize((
+-                  prefix
+-                  + Settings.IMP.MESSAGES.ELYTRAPROXY.ALERT_MESSAGE_NEEDED)
+-                      .replace("%nl%", "\n")
++              .deserialize(Settings.IMP.MESSAGES.ELYTRAPROXY.ALERT_MESSAGE_NEEDED
++                  .replace("{NL}", "\n")
++                  .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
+               ));
+     } else {
+       String message = String.join(" ", args);
+       Component component = LegacyComponentSerializer
+           .legacyAmpersand()
+-          .deserialize((
+-              Settings.IMP.MESSAGES.ELYTRAPROXY.ALERT_PREFIX
+-              + message)
+-                  .replace("%nl%", "\n")
++          .deserialize((Settings.IMP.MESSAGES.ELYTRAPROXY.ALERT_PREFIX + message)
++              .replace("{NL}", "\n")
++              .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
+           );
+       if (server.getAllPlayers().size() == 0) {
+         source.sendMessage(
+             LegacyComponentSerializer
+                 .legacyAmpersand()
+-                .deserialize((
+-                    prefix
+-                    + Settings.IMP.MESSAGES.ELYTRAPROXY.ALERT_SERVER_EMPTY)
+-                        .replace("%nl%", "\n")
++                .deserialize(Settings.IMP.MESSAGES.ELYTRAPROXY.ALERT_SERVER_EMPTY
++                    .replace("{NL}", "\n")
++                    .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
+                 ));
+       } else if (server.getAllPlayers().size() >= 1) {
+         if (!(source instanceof Player)) {
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/ElytraProxyCommand.java b/proxy/src/main/java/ru/elytrium/elytraproxy/commands/ElytraProxyCommand.java
+index 2cf63ba7..d3df9ccc 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/ElytraProxyCommand.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/commands/ElytraProxyCommand.java
+@@ -90,7 +90,7 @@ public class ElytraProxyCommand implements SimpleCommand {
+       source.sendMessage(Identity.nil(), Component.text("§6/elytraproxy reload §7-§f"
+           + " reloads proxy server itself, without plugins"));
+       source.sendMessage(Identity.nil(), Component.text("§6/elytraproxy stats §7-§f"
+-          + " enables action bars statistics"));
++          + " enable action bar statistic"));
+     }
+   }
+ 
+@@ -179,19 +179,17 @@ public class ElytraProxyCommand implements SimpleCommand {
+           source.sendMessage(Identity.nil(),
+               LegacyComponentSerializer
+                   .legacyAmpersand()
+-                  .deserialize((
+-                      Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX
+-                      + Settings.IMP.MESSAGES.VELOCITY.COMMAND.RELOAD_SUCCESS)
+-                          .replace("%nl%", "\n")
+-          ));
++                  .deserialize(Settings.IMP.MESSAGES.VELOCITY.COMMAND.RELOAD_SUCCESS
++                      .replace("{NL}", "\n")
++                      .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
++                  ));
+         } else {
+           source.sendMessage(Identity.nil(),
+               LegacyComponentSerializer
+                   .legacyAmpersand()
+-                  .deserialize((
+-                      Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX
+-                      + Settings.IMP.MESSAGES.VELOCITY.COMMAND.RELOAD_FAILURE)
+-                          .replace("%nl%", "\n")
++                  .deserialize(Settings.IMP.MESSAGES.VELOCITY.COMMAND.RELOAD_FAILURE
++                      .replace("{NL}", "\n")
++                      .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
+                   ));
+         }
+       } catch (Exception e) {
+@@ -199,10 +197,9 @@ public class ElytraProxyCommand implements SimpleCommand {
+         source.sendMessage(Identity.nil(),
+             LegacyComponentSerializer
+                 .legacyAmpersand()
+-                .deserialize((
+-                    Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX
+-                    + Settings.IMP.MESSAGES.VELOCITY.COMMAND.RELOAD_FAILURE)
+-                        .replace("%nl%", "\n")
++                .deserialize(Settings.IMP.MESSAGES.VELOCITY.COMMAND.RELOAD_FAILURE
++                    .replace("{NL}", "\n")
++                    .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
+                 ));
+       }
+ 
+@@ -233,9 +230,9 @@ public class ElytraProxyCommand implements SimpleCommand {
+               player.sendActionBar(
+                   LegacyComponentSerializer
+                       .legacyAmpersand()
+-                      .deserialize((
+-                          Settings.IMP.MESSAGES.ELYTRAPROXY.STATS_FORMAT)
+-                          .replace("%nl%", "\n")
++                      .deserialize(Settings.IMP.MESSAGES.ELYTRAPROXY.STATS_FORMAT
++                          .replace("{NL}", "\n")
++                          .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
+                           .replace("{0}", String.valueOf(statistics.getBlockedConnections()))
+                           .replace("{1}", String.valueOf(statistics.getConnectionsPerSecond()))
+                           .replace("{2}", String.valueOf(statistics.getPingsPerSecond()))
+@@ -260,20 +257,18 @@ public class ElytraProxyCommand implements SimpleCommand {
+         source.sendMessage(
+             LegacyComponentSerializer
+                 .legacyAmpersand()
+-                .deserialize((
+-                    Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX
+-                    + Settings.IMP.MESSAGES.ELYTRAPROXY.STATS_DISABLED)
+-                        .replace("%nl%", "\n")
++                .deserialize(Settings.IMP.MESSAGES.ELYTRAPROXY.STATS_DISABLED
++                    .replace("{NL}", "\n")
++                    .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
+                 ));
+         playersWithStats.remove(player);
+       } else {
+         source.sendMessage(
+             LegacyComponentSerializer
+                 .legacyAmpersand()
+-                .deserialize((
+-                    Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX
+-                    + Settings.IMP.MESSAGES.ELYTRAPROXY.STATS_ENABLED)
+-                        .replace("%nl%", "\n")
++                .deserialize(Settings.IMP.MESSAGES.ELYTRAPROXY.STATS_ENABLED
++                    .replace("{NL}", "\n")
++                    .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
+                 ));
+         playersWithStats.add(player);
+       }
+@@ -302,20 +297,18 @@ public class ElytraProxyCommand implements SimpleCommand {
+         source.sendMessage(
+             LegacyComponentSerializer
+                 .legacyAmpersand()
+-                .deserialize((
+-                    Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX
+-                    + Settings.IMP.MESSAGES.ELYTRAPROXY.COMMAND_SPY_DISABLED)
+-                        .replace("%nl%", "\n")
++                .deserialize(Settings.IMP.MESSAGES.ELYTRAPROXY.COMMAND_SPY_DISABLED
++                    .replace("{NL}", "\n")
++                    .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
+                 ));
+         playersWithSpy.remove(player);
+       } else {
+         source.sendMessage(
+             LegacyComponentSerializer
+                 .legacyAmpersand()
+-                .deserialize((
+-                    Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX
+-                    + Settings.IMP.MESSAGES.ELYTRAPROXY.COMMAND_SPY_ENABLED)
+-                        .replace("%nl%", "\n")
++                .deserialize(Settings.IMP.MESSAGES.ELYTRAPROXY.COMMAND_SPY_ENABLED
++                    .replace("{NL}", "\n")
++                    .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
+                 ));
+         playersWithSpy.add(player);
+       }
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/FindCommand.java b/proxy/src/main/java/ru/elytrium/elytraproxy/commands/FindCommand.java
+index 89e4adfd..ed436526 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/FindCommand.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/commands/FindCommand.java
+@@ -31,11 +31,9 @@ import ru.elytrium.elytraproxy.config.Settings;
+ public class FindCommand implements SimpleCommand {
+ 
+   private final ProxyServer server;
+-  private final String prefix;
+ 
+-  public FindCommand(ProxyServer server, String prefix) {
++  public FindCommand(ProxyServer server) {
+     this.server = server;
+-    this.prefix = prefix;
+   }
+ 
+   @Override
+@@ -65,10 +63,9 @@ public class FindCommand implements SimpleCommand {
+       source.sendMessage(
+           LegacyComponentSerializer
+               .legacyAmpersand()
+-              .deserialize((
+-                  prefix
+-                  + Settings.IMP.MESSAGES.ELYTRAPROXY.FIND_USERNAME_NEEDED)
+-                      .replace("%nl%", "\n")
++              .deserialize(Settings.IMP.MESSAGES.ELYTRAPROXY.FIND_USERNAME_NEEDED
++                  .replace("{NL}", "\n")
++                  .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
+               ));
+     } else {
+       Optional<Player> player = server.getPlayer(args[0]);
+@@ -78,22 +75,19 @@ public class FindCommand implements SimpleCommand {
+         server.ifPresent(srv -> source.sendMessage(
+             LegacyComponentSerializer
+                 .legacyAmpersand()
+-                .deserialize((
+-                    prefix
+-                    + Settings.IMP.MESSAGES.ELYTRAPROXY.FIND_USER_ONLINE_AT)
+-                        .replace("%nl%", "\n")
+-                        .replace("{0}", pl.getUsername())
+-                        .replace("{1}", srv.getServerInfo().getName())
++                .deserialize(Settings.IMP.MESSAGES.ELYTRAPROXY.FIND_USER_ONLINE_AT
++                    .replace("{NL}", "\n")
++                    .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
++                    .replace("{0}", pl.getUsername())
++                    .replace("{1}", srv.getServerInfo().getName())
+                 )));
+       } else {
+         source.sendMessage(
+             LegacyComponentSerializer
+                 .legacySection()
+-                .deserialize((
+-                    prefix
+-                    + Settings.IMP.MESSAGES.ELYTRAPROXY.USER_NOT_ONLINE)
+-                        .replace("%nl%", "\n")
+-                        .replace("{0}", args[0])
++                .deserialize(Settings.IMP.MESSAGES.ELYTRAPROXY.USER_NOT_ONLINE
++                    .replace("{NL}", "\n")
++                    .replace("{0}", args[0])
+                 ));
+       }
+     }
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/MessageCommand.java b/proxy/src/main/java/ru/elytrium/elytraproxy/commands/MessageCommand.java
+index 251733ff..17d8786b 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/MessageCommand.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/commands/MessageCommand.java
+@@ -34,11 +34,9 @@ import ru.elytrium.elytraproxy.config.Settings;
+ public class MessageCommand implements SimpleCommand {
+ 
+   private final ProxyServer server;
+-  private final String prefix;
+ 
+-  public MessageCommand(ProxyServer server, String prefix) {
++  public MessageCommand(ProxyServer server) {
+     this.server = server;
+-    this.prefix = prefix;
+   }
+ 
+   @Override
+@@ -68,10 +66,9 @@ public class MessageCommand implements SimpleCommand {
+       source.sendMessage(
+           LegacyComponentSerializer
+               .legacyAmpersand()
+-              .deserialize((
+-                  prefix
+-                  + "&cУкажите имя игрока, которому вы хотите отправить сообщение")
+-                      .replace("%nl%", "\n")
++              .deserialize("&cУкажите имя игрока, которому вы хотите отправить сообщение"
++                  .replace("{NL}", "\n")
++                  .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
+               ));
+       return;
+     }
+@@ -80,10 +77,9 @@ public class MessageCommand implements SimpleCommand {
+       source.sendMessage(
+           LegacyComponentSerializer
+               .legacyAmpersand()
+-              .deserialize((
+-                  prefix
+-                  + "&cУкажите сообщение, которое вы хотите отправить игроку")
+-                      .replace("%nl%", "\n")
++              .deserialize("&cУкажите сообщение, которое вы хотите отправить игроку"
++                  .replace("{NL}", "\n")
++                  .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
+               ));
+       return;
+     }
+@@ -93,18 +89,18 @@ public class MessageCommand implements SimpleCommand {
+       Player player = playerOptional.get();
+       String message = String.join(" ", Arrays.copyOfRange(args, 1, args.length - 1));
+       String author = (source instanceof Player) ? ((Player) source).getUsername()
+-          : ((
+-          Settings.IMP.MESSAGES.ELYTRAPROXY.IF_CONSOLE)
+-          .replace("%nl%", "\n")
+-          .replace("&", "§")
+-      );
++          : Settings.IMP.MESSAGES.ELYTRAPROXY.IF_CONSOLE
++              .replace("{NL}", "\n")
++              .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX);
+ 
+       Component component = LegacyComponentSerializer
+           .legacyAmpersand()
+-          .deserialize((
+-              prefix
+-              + "&d&l[" + author + "->" + player.getUsername() + "] " + message)
+-                  .replace("%nl%", "\n")
++          .deserialize("&d&l[{0}->{1}] {2}"
++              .replace("{NL}", "\n")
++              .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
++              .replace("{0}", author)
++              .replace("{1}", player.getUsername())
++              .replace("{2}", message)
+           );
+ 
+       player.sendMessage(component);
+@@ -112,10 +108,9 @@ public class MessageCommand implements SimpleCommand {
+       source.sendMessage(
+           LegacyComponentSerializer
+               .legacyAmpersand()
+-              .deserialize((
+-                  prefix
+-                  + "&cИгрок не найден, или находится вне сети")
+-                      .replace("%nl%", "\n")
++              .deserialize("&cИгрок не найден, или находится не в сети"
++                  .replace("{NL}", "\n")
++                  .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
+               ));
+     }
+   }
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/SendCommand.java b/proxy/src/main/java/ru/elytrium/elytraproxy/commands/SendCommand.java
+index eb2ad91f..7c868faf 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/SendCommand.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/commands/SendCommand.java
+@@ -26,11 +26,9 @@ import com.velocitypowered.api.proxy.server.ServerInfo;
+ import com.velocitypowered.proxy.VelocityServer;
+ import com.velocitypowered.proxy.command.builtin.CommandMessages;
+ import com.velocitypowered.proxy.connection.client.ConnectedPlayer;
+-
+ import java.util.Collection;
+ import java.util.List;
+ import java.util.stream.Collectors;
+-
+ import net.kyori.adventure.text.Component;
+ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+ import ru.elytrium.elytraproxy.config.Settings;
+@@ -38,11 +36,9 @@ import ru.elytrium.elytraproxy.config.Settings;
+ public class SendCommand implements SimpleCommand {
+ 
+   private final ProxyServer server;
+-  private final String prefix;
+ 
+-  public SendCommand(ProxyServer server, String prefix) {
++  public SendCommand(ProxyServer server) {
+     this.server = server;
+-    this.prefix = prefix;
+   }
+ 
+   @Override
+@@ -81,10 +77,9 @@ public class SendCommand implements SimpleCommand {
+       source.sendMessage(
+           LegacyComponentSerializer
+               .legacyAmpersand()
+-              .deserialize((
+-                  prefix
+-                  + Settings.IMP.MESSAGES.ELYTRAPROXY.SEND_NOT_ENOUGH_ARGUMENTS)
+-                      .replace("%nl%", "\n")
++              .deserialize(Settings.IMP.MESSAGES.ELYTRAPROXY.SEND_NOT_ENOUGH_ARGUMENTS
++                  .replace("{NL}", "\n")
++                  .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
+               ));
+       return;
+     }
+@@ -96,19 +91,17 @@ public class SendCommand implements SimpleCommand {
+     }
+ 
+     String sender = (source instanceof Player) ? ((Player) source).getUsername()
+-        : ((
+-            Settings.IMP.MESSAGES.ELYTRAPROXY.IF_CONSOLE)
+-                .replace("%nl%", "\n")
+-                .replace("&", "§")
+-    );
++        : Settings.IMP.MESSAGES.ELYTRAPROXY.IF_CONSOLE
++            .replace("{NL}", "\n")
++            .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX);
++
+     Component summoned = LegacyComponentSerializer
+         .legacyAmpersand()
+-        .deserialize((
+-            prefix
+-            + Settings.IMP.MESSAGES.ELYTRAPROXY.SEND_YOU_GOT_SUMMONED)
+-                .replace("%nl%", "\n")
+-                .replace("{0}", target.getServerInfo().getName())
+-                .replace("{1}", sender)
++        .deserialize(Settings.IMP.MESSAGES.ELYTRAPROXY.SEND_YOU_GOT_SUMMONED
++            .replace("{NL}", "\n")
++            .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
++            .replace("{0}", target.getServerInfo().getName())
++            .replace("{1}", sender)
+         );
+ 
+     switch (args[0].toLowerCase()) {
+@@ -141,11 +134,10 @@ public class SendCommand implements SimpleCommand {
+           source.sendMessage(
+               LegacyComponentSerializer
+                   .legacyAmpersand()
+-                  .deserialize((
+-                      prefix
+-                      + Settings.IMP.MESSAGES.ELYTRAPROXY.USER_NOT_ONLINE)
+-                          .replace("%nl%", "\n")
+-                          .replace("{0}", args[0])
++                  .deserialize(Settings.IMP.MESSAGES.ELYTRAPROXY.USER_NOT_ONLINE
++                      .replace("{NL}", "\n")
++                      .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
++                      .replace("{0}", args[0])
+                   ));
+         }
+         break;
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/config/Settings.java b/proxy/src/main/java/ru/elytrium/elytraproxy/config/Settings.java
+index 7bca10a4..f19780e3 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/config/Settings.java
++++ b/proxy/src/main/java/ru/elytrium/elytraproxy/config/Settings.java
+@@ -27,45 +27,51 @@ public class Settings extends Config {
+   public static final Settings IMP = new Settings();
+ 
+   @Final
+-  public String VERSION = "0.1.1";
++  public String VERSION = "0.1.2-DEV";
+ 
+   @Create
+   public MESSAGES MESSAGES;
+ 
+-  @Comment("Don't use \\n, use %nl% for new line. Ampersand (&) color codes are supported too.")
++  @Comment("Don't use \\n, use {NL} for new line, and {PRFX} for prefix. Ampersand (&) color codes are supported too.")
+   public static class MESSAGES {
+     @Create
+     public MESSAGES.ELYTRAPROXY ELYTRAPROXY;
+     @Create
+     public MESSAGES.VELOCITY VELOCITY;
+ 
+-    @Comment("alert-prefix, stats-format, command-spy-format, log-command-executions-format, protocol-blocked, glist-format-view-all and nick-blocked doesn't have prefix.")
+     public static class ELYTRAPROXY {
+-      public String PREFIX = "&5&l[ElytraProxy]&f ";
++      public String PREFIX = "&5&l[ElytraProxy]";
+       public String ALERT_PREFIX = "&8[&4Alert&8]&f ";
+       public String IF_CONSOLE = "CONSOLE";
+-      public String ALERT_MESSAGE_NEEDED = "You must supply a message.";
+-      public String ALERT_SERVER_EMPTY = "Server is empty.";
++      public String ALERT_MESSAGE_NEEDED = "{PRFX} &fYou must supply a message.";
++      public String ALERT_SERVER_EMPTY = "{PRFX} &fServer is empty.";
+       public String STATS_FORMAT = "&c&lTotal Blocked: &6&l{0}&c&l | Connections Per Second: &6&l{1}&c&l | Pings Per Second: &6&l{2}&c&l | Total Connections Per Second: &6&l{3}";
+-      public String STATS_ENABLED = "Now you see statistics in your action bar.";
+-      public String STATS_DISABLED = "You're no longer see statistics in your action bar.";
+-      public String FIND_USERNAME_NEEDED = "Please follow this command by a user name.";
+-      public String FIND_USER_ONLINE_AT = "&6{0} &fis online at &6{1}";
+-      public String USER_NOT_ONLINE = "&6{0} &fis not online.";
+-      public String SEND_YOU_GOT_SUMMONED = "Summoned to &6{0} &fby &6{1}";
+-      public String SEND_NOT_ENOUGH_ARGUMENTS = "Not enough arguments, usage: &6/send <server|player|all|current> <target>";
++      public String STATS_ENABLED = "{PRFX} &fNow you see statistics in your action bar.";
++      public String STATS_DISABLED = "{PRFX} &fYou're no longer see statistics in your action bar.";
++      public String FIND_USERNAME_NEEDED = "{PRFX} &fPlease follow this command by a user name.";
++      public String FIND_USER_ONLINE_AT = "{PRFX} &6{0} &fis online at &6{1}";
++      public String USER_NOT_ONLINE = "{PRFX} &6{0} &fis not online.";
++      public String SEND_YOU_GOT_SUMMONED = "{PRFX} &fSummoned to &6{0} &fby &6{1}";
++      public String SEND_NOT_ENOUGH_ARGUMENTS = "{PRFX} &fNot enough arguments, usage: &6/send <server|player|all|current> <target>";
+       public String COMMAND_SPY_FORMAT = "&7 — Player {0} executed command {1}";
+-      public String COMMAND_SPY_ENABLED = "Now you see commands from all server in your chat.";
+-      public String COMMAND_SPY_DISABLED = "You're no longer see statistics in your chat.";
++      public String COMMAND_SPY_ENABLED = "{PRFX} &fNow you see commands from all server in your chat.";
++      public String COMMAND_SPY_DISABLED = "{PRFX} &fYou're no longer see statistics in your action bar.";
+       public String CONSOLE_LOG_COMMAND_EXECUTIONS_FORMAT = "{0} -> executed command {1}";
+-      public String PROTOCOL_BLOCKED = "&c1.7.x not supported";
+-      public String NICK_BLOCKED = "&cYour nickname contains forbidden phrases.";
+-      public String CLIENT_CHECK_SETTINGS = "&cYour client doesn't send settings packets.";
+-      public String CLIENT_CHECK_SETTINGS_CHAT_COLOR = "&cPlease enable colors in chat settings to join the server.%nl%Options > Chat Settings.";
+-      public String CLIENT_CHECK_SETTINGS_SKIN_PARTS = "&cPlease enable any option from the skin customization to join the server.%nl%Options > Skin Customization.";
+-      public String CLIENT_CHECK_BRAND = "&cYour client doesn't send brand packets.";
+-      public String RELOAD_SUCCESS = "ElytraProxy configuration successfully reloaded.";
+-      public String RELOAD_FAILURE = "&cUnable to reload your ElytraProxy configuration. Check the console for more details.";
++      public String RELOAD_SUCCESS = "{PRFX} &fElytraProxy configuration successfully reloaded.";
++      public String RELOAD_FAILURE = "{PRFX} &cUnable to reload your ElytraProxy configuration. Check the console for more details.";
++
++      @Create
++      public MESSAGES.ELYTRAPROXY.KICK KICK;
++
++      @Comment("Kick messages")
++      public static class KICK {
++        public String PROTOCOL_BLOCKED = "&c1.7.x not supported";
++        public String NICK_BLOCKED = "&cYour nickname contains forbidden phrases.";
++        public String CLIENT_CHECK_SETTINGS = "&cYour client doesn't send settings packets.";
++        public String CLIENT_CHECK_SETTINGS_CHAT_COLOR = "&cPlease enable colors in chat settings to join the server.{NL}&eOptions > Chat Settings";
++        public String CLIENT_CHECK_SETTINGS_SKIN_PARTS = "&cPlease enable any option from the skin customization to join the server.{NL}&eOptions > Skin Customization";
++        public String CLIENT_CHECK_BRAND = "&cYour client doesn't send brand packets.";
++      }
+       /*
+       public String MYSQL_LOAD_FAILED: "Ошибка при инициализации базы данных. Выключение..."
+       */
+@@ -81,7 +87,6 @@ public class Settings extends Config {
+       @Create
+       public MESSAGES.VELOCITY.COMMAND COMMAND;
+ 
+-      @Comment("Error messages doesn't have ElytraProxy prefix")
+       public static class ERROR {
+         public String ALREADY_CONNECTED = "&cYou are already connected to this server!";
+         public String ALREADY_CONNECTED_PROXY = "&cYou are already connected to this proxy!";
+@@ -97,26 +102,27 @@ public class Settings extends Config {
+         public String MODERN_FORWARDING_FAILED = "&cYour server did not send a forwarding request to the proxy. Make sure the server is configured for Velocity forwarding.";
+         public String MOVED_TO_NEW_SERVER = "&cYou were kicked from &6{0}&c: &6{1}";
+         public String NO_AVAILABLE_SERVERS = "&cThere are no available servers to connect you to. Try again later or contact an admin.";
++        public String EXTREMELY_OLD_CLIENT = "&cYour client is extremely old. Please update to a newer version of Minecraft.";
+       }
+ 
+       public static class COMMAND {
+-        public String GENERIC_ERROR = "An error occurred while running this command.";
+-        public String COMMAND_DOES_NOT_EXIST = "This command does not exist.";
+-        public String PLAYERS_ONLY = "Only players can run this command.";
+-        public String SERVER_DOES_NOT_EXIST = "The specified server &6{0} &fdoes not exist.";
+-        public String SERVER_CURRENT_SERVER = "You are currently connected to &6{0}.";
+-        public String SERVER_TOO_MANY = "There are too many servers set up. Use tab completion to view all servers available.";
+-        public String SERVER_AVAILABLE = "Available servers: &6";
+-        public String SERVER_TOOLTIP_CURRENT_SERVER = "Currently connected to this server%nl%&6{0}";
+-        public String SERVER_TOOLTIP_PLAYER_ONLINE = "&6{0} &fplayer online";
+-        public String SERVER_TOOLTIP_PLAYERS_ONLINE = "&6{0} &fplayers online";
+-        public String SERVER_TOOLTIP_OFFER_CONNECT_SERVER = "Click to connect to this server%nl%&6{0}";
+-        public String GLIST_VIEW_ALL = "To view all players on servers, use &6/glist all&f.";
+-        public String GLIST_PLAYER_SINGULAR = "&6{0} &fplayer is currently connected to the proxy.";
+-        public String GLIST_PLAYER_PLURAL = "&6{0} &fplayers are currently connected to the proxy.";
++        public String GENERIC_ERROR = "{PRFX} &fAn error occurred while running this command.";
++        public String COMMAND_DOES_NOT_EXIST = "{PRFX} &fThis command does not exist.";
++        public String PLAYERS_ONLY = "{PRFX} &fOnly players can run this command.";
++        public String SERVER_DOES_NOT_EXIST = "{PRFX} &fThe specified server &6{0} &fdoes not exist.";
++        public String SERVER_CURRENT_SERVER = "{PRFX} &fYou are currently connected to &6{0}.";
++        public String SERVER_TOO_MANY = "{PRFX} &fThere are too many servers set up. Use tab completion to view all servers available.";
++        public String SERVER_AVAILABLE = "{PRFX} &fAvailable servers: &6";
++        public String SERVER_TOOLTIP_CURRENT_SERVER = "{PRFX} &fCurrently connected to this server{NL}&6{0}";
++        public String SERVER_TOOLTIP_PLAYER_ONLINE = "{PRFX} &6{0} &fplayer online";
++        public String SERVER_TOOLTIP_PLAYERS_ONLINE = "{PRFX} &6{0} &fplayers online";
++        public String SERVER_TOOLTIP_OFFER_CONNECT_SERVER = "{PRFX} &fClick to connect to this server{NL}&6{0}";
++        public String GLIST_VIEW_ALL = "{PRFX} &fTo view all players on servers, use &6/glist all&f.";
++        public String GLIST_PLAYER_SINGULAR = "{PRFX} &6{0} &fplayer is currently connected to the proxy.";
++        public String GLIST_PLAYER_PLURAL = "{PRFX} &6{0} &fplayers are currently connected to the proxy.";
+         public String GLIST_FORMAT_VIEW_ALL = "&f[&6{0}&f] (&6{1}&f): ";
+-        public String RELOAD_SUCCESS = "Velocity configuration successfully reloaded.";
+-        public String RELOAD_FAILURE = "&cUnable to reload your Velocity configuration. Check the console for more details.";
++        public String RELOAD_SUCCESS = "{PRFX} &fVelocity configuration successfully reloaded.";
++        public String RELOAD_FAILURE = "{PRFX} &cUnable to reload your Velocity configuration. Check the console for more details.";
+       }
+     }
+   }
+-- 
+2.24.1.windows.2
+
