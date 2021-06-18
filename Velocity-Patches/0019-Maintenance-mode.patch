@@ -1,9 +1,21 @@
-From a8af5fa41039e6be8312a245718e49bd4cf3616b Mon Sep 17 00:00:00 2001
+From 8d5b313fd5b457c744ef00b48cb155b2d3814419 Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Fri, 18 Jun 2021 23:18:35 +0900
 Subject: [PATCH] Maintenance mode
 
 
+diff --git a/api/src/main/java/com/velocitypowered/api/network/ProtocolVersion.java b/api/src/main/java/com/velocitypowered/api/network/ProtocolVersion.java
+index e8f2ef6b..eb76b5ce 100644
+--- a/api/src/main/java/com/velocitypowered/api/network/ProtocolVersion.java
++++ b/api/src/main/java/com/velocitypowered/api/network/ProtocolVersion.java
+@@ -22,6 +22,7 @@ import java.util.Set;
+ public enum ProtocolVersion {
+   UNKNOWN(-1, "Unknown"),
+   LEGACY(-2, "Legacy"),
++  MAINTENANCE(-99, "Maintenance"),
+   MINECRAFT_1_7_2(4,
+           "1.7.2", "1.7.3", "1.7.4", "1.7.5"),
+   MINECRAFT_1_7_6(5,
 diff --git a/proxy/build.gradle b/proxy/build.gradle
 index 52e4734f..8b7d77fd 100644
 --- a/proxy/build.gradle
@@ -20,7 +32,7 @@ index 52e4734f..8b7d77fd 100644
  
  dependencies {
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-index ad103cca..6418acaa 100644
+index ad103cca..f8a4438d 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
 @@ -88,8 +88,9 @@ import java.util.concurrent.TimeoutException;
@@ -43,6 +55,23 @@ index ad103cca..6418acaa 100644
  
  public class VelocityServer implements ProxyServer, ForwardingAudience {
  
+@@ -142,7 +141,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+   private final VelocityEventManager eventManager;
+   private final VelocityScheduler scheduler;
+   private final VelocityChannelRegistrar channelRegistrar = new VelocityChannelRegistrar();
+-  private @MonotonicNonNull ElytraProxy elytraProxy; // ElytraProxy
++  private ElytraProxy elytraProxy; // ElytraProxy
+ 
+   VelocityServer(final ProxyOptions options) {
+     pluginManager = new VelocityPluginManager(this);
+@@ -241,6 +240,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+     Metrics.VelocityMetrics.startMetrics(this, configuration.getMetrics());
+ 
+     this.elytraProxy = new ElytraProxy(this);
++    configuration.getMotd();
+   }
+ 
+   @SuppressFBWarnings("DM_EXIT")
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/CommandMessages.java b/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/CommandMessages.java
 index 0c407be7..59102c9b 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/CommandMessages.java
@@ -98,10 +127,18 @@ index 88305e80..fa55a506 100644
  public class ServerCommand implements SimpleCommand {
  
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/config/VelocityConfiguration.java b/proxy/src/main/java/com/velocitypowered/proxy/config/VelocityConfiguration.java
-index 81b9cb0b..066ad413 100644
+index 81b9cb0b..4f3d1c12 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/config/VelocityConfiguration.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/config/VelocityConfiguration.java
-@@ -47,13 +47,13 @@ import java.util.Locale;
+@@ -28,7 +28,6 @@ import com.google.gson.annotations.Expose;
+ import com.velocitypowered.api.proxy.config.ProxyConfig;
+ import com.velocitypowered.api.util.Favicon;
+ import com.velocitypowered.proxy.util.AddressUtil;
+-
+ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+ import java.io.File;
+ import java.io.IOException;
+@@ -47,26 +46,26 @@ import java.util.Locale;
  import java.util.Map;
  import java.util.Optional;
  import java.util.Random;
@@ -116,33 +153,46 @@ index 81b9cb0b..066ad413 100644
  
  public class VelocityConfiguration implements ProxyConfig {
  
-@@ -267,9 +267,23 @@ public class VelocityConfiguration implements ProxyConfig {
+   private static final Logger logger = LogManager.getLogger(VelocityConfiguration.class);
+ 
+-  @Expose private String bind = "0.0.0.0:25577";
+-  @Expose private String motd = "&3A Velocity Server";
++  @Expose private String bind = "0.0.0.0:25565";
++  @Expose private String motd = "&3An ElytraProxy Server";
+   @Expose private int showMaxPlayers = 500;
+   @Expose private boolean onlineMode = true;
+-  @Expose private boolean preventClientProxyConnections = false;
++  @Expose private boolean preventClientProxyConnections = true;
+   @Expose private PlayerInfoForwarding playerInfoForwardingMode = PlayerInfoForwarding.NONE;
+   private byte[] forwardingSecret = generateRandomString(12).getBytes(StandardCharsets.UTF_8);
+-  @Expose private boolean announceForge = false;
++  @Expose private boolean announceForge = true;
+   @Expose private boolean onlineModeKickExistingPlayers = false;
+   @Expose private PingPassthroughMode pingPassthrough = PingPassthroughMode.DISABLED;
+   private final Servers servers;
+@@ -267,9 +266,19 @@ public class VelocityConfiguration implements ProxyConfig {
    public net.kyori.adventure.text.Component getMotd() {
      if (motdAsComponent == null) {
        if (motd.startsWith("{")) {
 -        motdAsComponent = GsonComponentSerializer.gson().deserialize(motd);
-+        motdAsComponent = GsonComponentSerializer.gson().deserialize((
-+            Settings.IMP.MAIN_SETTINGS.MAINTENANCE.ENABLED
-+                ? Settings.IMP.MAIN_SETTINGS.MAINTENANCE.MOTD : motd)
-+                .replace('&', '§')
++        motdAsComponent = GsonComponentSerializer
++            .gson()
++            .deserialize(motd
 +                .replace("{NL}", "\n")
 +                .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
-+        );
++            );
        } else {
 -        motdAsComponent = LegacyComponentSerializer.legacy('&').deserialize(motd);
 +        motdAsComponent = LegacyComponentSerializer
 +            .legacyAmpersand()
-+            .deserialize((
-+                Settings.IMP.MAIN_SETTINGS.MAINTENANCE.ENABLED
-+                    ? Settings.IMP.MAIN_SETTINGS.MAINTENANCE.MOTD : motd)
-+                    .replace('&', '§')
-+                    .replace("{NL}", "\n")
-+                    .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
++            .deserialize(motd
++                .replace("{NL}", "\n")
++                .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
 +            );
        }
      }
      return motdAsComponent;
-@@ -477,8 +491,8 @@ public class VelocityConfiguration implements ProxyConfig {
+@@ -477,8 +486,8 @@ public class VelocityConfiguration implements ProxyConfig {
      PingPassthroughMode pingPassthroughMode = config.getEnumOrElse("ping-passthrough",
          PingPassthroughMode.DISABLED);
  
@@ -153,7 +203,7 @@ index 81b9cb0b..066ad413 100644
      int maxPlayers = config.getIntOrElse("show-max-players", 500);
      Boolean onlineMode = config.getOrElse("online-mode", true);
      Boolean announceForge = config.getOrElse("announce-forge", true);
-@@ -646,18 +660,18 @@ public class VelocityConfiguration implements ProxyConfig {
+@@ -646,18 +655,18 @@ public class VelocityConfiguration implements ProxyConfig {
  
    private static class Advanced {
  
@@ -176,7 +226,7 @@ index 81b9cb0b..066ad413 100644
  
      private Advanced() {
      }
-@@ -665,7 +679,7 @@ public class VelocityConfiguration implements ProxyConfig {
+@@ -665,7 +674,7 @@ public class VelocityConfiguration implements ProxyConfig {
      private Advanced(CommentedConfig config) {
        if (config != null) {
          this.compressionThreshold = config.getIntOrElse("compression-threshold", 512);
@@ -185,7 +235,7 @@ index 81b9cb0b..066ad413 100644
          this.loginRatelimit = config.getIntOrElse("login-ratelimit", 3000);
          this.connectionTimeout = config.getIntOrElse("connection-timeout", 5000);
          this.readTimeout = config.getIntOrElse("read-timeout", 30000);
-@@ -680,7 +694,7 @@ public class VelocityConfiguration implements ProxyConfig {
+@@ -680,7 +689,7 @@ public class VelocityConfiguration implements ProxyConfig {
          this.failoverOnUnexpectedServerDisconnect = config
              .getOrElse("failover-on-unexpected-server-disconnect", true);
          this.announceProxyCommands = config.getOrElse("announce-proxy-commands", true);
@@ -194,7 +244,7 @@ index 81b9cb0b..066ad413 100644
        }
      }
  
-@@ -754,8 +768,8 @@ public class VelocityConfiguration implements ProxyConfig {
+@@ -754,8 +763,8 @@ public class VelocityConfiguration implements ProxyConfig {
    private static class Query {
  
      @Expose private boolean queryEnabled = false;
@@ -205,7 +255,7 @@ index 81b9cb0b..066ad413 100644
      @Expose private boolean showPlugins = false;
  
      private Query() {
-@@ -771,8 +785,8 @@ public class VelocityConfiguration implements ProxyConfig {
+@@ -771,8 +780,8 @@ public class VelocityConfiguration implements ProxyConfig {
      private Query(CommentedConfig config) {
        if (config != null) {
          this.queryEnabled = config.getOrElse("enabled", false);
@@ -385,21 +435,57 @@ index f6856f57..29853729 100644
            .contains(mcConnection.getProtocolVersion().getProtocol())) {
          player.disconnect0(
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/StatusSessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/StatusSessionHandler.java
-index 3e4e719f..6fd7be5c 100644
+index 3e4e719f..d1fc82cb 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/StatusSessionHandler.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/StatusSessionHandler.java
-@@ -44,9 +44,9 @@ import java.util.List;
+@@ -44,9 +44,12 @@ import java.util.List;
  import java.util.Locale;
  import java.util.Optional;
  import java.util.concurrent.CompletableFuture;
 +import net.elytrium.elytraproxy.config.Settings;
++import net.kyori.adventure.text.Component;
++import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
++import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
  import org.apache.logging.log4j.LogManager;
  import org.apache.logging.log4j.Logger;
 -import ru.elytrium.elytraproxy.config.Settings;
  
  public class StatusSessionHandler implements MinecraftSessionHandler {
  
-@@ -79,7 +79,12 @@ public class StatusSessionHandler implements MinecraftSessionHandler {
+@@ -58,6 +61,7 @@ public class StatusSessionHandler implements MinecraftSessionHandler {
+   private final MinecraftConnection connection;
+   private final InboundConnection inbound;
+   private boolean pingReceived = false;
++  private Component maintenanceMotd;
+ 
+   StatusSessionHandler(VelocityServer server, MinecraftConnection connection,
+       InboundConnection inbound) {
+@@ -75,14 +79,42 @@ public class StatusSessionHandler implements MinecraftSessionHandler {
+     server.getElytraProxy().getStatistics().addPingPerSecond();
+   }
+ 
++  private Component getMaintenanceMotd() {
++    if (Settings.IMP.MAIN_SETTINGS.MAINTENANCE.ENABLED) {
++      if (Settings.IMP.MAIN_SETTINGS.MAINTENANCE.MOTD.startsWith("{")) {
++        maintenanceMotd = GsonComponentSerializer
++            .gson()
++            .deserialize(Settings.IMP.MAIN_SETTINGS.MAINTENANCE.MOTD
++                .replace("{NL}", "\n")
++                .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
++            );
++      } else {
++        maintenanceMotd = LegacyComponentSerializer
++            .legacyAmpersand()
++            .deserialize(Settings.IMP.MAIN_SETTINGS.MAINTENANCE.MOTD
++                .replace("{NL}", "\n")
++                .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
++            );
++      }
++    }
++    return maintenanceMotd;
++  }
++
+   private ServerPing constructLocalPing(ProtocolVersion version) {
      VelocityConfiguration configuration = server.getConfiguration();
      return new ServerPing(
          new ServerPing.Version(version.getProtocol(),
@@ -412,15 +498,21 @@ index 3e4e719f..6fd7be5c 100644
 +                    .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)),
          new ServerPing.Players(server.getPlayerCount(), configuration.getShowMaxPlayers(),
              ImmutableList.of()),
-         configuration.getMotd(),
-@@ -162,8 +167,13 @@ public class StatusSessionHandler implements MinecraftSessionHandler {
+-        configuration.getMotd(),
++        Settings.IMP.MAIN_SETTINGS.MAINTENANCE.ENABLED
++            ? getMaintenanceMotd()
++            : configuration.getMotd(),
+         configuration.getFavicon().orElse(null),
+         configuration.isAnnounceForge() ? ModInfo.DEFAULT : null
+     );
+@@ -162,8 +194,13 @@ public class StatusSessionHandler implements MinecraftSessionHandler {
  
    private CompletableFuture<ServerPing> getInitialPing() {
      VelocityConfiguration configuration = server.getConfiguration();
 -    ProtocolVersion shownVersion = ProtocolVersion.isSupported(connection.getProtocolVersion())
 +    ProtocolVersion shownVersion;
 +    if (Settings.IMP.MAIN_SETTINGS.MAINTENANCE.ENABLED) {
-+      shownVersion = ProtocolVersion.MAXIMUM_VERSION;
++      shownVersion = ProtocolVersion.MAINTENANCE;
 +    } else {
 +      shownVersion = ProtocolVersion.isSupported(connection.getProtocolVersion())
          ? connection.getProtocolVersion() : ProtocolVersion.MAXIMUM_VERSION;
@@ -428,6 +520,17 @@ index 3e4e719f..6fd7be5c 100644
      PingPassthroughMode passthrough = configuration.getPingPassthrough();
  
      if (passthrough == PingPassthroughMode.DISABLED) {
+@@ -210,7 +247,9 @@ public class StatusSessionHandler implements MinecraftSessionHandler {
+     this.pingReceived = true;
+ 
+     getInitialPing()
+-        .thenCompose(ping -> server.getEventManager().fire(new ProxyPingEvent(inbound, ping)))
++        .thenCompose(Settings.IMP.MAIN_SETTINGS.MAINTENANCE.ENABLED
++            ? ping -> CompletableFuture.completedFuture(new ProxyPingEvent(inbound, ping))
++            : ping -> server.getEventManager().fire(new ProxyPingEvent(inbound, ping)))
+         .thenAcceptAsync(
+             (event) -> {
+               StringBuilder json = new StringBuilder();
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/util/ConnectionMessages.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/util/ConnectionMessages.java
 index ba820796..0ff0dc89 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/util/ConnectionMessages.java
@@ -1608,7 +1711,7 @@ diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/config/Settings.java b/
 similarity index 95%
 rename from proxy/src/main/java/ru/elytrium/elytraproxy/config/Settings.java
 rename to proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java
-index f19780e3..9a425c5d 100644
+index f19780e3..51fe66c2 100644
 --- a/proxy/src/main/java/ru/elytrium/elytraproxy/config/Settings.java
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java
 @@ -15,7 +15,7 @@
@@ -1638,7 +1741,7 @@ index f19780e3..9a425c5d 100644
      @Comment({
          "Allows you to reject connection to the server for all domains except yours and direct ip",
          "Most likely does not work with SRV records"
-@@ -168,6 +172,15 @@ public class Settings extends Config {
+@@ -168,6 +172,14 @@ public class Settings extends Config {
      }
      @Comment("Players who are on these servers will not be counted in ping request and in the query request.")
      public List<String> IGNORE_ONLINE_AT = Arrays.asList("auth");
@@ -1646,9 +1749,8 @@ index f19780e3..9a425c5d 100644
 +    public static class MAINTENANCE {
 +      public boolean ENABLED = false;
 +      public String PING_VERSION = "Maintenance";
-+      @Comment("Works only if you don't using motd plugin.")
-+      public String MOTD = "Maintenance, place wait.";
-+      public String DISCONNECT_REASON = "Sorry, but now server is not available due to maintenance";
++      public String MOTD = "&cMaintenance, please wait.";
++      public String DISCONNECT_REASON = "&cSorry, but now server is not available due to maintenance";
 +      public List<String> IGNORED_PLAYERS = Arrays.asList("4anonymous4");
 +    }
    }
