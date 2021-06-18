@@ -1,4 +1,4 @@
-From d1f11a0d9c83a4989b58b5e7108aecdaccc9e6a3 Mon Sep 17 00:00:00 2001
+From a8af5fa41039e6be8312a245718e49bd4cf3616b Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Fri, 18 Jun 2021 23:18:35 +0900
 Subject: [PATCH] Maintenance mode
@@ -20,53 +20,71 @@ index 52e4734f..8b7d77fd 100644
  
  dependencies {
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-index ad103cca..e107a82f 100644
+index ad103cca..6418acaa 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-@@ -100,8 +100,8 @@ import org.checkerframework.checker.nullness.qual.EnsuresNonNull;
+@@ -88,8 +88,9 @@ import java.util.concurrent.TimeoutException;
+ import java.util.concurrent.atomic.AtomicBoolean;
+ import java.util.function.IntFunction;
+ import java.util.stream.Collectors;
+-
+ import lombok.Getter;
++import net.elytrium.elytraproxy.ElytraProxy;
++import net.elytrium.elytraproxy.config.Settings;
+ import net.kyori.adventure.audience.Audience;
+ import net.kyori.adventure.audience.ForwardingAudience;
+ import net.kyori.adventure.text.Component;
+@@ -100,8 +101,6 @@ import org.checkerframework.checker.nullness.qual.EnsuresNonNull;
  import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
  import org.checkerframework.checker.nullness.qual.NonNull;
  import org.checkerframework.checker.nullness.qual.Nullable;
 -import ru.elytrium.elytraproxy.ElytraProxy;
 -import ru.elytrium.elytraproxy.config.Settings;
-+import net.elytrium.elytraproxy.ElytraProxy;
-+import net.elytrium.elytraproxy.config.Settings;
  
  public class VelocityServer implements ProxyServer, ForwardingAudience {
  
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/CommandMessages.java b/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/CommandMessages.java
-index 0c407be7..1ca0d2c3 100644
+index 0c407be7..59102c9b 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/CommandMessages.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/CommandMessages.java
-@@ -19,7 +19,7 @@ package com.velocitypowered.proxy.command.builtin;
+@@ -17,9 +17,9 @@
  
+ package com.velocitypowered.proxy.command.builtin;
+ 
++import net.elytrium.elytraproxy.config.Settings;
  import net.kyori.adventure.text.Component;
  import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 -import ru.elytrium.elytraproxy.config.Settings;
-+import net.elytrium.elytraproxy.config.Settings;
  
  public class CommandMessages {
  
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/GlistCommand.java b/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/GlistCommand.java
-index 4ab3d464..6fe081da 100644
+index 4ab3d464..e318e6c2 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/GlistCommand.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/GlistCommand.java
-@@ -36,9 +36,8 @@ import java.util.Optional;
+@@ -33,12 +33,11 @@ import com.velocitypowered.api.proxy.ProxyServer;
+ import com.velocitypowered.api.proxy.server.RegisteredServer;
+ import java.util.List;
+ import java.util.Optional;
++import net.elytrium.elytraproxy.config.Settings;
  import net.kyori.adventure.identity.Identity;
  import net.kyori.adventure.text.Component;
  import net.kyori.adventure.text.TextComponent;
 -import net.kyori.adventure.text.format.NamedTextColor;
  import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 -import ru.elytrium.elytraproxy.config.Settings;
-+import net.elytrium.elytraproxy.config.Settings;
  
  public class GlistCommand {
  
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/ServerCommand.java b/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/ServerCommand.java
-index 88305e80..8918ba87 100644
+index 88305e80..fa55a506 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/ServerCommand.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/ServerCommand.java
-@@ -34,12 +34,10 @@ import java.util.stream.Stream;
+@@ -31,15 +31,13 @@ import java.util.List;
+ import java.util.Optional;
+ import java.util.stream.Collectors;
+ import java.util.stream.Stream;
++import net.elytrium.elytraproxy.config.Settings;
  import net.kyori.adventure.identity.Identity;
  import net.kyori.adventure.text.Component;
  import net.kyori.adventure.text.TextComponent;
@@ -76,20 +94,25 @@ index 88305e80..8918ba87 100644
  import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 -import net.kyori.adventure.text.serializer.plain.PlainComponentSerializer;
 -import ru.elytrium.elytraproxy.config.Settings;
-+import net.elytrium.elytraproxy.config.Settings;
  
  public class ServerCommand implements SimpleCommand {
  
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/config/VelocityConfiguration.java b/proxy/src/main/java/com/velocitypowered/proxy/config/VelocityConfiguration.java
-index 81b9cb0b..f3677f82 100644
+index 81b9cb0b..066ad413 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/config/VelocityConfiguration.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/config/VelocityConfiguration.java
-@@ -53,7 +53,7 @@ import org.apache.logging.log4j.LogManager;
+@@ -47,13 +47,13 @@ import java.util.Locale;
+ import java.util.Map;
+ import java.util.Optional;
+ import java.util.Random;
++import net.elytrium.elytraproxy.config.Settings;
+ import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
+ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+ import org.apache.logging.log4j.LogManager;
  import org.apache.logging.log4j.Logger;
  import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
  import org.checkerframework.checker.nullness.qual.Nullable;
 -import ru.elytrium.elytraproxy.config.Settings;
-+import net.elytrium.elytraproxy.config.Settings;
  
  public class VelocityConfiguration implements ProxyConfig {
  
@@ -119,16 +142,93 @@ index 81b9cb0b..f3677f82 100644
        }
      }
      return motdAsComponent;
+@@ -477,8 +491,8 @@ public class VelocityConfiguration implements ProxyConfig {
+     PingPassthroughMode pingPassthroughMode = config.getEnumOrElse("ping-passthrough",
+         PingPassthroughMode.DISABLED);
+ 
+-    String bind = config.getOrElse("bind", "0.0.0.0:25577");
+-    String motd = config.getOrElse("motd", "&#09add3A ElytraProxy Server");
++    String bind = config.getOrElse("bind", "0.0.0.0:25565");
++    String motd = config.getOrElse("motd", "&#09add3Am ElytraProxy Server");
+     int maxPlayers = config.getIntOrElse("show-max-players", 500);
+     Boolean onlineMode = config.getOrElse("online-mode", true);
+     Boolean announceForge = config.getOrElse("announce-forge", true);
+@@ -646,18 +660,18 @@ public class VelocityConfiguration implements ProxyConfig {
+ 
+   private static class Advanced {
+ 
+-    @Expose private int compressionThreshold = 256;
+-    @Expose private int compressionLevel = -1;
++    @Expose private int compressionThreshold = 512;
++    @Expose private int compressionLevel = 9;
+     @Expose private int loginRatelimit = 3000;
+     @Expose private int connectionTimeout = 5000;
+     @Expose private int readTimeout = 30000;
+     @Expose private boolean proxyProtocol = false;
+     @Expose private boolean tcpFastOpen = false;
+     @Expose private boolean bungeePluginMessageChannel = true;
+-    @Expose private boolean showPingRequests = false;
++    @Expose private boolean showPingRequests = true;
+     @Expose private boolean failoverOnUnexpectedServerDisconnect = true;
+     @Expose private boolean announceProxyCommands = true;
+-    @Expose private boolean logCommandExecutions = false;
++    @Expose private boolean logCommandExecutions = true;
+ 
+     private Advanced() {
+     }
+@@ -665,7 +679,7 @@ public class VelocityConfiguration implements ProxyConfig {
+     private Advanced(CommentedConfig config) {
+       if (config != null) {
+         this.compressionThreshold = config.getIntOrElse("compression-threshold", 512);
+-        this.compressionLevel = config.getIntOrElse("compression-level", -1);
++        this.compressionLevel = config.getIntOrElse("compression-level", 9);
+         this.loginRatelimit = config.getIntOrElse("login-ratelimit", 3000);
+         this.connectionTimeout = config.getIntOrElse("connection-timeout", 5000);
+         this.readTimeout = config.getIntOrElse("read-timeout", 30000);
+@@ -680,7 +694,7 @@ public class VelocityConfiguration implements ProxyConfig {
+         this.failoverOnUnexpectedServerDisconnect = config
+             .getOrElse("failover-on-unexpected-server-disconnect", true);
+         this.announceProxyCommands = config.getOrElse("announce-proxy-commands", true);
+-        this.logCommandExecutions = config.getOrElse("log-command-executions", false);
++        this.logCommandExecutions = config.getOrElse("log-command-executions", true);
+       }
+     }
+ 
+@@ -754,8 +768,8 @@ public class VelocityConfiguration implements ProxyConfig {
+   private static class Query {
+ 
+     @Expose private boolean queryEnabled = false;
+-    @Expose private int queryPort = 25577;
+-    @Expose private String queryMap = "Velocity";
++    @Expose private int queryPort = 25565;
++    @Expose private String queryMap = "ElytraProxy";
+     @Expose private boolean showPlugins = false;
+ 
+     private Query() {
+@@ -771,8 +785,8 @@ public class VelocityConfiguration implements ProxyConfig {
+     private Query(CommentedConfig config) {
+       if (config != null) {
+         this.queryEnabled = config.getOrElse("enabled", false);
+-        this.queryPort = config.getIntOrElse("port", 25577);
+-        this.queryMap = config.getOrElse("map", "Velocity");
++        this.queryPort = config.getIntOrElse("port", 25565);
++        this.queryMap = config.getOrElse("map", "ElytraProxy");
+         this.showPlugins = config.getOrElse("show-plugins", false);
+       }
+     }
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftConnection.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftConnection.java
-index 8328752a..b911f341 100644
+index 8328752a..03901b49 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftConnection.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftConnection.java
-@@ -67,7 +67,7 @@ import javax.crypto.spec.SecretKeySpec;
+@@ -64,10 +64,10 @@ import java.security.GeneralSecurityException;
+ import java.util.concurrent.TimeUnit;
+ import javax.crypto.SecretKey;
+ import javax.crypto.spec.SecretKeySpec;
++import net.elytrium.elytraproxy.config.Settings;
  import org.apache.logging.log4j.LogManager;
  import org.apache.logging.log4j.Logger;
  import org.checkerframework.checker.nullness.qual.Nullable;
 -import ru.elytrium.elytraproxy.config.Settings;
-+import net.elytrium.elytraproxy.config.Settings;
  
  /**
   * A utility class to make working with the pipeline a little less painful and transparently handles
@@ -146,7 +246,7 @@ index 2c6d4375..e3d2cae0 100644
  public interface MinecraftSessionHandler {
  
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/backend/LoginSessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/backend/LoginSessionHandler.java
-index 56767d04..ed1d8916 100644
+index 56767d04..b8627700 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/backend/LoginSessionHandler.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/backend/LoginSessionHandler.java
 @@ -44,10 +44,9 @@ import java.util.concurrent.CompletableFuture;
@@ -154,33 +254,45 @@ index 56767d04..ed1d8916 100644
  import javax.crypto.SecretKey;
  import javax.crypto.spec.SecretKeySpec;
 -import net.kyori.adventure.text.Component;
++import net.elytrium.elytraproxy.config.Settings;
  import net.kyori.adventure.text.TextComponent;
  import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 -import ru.elytrium.elytraproxy.config.Settings;
-+import net.elytrium.elytraproxy.config.Settings;
  
  public class LoginSessionHandler implements MinecraftSessionHandler {
  
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
-index 3a61616b..ff8a74f2 100644
+index 3a61616b..6c4ec6fc 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
-@@ -71,8 +71,8 @@ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+@@ -66,13 +66,13 @@ import java.util.Optional;
+ import java.util.Queue;
+ import java.util.UUID;
+ import java.util.concurrent.CompletableFuture;
++import net.elytrium.elytraproxy.commands.ElytraProxyCommand;
++import net.elytrium.elytraproxy.config.Settings;
+ import net.kyori.adventure.identity.Identity;
+ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
  import org.apache.logging.log4j.LogManager;
  import org.apache.logging.log4j.Logger;
  import org.checkerframework.checker.nullness.qual.Nullable;
 -import ru.elytrium.elytraproxy.commands.ElytraProxyCommand;
 -import ru.elytrium.elytraproxy.config.Settings;
-+import net.elytrium.elytraproxy.commands.ElytraProxyCommand;
-+import net.elytrium.elytraproxy.config.Settings;
  
  /**
   * Handles communication with the connected Minecraft client. This is effectively the primary nerve
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
-index fd9aa13b..abd87ef2 100644
+index fd9aa13b..308bb67c 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
-@@ -90,17 +90,15 @@ import net.kyori.adventure.identity.Identity;
+@@ -84,23 +84,21 @@ import java.util.UUID;
+ import java.util.concurrent.CompletableFuture;
+ import java.util.concurrent.CompletionException;
+ import java.util.concurrent.ThreadLocalRandom;
++import net.elytrium.elytraproxy.config.Settings;
+ import net.kyori.adventure.audience.MessageType;
+ import net.kyori.adventure.bossbar.BossBar;
+ import net.kyori.adventure.identity.Identity;
  import net.kyori.adventure.permission.PermissionChecker;
  import net.kyori.adventure.pointer.Pointers;
  import net.kyori.adventure.text.Component;
@@ -195,12 +307,11 @@ index fd9aa13b..abd87ef2 100644
  import org.checkerframework.checker.nullness.qual.Nullable;
  import org.jetbrains.annotations.NotNull;
 -import ru.elytrium.elytraproxy.config.Settings;
-+import net.elytrium.elytraproxy.config.Settings;
  
  public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
  
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/HandshakeSessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/HandshakeSessionHandler.java
-index f1445de5..188593a2 100644
+index f1445de5..3dc5a545 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/HandshakeSessionHandler.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/HandshakeSessionHandler.java
 @@ -36,18 +36,14 @@ import com.velocitypowered.proxy.protocol.packet.LegacyDisconnect;
@@ -210,6 +321,7 @@ index f1445de5..188593a2 100644
 -import java.net.InetAddress;
  import java.net.InetSocketAddress;
  import java.util.Optional;
++import net.elytrium.elytraproxy.config.Settings;
  import net.kyori.adventure.text.Component;
 -import net.kyori.adventure.text.TextComponent;
 -import net.kyori.adventure.text.TranslatableComponent;
@@ -219,12 +331,11 @@ index f1445de5..188593a2 100644
  import org.apache.logging.log4j.Logger;
  import org.checkerframework.checker.nullness.qual.Nullable;
 -import ru.elytrium.elytraproxy.config.Settings;
-+import net.elytrium.elytraproxy.config.Settings;
  
  public class HandshakeSessionHandler implements MinecraftSessionHandler {
  
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
-index f6856f57..4c69ed69 100644
+index f6856f57..29853729 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
 @@ -44,7 +44,6 @@ import com.velocitypowered.proxy.config.VelocityConfiguration;
@@ -235,16 +346,23 @@ index f6856f57..4c69ed69 100644
  import com.velocitypowered.proxy.protocol.packet.Disconnect;
  import com.velocitypowered.proxy.protocol.packet.EncryptionRequest;
  import com.velocitypowered.proxy.protocol.packet.EncryptionResponse;
-@@ -69,7 +68,7 @@ import org.apache.logging.log4j.Logger;
+@@ -62,6 +61,7 @@ import java.util.UUID;
+ import java.util.concurrent.CompletableFuture;
+ import java.util.concurrent.ExecutionException;
+ import java.util.concurrent.ThreadLocalRandom;
++import net.elytrium.elytraproxy.config.Settings;
+ import net.kyori.adventure.text.Component;
+ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+ import org.apache.logging.log4j.LogManager;
+@@ -69,7 +69,6 @@ import org.apache.logging.log4j.Logger;
  import org.asynchttpclient.ListenableFuture;
  import org.asynchttpclient.Response;
  import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 -import ru.elytrium.elytraproxy.config.Settings;
-+import net.elytrium.elytraproxy.config.Settings;
  
  public class LoginSessionHandler implements MinecraftSessionHandler {
  
-@@ -268,8 +267,19 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+@@ -268,8 +267,20 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
        }
        */
        logger.info("{} has connected", player);
@@ -252,7 +370,8 @@ index f6856f57..4c69ed69 100644
        // ElytraProxy Start
 +      server.getElytraProxy().getStatistics().addConnectionPerSecond();
 +      if (Settings.IMP.MAIN_SETTINGS.MAINTENANCE.ENABLED
-+          && !Settings.IMP.MAIN_SETTINGS.MAINTENANCE.IGNORED_PLAYERS.contains(player.getUsername())) {
++          && !Settings.IMP.MAIN_SETTINGS.MAINTENANCE
++              .IGNORED_PLAYERS.contains(player.getUsername())) {
 +        player.disconnect0(
 +            LegacyComponentSerializer
 +                .legacyAmpersand()
@@ -266,24 +385,27 @@ index f6856f57..4c69ed69 100644
            .contains(mcConnection.getProtocolVersion().getProtocol())) {
          player.disconnect0(
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/StatusSessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/StatusSessionHandler.java
-index 3e4e719f..80bf16e2 100644
+index 3e4e719f..6fd7be5c 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/StatusSessionHandler.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/StatusSessionHandler.java
-@@ -46,7 +46,7 @@ import java.util.Optional;
+@@ -44,9 +44,9 @@ import java.util.List;
+ import java.util.Locale;
+ import java.util.Optional;
  import java.util.concurrent.CompletableFuture;
++import net.elytrium.elytraproxy.config.Settings;
  import org.apache.logging.log4j.LogManager;
  import org.apache.logging.log4j.Logger;
 -import ru.elytrium.elytraproxy.config.Settings;
-+import net.elytrium.elytraproxy.config.Settings;
  
  public class StatusSessionHandler implements MinecraftSessionHandler {
  
-@@ -79,7 +79,11 @@ public class StatusSessionHandler implements MinecraftSessionHandler {
+@@ -79,7 +79,12 @@ public class StatusSessionHandler implements MinecraftSessionHandler {
      VelocityConfiguration configuration = server.getConfiguration();
      return new ServerPing(
          new ServerPing.Version(version.getProtocol(),
 -            Settings.IMP.MAIN_SETTINGS.PING_VERSION),
-+            (Settings.IMP.MAIN_SETTINGS.MAINTENANCE.ENABLED ? Settings.IMP.MAIN_SETTINGS.MAINTENANCE.PING_VERSION
++            (Settings.IMP.MAIN_SETTINGS.MAINTENANCE.ENABLED
++                ? Settings.IMP.MAIN_SETTINGS.MAINTENANCE.PING_VERSION
 +                : Settings.IMP.MAIN_SETTINGS.PING_VERSION)
 +                    .replace('&', '§')
 +                    .replace("{NL}", "\n")
@@ -291,7 +413,7 @@ index 3e4e719f..80bf16e2 100644
          new ServerPing.Players(server.getPlayerCount(), configuration.getShowMaxPlayers(),
              ImmutableList.of()),
          configuration.getMotd(),
-@@ -162,8 +166,13 @@ public class StatusSessionHandler implements MinecraftSessionHandler {
+@@ -162,8 +167,13 @@ public class StatusSessionHandler implements MinecraftSessionHandler {
  
    private CompletableFuture<ServerPing> getInitialPing() {
      VelocityConfiguration configuration = server.getConfiguration();
@@ -307,41 +429,52 @@ index 3e4e719f..80bf16e2 100644
  
      if (passthrough == PingPassthroughMode.DISABLED) {
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/util/ConnectionMessages.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/util/ConnectionMessages.java
-index ba820796..b2be54e9 100644
+index ba820796..0ff0dc89 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/util/ConnectionMessages.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/util/ConnectionMessages.java
-@@ -19,7 +19,7 @@ package com.velocitypowered.proxy.connection.util;
+@@ -17,9 +17,9 @@
  
+ package com.velocitypowered.proxy.connection.util;
+ 
++import net.elytrium.elytraproxy.config.Settings;
  import net.kyori.adventure.text.Component;
  import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 -import ru.elytrium.elytraproxy.config.Settings;
-+import net.elytrium.elytraproxy.config.Settings;
  
  public class ConnectionMessages {
  
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/console/VelocityConsole.java b/proxy/src/main/java/com/velocitypowered/proxy/console/VelocityConsole.java
-index aca38aa0..073f5240 100644
+index aca38aa0..22154b78 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/console/VelocityConsole.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/console/VelocityConsole.java
-@@ -40,7 +40,7 @@ import org.jetbrains.annotations.NotNull;
+@@ -25,6 +25,7 @@ import com.velocitypowered.api.permission.Tristate;
+ import com.velocitypowered.api.proxy.ConsoleCommandSource;
+ import com.velocitypowered.proxy.VelocityServer;
+ import java.util.List;
++import net.elytrium.elytraproxy.config.Settings;
+ import net.kyori.adventure.identity.Identity;
+ import net.kyori.adventure.permission.PermissionChecker;
+ import net.kyori.adventure.pointer.Pointers;
+@@ -40,7 +41,6 @@ import org.jetbrains.annotations.NotNull;
  import org.jline.reader.Candidate;
  import org.jline.reader.LineReader;
  import org.jline.reader.LineReaderBuilder;
 -import ru.elytrium.elytraproxy.config.Settings;
-+import net.elytrium.elytraproxy.config.Settings;
  
  public final class VelocityConsole extends SimpleTerminalConsole implements ConsoleCommandSource {
  
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/protocol/netty/GS4QueryHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/protocol/netty/GS4QueryHandler.java
-index f4390b56..e903789d 100644
+index f4390b56..55e42236 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/protocol/netty/GS4QueryHandler.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/protocol/netty/GS4QueryHandler.java
-@@ -46,7 +46,7 @@ import java.util.concurrent.TimeUnit;
+@@ -44,9 +44,9 @@ import java.util.List;
+ import java.util.Optional;
+ import java.util.concurrent.TimeUnit;
  import java.util.stream.Collectors;
++import net.elytrium.elytraproxy.config.Settings;
  import net.kyori.adventure.text.serializer.plain.PlainComponentSerializer;
  import org.apache.logging.log4j.LogManager;
 -import ru.elytrium.elytraproxy.config.Settings;
-+import net.elytrium.elytraproxy.config.Settings;
  
  public class GS4QueryHandler extends SimpleChannelInboundHandler<DatagramPacket> {
  
@@ -374,7 +507,7 @@ diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/ElytraProxy.java b/prox
 similarity index 86%
 rename from proxy/src/main/java/ru/elytrium/elytraproxy/ElytraProxy.java
 rename to proxy/src/main/java/net/elytrium/elytraproxy/ElytraProxy.java
-index eed9202c..8ca9ef37 100644
+index eed9202c..2356caad 100644
 --- a/proxy/src/main/java/ru/elytrium/elytraproxy/ElytraProxy.java
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/ElytraProxy.java
 @@ -15,7 +15,7 @@
@@ -390,9 +523,16 @@ index eed9202c..8ca9ef37 100644
  import java.nio.charset.StandardCharsets;
  import lombok.Getter;
  import lombok.ToString;
++import net.elytrium.elytraproxy.botfilter.protocol.cache.netty.MultiplePreparedPacketsEncoder;
++import net.elytrium.elytraproxy.botfilter.protocol.cache.netty.PreparedPacketEncoder;
++import net.elytrium.elytraproxy.botfilter.server.BotFilterSessionHandler;
++import net.elytrium.elytraproxy.botfilter.server.VirtualServer;
++import net.elytrium.elytraproxy.commands.AlertCommand;
 +import net.elytrium.elytraproxy.commands.ElytraProxyCommand;
 +import net.elytrium.elytraproxy.commands.FindCommand;
 +import net.elytrium.elytraproxy.commands.SendCommand;
++import net.elytrium.elytraproxy.config.Settings;
++import net.elytrium.elytraproxy.stats.Statistics;
  import net.kyori.adventure.identity.Identity;
  import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
  import org.apache.logging.log4j.LogManager;
@@ -407,13 +547,6 @@ index eed9202c..8ca9ef37 100644
 -import ru.elytrium.elytraproxy.commands.SendCommand;
 -import ru.elytrium.elytraproxy.config.Settings;
 -import ru.elytrium.elytraproxy.stats.Statistics;
-+import net.elytrium.elytraproxy.botfilter.protocol.cache.netty.MultiplePreparedPacketsEncoder;
-+import net.elytrium.elytraproxy.botfilter.protocol.cache.netty.PreparedPacketEncoder;
-+import net.elytrium.elytraproxy.botfilter.server.BotFilterSessionHandler;
-+import net.elytrium.elytraproxy.botfilter.server.VirtualServer;
-+import net.elytrium.elytraproxy.commands.AlertCommand;
-+import net.elytrium.elytraproxy.config.Settings;
-+import net.elytrium.elytraproxy.stats.Statistics;
  
  @Getter
  @ToString
@@ -1302,7 +1435,7 @@ diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/AlertCommand.j
 similarity index 97%
 rename from proxy/src/main/java/ru/elytrium/elytraproxy/commands/AlertCommand.java
 rename to proxy/src/main/java/net/elytrium/elytraproxy/commands/AlertCommand.java
-index 2f925d91..0b89a84e 100644
+index 2f925d91..d1cbb572 100644
 --- a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/AlertCommand.java
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/commands/AlertCommand.java
 @@ -15,7 +15,7 @@
@@ -1314,12 +1447,14 @@ index 2f925d91..0b89a84e 100644
  
  import com.velocitypowered.api.command.CommandSource;
  import com.velocitypowered.api.command.SimpleCommand;
-@@ -25,7 +25,7 @@ import com.velocitypowered.proxy.VelocityServer;
+@@ -23,9 +23,9 @@ import com.velocitypowered.api.proxy.Player;
+ import com.velocitypowered.api.proxy.ProxyServer;
+ import com.velocitypowered.proxy.VelocityServer;
  import com.velocitypowered.proxy.connection.client.ConnectedPlayer;
++import net.elytrium.elytraproxy.config.Settings;
  import net.kyori.adventure.text.Component;
  import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 -import ru.elytrium.elytraproxy.config.Settings;
-+import net.elytrium.elytraproxy.config.Settings;
  
  public class AlertCommand implements SimpleCommand {
  
@@ -1327,7 +1462,7 @@ diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/ElytraProxyCom
 similarity index 98%
 rename from proxy/src/main/java/ru/elytrium/elytraproxy/commands/ElytraProxyCommand.java
 rename to proxy/src/main/java/net/elytrium/elytraproxy/commands/ElytraProxyCommand.java
-index d3df9ccc..1ada9daf 100644
+index d3df9ccc..4a622823 100644
 --- a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/ElytraProxyCommand.java
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/commands/ElytraProxyCommand.java
 @@ -15,7 +15,7 @@
@@ -1339,16 +1474,22 @@ index d3df9ccc..1ada9daf 100644
  
  import com.google.common.collect.ImmutableList;
  import com.google.common.collect.ImmutableMap;
-@@ -39,9 +39,9 @@ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+@@ -33,15 +33,15 @@ import java.util.Map;
+ import java.util.Timer;
+ import java.util.TimerTask;
+ import lombok.Getter;
++import net.elytrium.elytraproxy.ElytraProxy;
++import net.elytrium.elytraproxy.config.Settings;
++import net.elytrium.elytraproxy.stats.Statistics;
+ import net.kyori.adventure.identity.Identity;
+ import net.kyori.adventure.text.Component;
+ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
  import org.apache.logging.log4j.LogManager;
  import org.apache.logging.log4j.Logger;
  import org.checkerframework.checker.nullness.qual.NonNull;
 -import ru.elytrium.elytraproxy.ElytraProxy;
 -import ru.elytrium.elytraproxy.config.Settings;
 -import ru.elytrium.elytraproxy.stats.Statistics;
-+import net.elytrium.elytraproxy.ElytraProxy;
-+import net.elytrium.elytraproxy.config.Settings;
-+import net.elytrium.elytraproxy.stats.Statistics;
  
  public class ElytraProxyCommand implements SimpleCommand {
  
@@ -1356,7 +1497,7 @@ diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/FindCommand.ja
 similarity index 97%
 rename from proxy/src/main/java/ru/elytrium/elytraproxy/commands/FindCommand.java
 rename to proxy/src/main/java/net/elytrium/elytraproxy/commands/FindCommand.java
-index ed436526..780f6b21 100644
+index ed436526..5e60e390 100644
 --- a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/FindCommand.java
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/commands/FindCommand.java
 @@ -15,7 +15,7 @@
@@ -1368,12 +1509,13 @@ index ed436526..780f6b21 100644
  
  import com.velocitypowered.api.command.CommandSource;
  import com.velocitypowered.api.command.SimpleCommand;
-@@ -26,7 +26,7 @@ import java.util.List;
+@@ -25,8 +25,8 @@ import com.velocitypowered.api.proxy.ServerConnection;
+ import java.util.List;
  import java.util.Optional;
  import java.util.stream.Collectors;
++import net.elytrium.elytraproxy.config.Settings;
  import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 -import ru.elytrium.elytraproxy.config.Settings;
-+import net.elytrium.elytraproxy.config.Settings;
  
  public class FindCommand implements SimpleCommand {
  
@@ -1381,7 +1523,7 @@ diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/MessageCommand
 similarity index 97%
 rename from proxy/src/main/java/ru/elytrium/elytraproxy/commands/MessageCommand.java
 rename to proxy/src/main/java/net/elytrium/elytraproxy/commands/MessageCommand.java
-index 17d8786b..6389ca5e 100644
+index 17d8786b..c93d30cb 100644
 --- a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/MessageCommand.java
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/commands/MessageCommand.java
 @@ -15,7 +15,7 @@
@@ -1393,12 +1535,14 @@ index 17d8786b..6389ca5e 100644
  
  import com.google.common.collect.ImmutableList;
  import com.velocitypowered.api.command.CommandSource;
-@@ -29,7 +29,7 @@ import java.util.Optional;
+@@ -27,9 +27,9 @@ import java.util.Arrays;
+ import java.util.List;
+ import java.util.Optional;
  import java.util.stream.Collectors;
++import net.elytrium.elytraproxy.config.Settings;
  import net.kyori.adventure.text.Component;
  import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 -import ru.elytrium.elytraproxy.config.Settings;
-+import net.elytrium.elytraproxy.config.Settings;
  
  public class MessageCommand implements SimpleCommand {
  
@@ -1406,7 +1550,7 @@ diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/SendCommand.ja
 similarity index 98%
 rename from proxy/src/main/java/ru/elytrium/elytraproxy/commands/SendCommand.java
 rename to proxy/src/main/java/net/elytrium/elytraproxy/commands/SendCommand.java
-index 7c868faf..dc44933d 100644
+index 7c868faf..b4480320 100644
 --- a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/SendCommand.java
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/commands/SendCommand.java
 @@ -15,7 +15,7 @@
@@ -1418,12 +1562,14 @@ index 7c868faf..dc44933d 100644
  
  import com.velocitypowered.api.command.CommandSource;
  import com.velocitypowered.api.command.SimpleCommand;
-@@ -31,7 +31,7 @@ import java.util.List;
+@@ -29,9 +29,9 @@ import com.velocitypowered.proxy.connection.client.ConnectedPlayer;
+ import java.util.Collection;
+ import java.util.List;
  import java.util.stream.Collectors;
++import net.elytrium.elytraproxy.config.Settings;
  import net.kyori.adventure.text.Component;
  import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 -import ru.elytrium.elytraproxy.config.Settings;
-+import net.elytrium.elytraproxy.config.Settings;
  
  public class SendCommand implements SimpleCommand {
  
@@ -1431,7 +1577,7 @@ diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/config/Config.java b/pr
 similarity index 98%
 rename from proxy/src/main/java/ru/elytrium/elytraproxy/config/Config.java
 rename to proxy/src/main/java/net/elytrium/elytraproxy/config/Config.java
-index 06720f23..ee69f5cc 100644
+index 06720f23..9b5cedfd 100644
 --- a/proxy/src/main/java/ru/elytrium/elytraproxy/config/Config.java
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/config/Config.java
 @@ -15,7 +15,7 @@
@@ -1443,16 +1589,18 @@ index 06720f23..ee69f5cc 100644
  
  import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
  import java.io.File;
-@@ -43,9 +43,9 @@ import java.util.Collection;
+@@ -41,11 +41,11 @@ import java.util.ArrayList;
+ import java.util.Arrays;
+ import java.util.Collection;
  import java.util.List;
++import net.elytrium.elytraproxy.config.helpers.Configuration;
++import net.elytrium.elytraproxy.config.helpers.ConfigurationProvider;
++import net.elytrium.elytraproxy.config.helpers.YamlConfiguration;
  import org.apache.logging.log4j.LogManager;
  import org.apache.logging.log4j.Logger;
 -import ru.elytrium.elytraproxy.config.helpers.Configuration;
 -import ru.elytrium.elytraproxy.config.helpers.ConfigurationProvider;
 -import ru.elytrium.elytraproxy.config.helpers.YamlConfiguration;
-+import net.elytrium.elytraproxy.config.helpers.Configuration;
-+import net.elytrium.elytraproxy.config.helpers.ConfigurationProvider;
-+import net.elytrium.elytraproxy.config.helpers.YamlConfiguration;
  
  @SuppressFBWarnings("RV_RETURN_VALUE_IGNORED")
  public class Config {
@@ -1602,6 +1750,59 @@ index d60ebed8..51c98d40 100644
  
  import java.util.Timer;
  import java.util.TimerTask;
+diff --git a/proxy/src/main/resources/default-velocity.toml b/proxy/src/main/resources/default-velocity.toml
+index c85137f5..22122db5 100644
+--- a/proxy/src/main/resources/default-velocity.toml
++++ b/proxy/src/main/resources/default-velocity.toml
+@@ -2,11 +2,11 @@
+ config-version = "1.0"
+ 
+ # What port should the proxy be bound to? By default, we'll bind to all addresses on port 25577.
+-bind = "0.0.0.0:25577"
++bind = "0.0.0.0:25565"
+ 
+ # What should be the MOTD? This gets displayed when the player adds your server to
+ # their server list. Legacy color codes and JSON are accepted.
+-motd = "&#09add3A ElytraProxy Server"
++motd = "&#09add3An ElytraProxy Server"
+ 
+ # What should we display for the maximum number of players? (Velocity does not support a cap
+ # on the number of players online.)
+@@ -18,7 +18,7 @@ online-mode = true
+ # If client's ISP/AS sent from this proxy is different from the one from Mojang's
+ # authentication server, the player is kicked. This disallows some VPN and proxy
+ # connections but is a weak form of protection.
+-prevent-client-proxy-connections = false
++prevent-client-proxy-connections = true
+ 
+ # Should we forward IP addresses and other data to backend servers?
+ # Available options:
+@@ -93,7 +93,7 @@ compression-threshold = 512
+ 
+ # How much compression should be done (from 0-9). The default is -1, which uses the
+ # default level of 6.
+-compression-level = -1
++compression-level = 9
+ 
+ # How fast (in milliseconds) are clients allowed to connect after the last connection? By
+ # default, this is three seconds. Disable this by setting this to 0.
+@@ -128,14 +128,14 @@ failover-on-unexpected-server-disconnect = true
+ announce-proxy-commands = true
+ 
+ # Enables the logging of commands
+-log-command-executions = false
++log-command-executions = true
+ 
+ [query]
+ # Whether to enable responding to GameSpy 4 query responses or not.
+ enabled = false
+ 
+ # If query is enabled, on what port should the query protocol listen on?
+-port = 25577
++port = 25565
+ 
+ # This is the map name that is reported to the query services.
+ map = "ElytraProxy"
 -- 
 2.24.1.windows.2
 

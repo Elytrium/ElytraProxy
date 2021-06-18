@@ -30,9 +30,6 @@ index 88036f3a..c4f10d2c 100644
              'https://jd.adventure.kyori.net/api/4.7.0/'
      )
  
-diff --git a/native/src/main/java/com/velocitypowered/natives/compression/Java11VelocityCompressor.java b/native/src/main/java/com/velocitypowered/natives/compression/Java11VelocityCompressor.java
-deleted file mode 100644
-index e69de29b..00000000
 diff --git a/proxy/lombok.config b/proxy/lombok.config
 new file mode 100644
 index 00000000..46401d2f
