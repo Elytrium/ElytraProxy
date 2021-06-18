@@ -130,9 +130,6 @@ index 3b9ce7db..4c62bd0d 100644
      }
  
      test {
-diff --git a/native/src/main/java/com/velocitypowered/natives/compression/Java11VelocityCompressor.java b/native/src/main/java/com/velocitypowered/natives/compression/Java11VelocityCompressor.java
-new file mode 100644
-index 00000000..e69de29b
 diff --git a/native/src/main/java/com/velocitypowered/natives/compression/JavaVelocityCompressor.java b/native/src/main/java/com/velocitypowered/natives/compression/JavaVelocityCompressor.java
 index e9809f2a..37b994ba 100644
 --- a/native/src/main/java/com/velocitypowered/natives/compression/JavaVelocityCompressor.java
