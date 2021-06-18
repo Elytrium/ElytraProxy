@@ -1,4 +1,4 @@
-From 8d5b313fd5b457c744ef00b48cb155b2d3814419 Mon Sep 17 00:00:00 2001
+From 82c984ed27008ef4df5509bd3c9f9aae9021707e Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Fri, 18 Jun 2021 23:18:35 +0900
 Subject: [PATCH] Maintenance mode
@@ -32,7 +32,7 @@ index 52e4734f..8b7d77fd 100644
  
  dependencies {
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-index ad103cca..f8a4438d 100644
+index ad103cca..3bf1fa0e 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
 @@ -88,8 +88,9 @@ import java.util.concurrent.TimeoutException;
@@ -64,14 +64,6 @@ index ad103cca..f8a4438d 100644
  
    VelocityServer(final ProxyOptions options) {
      pluginManager = new VelocityPluginManager(this);
-@@ -241,6 +240,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
-     Metrics.VelocityMetrics.startMetrics(this, configuration.getMetrics());
- 
-     this.elytraProxy = new ElytraProxy(this);
-+    configuration.getMotd();
-   }
- 
-   @SuppressFBWarnings("DM_EXIT")
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/CommandMessages.java b/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/CommandMessages.java
 index 0c407be7..59102c9b 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/CommandMessages.java
