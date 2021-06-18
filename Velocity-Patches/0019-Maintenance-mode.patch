@@ -1,0 +1,1607 @@
+From d1f11a0d9c83a4989b58b5e7108aecdaccc9e6a3 Mon Sep 17 00:00:00 2001
+From: mdxd44 <mdxd44@ely.su>
+Date: Fri, 18 Jun 2021 23:18:35 +0900
+Subject: [PATCH] Maintenance mode
+
+
+diff --git a/proxy/build.gradle b/proxy/build.gradle
+index 52e4734f..8b7d77fd 100644
+--- a/proxy/build.gradle
++++ b/proxy/build.gradle
+@@ -53,8 +53,8 @@ shadowJar {
+ 
+ tasks.withType(Checkstyle) {
+     exclude('**/com/velocitypowered/proxy/protocol/packet/*.java')
+-    exclude('**/ru/elytrium/elytraproxy/botfilter/**') // temp
+-    exclude('**/ru/elytrium/elytraproxy/config/Settings.java')
++    exclude('**/net/elytrium/elytraproxy/botfilter/**') // temp
++    exclude('**/net/elytrium/elytraproxy/config/Settings.java')
+ }
+ 
+ dependencies {
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
+index ad103cca..e107a82f 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
+@@ -100,8 +100,8 @@ import org.checkerframework.checker.nullness.qual.EnsuresNonNull;
+ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
+ import org.checkerframework.checker.nullness.qual.NonNull;
+ import org.checkerframework.checker.nullness.qual.Nullable;
+-import ru.elytrium.elytraproxy.ElytraProxy;
+-import ru.elytrium.elytraproxy.config.Settings;
++import net.elytrium.elytraproxy.ElytraProxy;
++import net.elytrium.elytraproxy.config.Settings;
+ 
+ public class VelocityServer implements ProxyServer, ForwardingAudience {
+ 
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/CommandMessages.java b/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/CommandMessages.java
+index 0c407be7..1ca0d2c3 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/CommandMessages.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/CommandMessages.java
+@@ -19,7 +19,7 @@ package com.velocitypowered.proxy.command.builtin;
+ 
+ import net.kyori.adventure.text.Component;
+ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+-import ru.elytrium.elytraproxy.config.Settings;
++import net.elytrium.elytraproxy.config.Settings;
+ 
+ public class CommandMessages {
+ 
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/GlistCommand.java b/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/GlistCommand.java
+index 4ab3d464..6fe081da 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/GlistCommand.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/GlistCommand.java
+@@ -36,9 +36,8 @@ import java.util.Optional;
+ import net.kyori.adventure.identity.Identity;
+ import net.kyori.adventure.text.Component;
+ import net.kyori.adventure.text.TextComponent;
+-import net.kyori.adventure.text.format.NamedTextColor;
+ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+-import ru.elytrium.elytraproxy.config.Settings;
++import net.elytrium.elytraproxy.config.Settings;
+ 
+ public class GlistCommand {
+ 
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/ServerCommand.java b/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/ServerCommand.java
+index 88305e80..8918ba87 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/ServerCommand.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/ServerCommand.java
+@@ -34,12 +34,10 @@ import java.util.stream.Stream;
+ import net.kyori.adventure.identity.Identity;
+ import net.kyori.adventure.text.Component;
+ import net.kyori.adventure.text.TextComponent;
+-import net.kyori.adventure.text.TranslatableComponent;
+ import net.kyori.adventure.text.event.ClickEvent;
+ import net.kyori.adventure.text.format.NamedTextColor;
+ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+-import net.kyori.adventure.text.serializer.plain.PlainComponentSerializer;
+-import ru.elytrium.elytraproxy.config.Settings;
++import net.elytrium.elytraproxy.config.Settings;
+ 
+ public class ServerCommand implements SimpleCommand {
+ 
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/config/VelocityConfiguration.java b/proxy/src/main/java/com/velocitypowered/proxy/config/VelocityConfiguration.java
+index 81b9cb0b..f3677f82 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/config/VelocityConfiguration.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/config/VelocityConfiguration.java
+@@ -53,7 +53,7 @@ import org.apache.logging.log4j.LogManager;
+ import org.apache.logging.log4j.Logger;
+ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
+ import org.checkerframework.checker.nullness.qual.Nullable;
+-import ru.elytrium.elytraproxy.config.Settings;
++import net.elytrium.elytraproxy.config.Settings;
+ 
+ public class VelocityConfiguration implements ProxyConfig {
+ 
+@@ -267,9 +267,23 @@ public class VelocityConfiguration implements ProxyConfig {
+   public net.kyori.adventure.text.Component getMotd() {
+     if (motdAsComponent == null) {
+       if (motd.startsWith("{")) {
+-        motdAsComponent = GsonComponentSerializer.gson().deserialize(motd);
++        motdAsComponent = GsonComponentSerializer.gson().deserialize((
++            Settings.IMP.MAIN_SETTINGS.MAINTENANCE.ENABLED
++                ? Settings.IMP.MAIN_SETTINGS.MAINTENANCE.MOTD : motd)
++                .replace('&', '§')
++                .replace("{NL}", "\n")
++                .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
++        );
+       } else {
+-        motdAsComponent = LegacyComponentSerializer.legacy('&').deserialize(motd);
++        motdAsComponent = LegacyComponentSerializer
++            .legacyAmpersand()
++            .deserialize((
++                Settings.IMP.MAIN_SETTINGS.MAINTENANCE.ENABLED
++                    ? Settings.IMP.MAIN_SETTINGS.MAINTENANCE.MOTD : motd)
++                    .replace('&', '§')
++                    .replace("{NL}", "\n")
++                    .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
++            );
+       }
+     }
+     return motdAsComponent;
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftConnection.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftConnection.java
+index 8328752a..b911f341 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftConnection.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftConnection.java
+@@ -67,7 +67,7 @@ import javax.crypto.spec.SecretKeySpec;
+ import org.apache.logging.log4j.LogManager;
+ import org.apache.logging.log4j.Logger;
+ import org.checkerframework.checker.nullness.qual.Nullable;
+-import ru.elytrium.elytraproxy.config.Settings;
++import net.elytrium.elytraproxy.config.Settings;
+ 
+ /**
+  * A utility class to make working with the pipeline a little less painful and transparently handles
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftSessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftSessionHandler.java
+index 2c6d4375..e3d2cae0 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftSessionHandler.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftSessionHandler.java
+@@ -53,7 +53,7 @@ import com.velocitypowered.proxy.protocol.packet.title.TitleSubtitlePacket;
+ import com.velocitypowered.proxy.protocol.packet.title.TitleTextPacket;
+ import com.velocitypowered.proxy.protocol.packet.title.TitleTimesPacket;
+ import io.netty.buffer.ByteBuf;
+-import ru.elytrium.elytraproxy.botfilter.protocol.packet.PlayerPositionAndLook;
++import net.elytrium.elytraproxy.botfilter.protocol.packet.PlayerPositionAndLook;
+ 
+ public interface MinecraftSessionHandler {
+ 
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/backend/LoginSessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/backend/LoginSessionHandler.java
+index 56767d04..ed1d8916 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/connection/backend/LoginSessionHandler.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/backend/LoginSessionHandler.java
+@@ -44,10 +44,9 @@ import java.util.concurrent.CompletableFuture;
+ import javax.crypto.Mac;
+ import javax.crypto.SecretKey;
+ import javax.crypto.spec.SecretKeySpec;
+-import net.kyori.adventure.text.Component;
+ import net.kyori.adventure.text.TextComponent;
+ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+-import ru.elytrium.elytraproxy.config.Settings;
++import net.elytrium.elytraproxy.config.Settings;
+ 
+ public class LoginSessionHandler implements MinecraftSessionHandler {
+ 
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
+index 3a61616b..ff8a74f2 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
+@@ -71,8 +71,8 @@ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+ import org.apache.logging.log4j.LogManager;
+ import org.apache.logging.log4j.Logger;
+ import org.checkerframework.checker.nullness.qual.Nullable;
+-import ru.elytrium.elytraproxy.commands.ElytraProxyCommand;
+-import ru.elytrium.elytraproxy.config.Settings;
++import net.elytrium.elytraproxy.commands.ElytraProxyCommand;
++import net.elytrium.elytraproxy.config.Settings;
+ 
+ /**
+  * Handles communication with the connected Minecraft client. This is effectively the primary nerve
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
+index fd9aa13b..abd87ef2 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
+@@ -90,17 +90,15 @@ import net.kyori.adventure.identity.Identity;
+ import net.kyori.adventure.permission.PermissionChecker;
+ import net.kyori.adventure.pointer.Pointers;
+ import net.kyori.adventure.text.Component;
+-import net.kyori.adventure.text.TranslatableComponent;
+ import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
+ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+-import net.kyori.adventure.text.serializer.plain.PlainComponentSerializer;
+ import org.apache.logging.log4j.LogManager;
+ import org.apache.logging.log4j.Logger;
+ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
+ import org.checkerframework.checker.nullness.qual.NonNull;
+ import org.checkerframework.checker.nullness.qual.Nullable;
+ import org.jetbrains.annotations.NotNull;
+-import ru.elytrium.elytraproxy.config.Settings;
++import net.elytrium.elytraproxy.config.Settings;
+ 
+ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
+ 
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/HandshakeSessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/HandshakeSessionHandler.java
+index f1445de5..188593a2 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/HandshakeSessionHandler.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/HandshakeSessionHandler.java
+@@ -36,18 +36,14 @@ import com.velocitypowered.proxy.protocol.packet.LegacyDisconnect;
+ import com.velocitypowered.proxy.protocol.packet.LegacyHandshake;
+ import com.velocitypowered.proxy.protocol.packet.LegacyPing;
+ import io.netty.buffer.ByteBuf;
+-import java.net.InetAddress;
+ import java.net.InetSocketAddress;
+ import java.util.Optional;
+ import net.kyori.adventure.text.Component;
+-import net.kyori.adventure.text.TextComponent;
+-import net.kyori.adventure.text.TranslatableComponent;
+-import net.kyori.adventure.text.format.NamedTextColor;
+ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+ import org.apache.logging.log4j.LogManager;
+ import org.apache.logging.log4j.Logger;
+ import org.checkerframework.checker.nullness.qual.Nullable;
+-import ru.elytrium.elytraproxy.config.Settings;
++import net.elytrium.elytraproxy.config.Settings;
+ 
+ public class HandshakeSessionHandler implements MinecraftSessionHandler {
+ 
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
+index f6856f57..4c69ed69 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
+@@ -44,7 +44,6 @@ import com.velocitypowered.proxy.config.VelocityConfiguration;
+ import com.velocitypowered.proxy.connection.MinecraftConnection;
+ import com.velocitypowered.proxy.connection.MinecraftSessionHandler;
+ import com.velocitypowered.proxy.protocol.StateRegistry;
+-import com.velocitypowered.proxy.protocol.packet.ClientSettings;
+ import com.velocitypowered.proxy.protocol.packet.Disconnect;
+ import com.velocitypowered.proxy.protocol.packet.EncryptionRequest;
+ import com.velocitypowered.proxy.protocol.packet.EncryptionResponse;
+@@ -69,7 +68,7 @@ import org.apache.logging.log4j.Logger;
+ import org.asynchttpclient.ListenableFuture;
+ import org.asynchttpclient.Response;
+ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
+-import ru.elytrium.elytraproxy.config.Settings;
++import net.elytrium.elytraproxy.config.Settings;
+ 
+ public class LoginSessionHandler implements MinecraftSessionHandler {
+ 
+@@ -268,8 +267,19 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+       }
+       */
+       logger.info("{} has connected", player);
+-      server.getElytraProxy().getStatistics().addConnectionPerSecond();
+       // ElytraProxy Start
++      server.getElytraProxy().getStatistics().addConnectionPerSecond();
++      if (Settings.IMP.MAIN_SETTINGS.MAINTENANCE.ENABLED
++          && !Settings.IMP.MAIN_SETTINGS.MAINTENANCE.IGNORED_PLAYERS.contains(player.getUsername())) {
++        player.disconnect0(
++            LegacyComponentSerializer
++                .legacyAmpersand()
++                .deserialize(Settings.IMP.MAIN_SETTINGS.MAINTENANCE.DISCONNECT_REASON
++                    .replace("{NL}", "\n")
++                    .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
++                ), true);
++        return;
++      }
+       if (Settings.IMP.MAIN_SETTINGS.BANNED_PROTOCOLS
+           .contains(mcConnection.getProtocolVersion().getProtocol())) {
+         player.disconnect0(
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/StatusSessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/StatusSessionHandler.java
+index 3e4e719f..80bf16e2 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/StatusSessionHandler.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/StatusSessionHandler.java
+@@ -46,7 +46,7 @@ import java.util.Optional;
+ import java.util.concurrent.CompletableFuture;
+ import org.apache.logging.log4j.LogManager;
+ import org.apache.logging.log4j.Logger;
+-import ru.elytrium.elytraproxy.config.Settings;
++import net.elytrium.elytraproxy.config.Settings;
+ 
+ public class StatusSessionHandler implements MinecraftSessionHandler {
+ 
+@@ -79,7 +79,11 @@ public class StatusSessionHandler implements MinecraftSessionHandler {
+     VelocityConfiguration configuration = server.getConfiguration();
+     return new ServerPing(
+         new ServerPing.Version(version.getProtocol(),
+-            Settings.IMP.MAIN_SETTINGS.PING_VERSION),
++            (Settings.IMP.MAIN_SETTINGS.MAINTENANCE.ENABLED ? Settings.IMP.MAIN_SETTINGS.MAINTENANCE.PING_VERSION
++                : Settings.IMP.MAIN_SETTINGS.PING_VERSION)
++                    .replace('&', '§')
++                    .replace("{NL}", "\n")
++                    .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)),
+         new ServerPing.Players(server.getPlayerCount(), configuration.getShowMaxPlayers(),
+             ImmutableList.of()),
+         configuration.getMotd(),
+@@ -162,8 +166,13 @@ public class StatusSessionHandler implements MinecraftSessionHandler {
+ 
+   private CompletableFuture<ServerPing> getInitialPing() {
+     VelocityConfiguration configuration = server.getConfiguration();
+-    ProtocolVersion shownVersion = ProtocolVersion.isSupported(connection.getProtocolVersion())
++    ProtocolVersion shownVersion;
++    if (Settings.IMP.MAIN_SETTINGS.MAINTENANCE.ENABLED) {
++      shownVersion = ProtocolVersion.MAXIMUM_VERSION;
++    } else {
++      shownVersion = ProtocolVersion.isSupported(connection.getProtocolVersion())
+         ? connection.getProtocolVersion() : ProtocolVersion.MAXIMUM_VERSION;
++    }
+     PingPassthroughMode passthrough = configuration.getPingPassthrough();
+ 
+     if (passthrough == PingPassthroughMode.DISABLED) {
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/util/ConnectionMessages.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/util/ConnectionMessages.java
+index ba820796..b2be54e9 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/connection/util/ConnectionMessages.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/util/ConnectionMessages.java
+@@ -19,7 +19,7 @@ package com.velocitypowered.proxy.connection.util;
+ 
+ import net.kyori.adventure.text.Component;
+ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+-import ru.elytrium.elytraproxy.config.Settings;
++import net.elytrium.elytraproxy.config.Settings;
+ 
+ public class ConnectionMessages {
+ 
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/console/VelocityConsole.java b/proxy/src/main/java/com/velocitypowered/proxy/console/VelocityConsole.java
+index aca38aa0..073f5240 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/console/VelocityConsole.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/console/VelocityConsole.java
+@@ -40,7 +40,7 @@ import org.jetbrains.annotations.NotNull;
+ import org.jline.reader.Candidate;
+ import org.jline.reader.LineReader;
+ import org.jline.reader.LineReaderBuilder;
+-import ru.elytrium.elytraproxy.config.Settings;
++import net.elytrium.elytraproxy.config.Settings;
+ 
+ public final class VelocityConsole extends SimpleTerminalConsole implements ConsoleCommandSource {
+ 
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/protocol/netty/GS4QueryHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/protocol/netty/GS4QueryHandler.java
+index f4390b56..e903789d 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/protocol/netty/GS4QueryHandler.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/protocol/netty/GS4QueryHandler.java
+@@ -46,7 +46,7 @@ import java.util.concurrent.TimeUnit;
+ import java.util.stream.Collectors;
+ import net.kyori.adventure.text.serializer.plain.PlainComponentSerializer;
+ import org.apache.logging.log4j.LogManager;
+-import ru.elytrium.elytraproxy.config.Settings;
++import net.elytrium.elytraproxy.config.Settings;
+ 
+ public class GS4QueryHandler extends SimpleChannelInboundHandler<DatagramPacket> {
+ 
+@@ -95,7 +95,10 @@ public class GS4QueryHandler extends SimpleChannelInboundHandler<DatagramPacket>
+                 .get().getServerInfo().getName()))
+             .map(Player::getUsername)
+             .collect(Collectors.toList()))
+-        .proxyVersion(Settings.IMP.MAIN_SETTINGS.PING_VERSION)
++        .proxyVersion(Settings.IMP.MAIN_SETTINGS.PING_VERSION
++            .replace('&', '§')
++            .replace("{NL}", "\n")
++            .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX))
+         .plugins(
+             server.getConfiguration().shouldQueryShowPlugins() ? getRealPluginInformation()
+                 : Collections.emptyList())
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/protocol/util/PluginMessageUtil.java b/proxy/src/main/java/com/velocitypowered/proxy/protocol/util/PluginMessageUtil.java
+index 8c549b8c..37d77cf2 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/protocol/util/PluginMessageUtil.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/protocol/util/PluginMessageUtil.java
+@@ -32,7 +32,7 @@ import java.util.Collection;
+ import java.util.List;
+ import java.util.Locale;
+ import java.util.regex.Pattern;
+-import ru.elytrium.elytraproxy.config.Settings;
++import net.elytrium.elytraproxy.config.Settings;
+ 
+ public final class PluginMessageUtil {
+ 
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/ElytraProxy.java b/proxy/src/main/java/net/elytrium/elytraproxy/ElytraProxy.java
+similarity index 86%
+rename from proxy/src/main/java/ru/elytrium/elytraproxy/ElytraProxy.java
+rename to proxy/src/main/java/net/elytrium/elytraproxy/ElytraProxy.java
+index eed9202c..8ca9ef37 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/ElytraProxy.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/ElytraProxy.java
+@@ -15,7 +15,7 @@
+  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ 
+-package ru.elytrium.elytraproxy;
++package net.elytrium.elytraproxy;
+ 
+ import com.velocitypowered.api.command.CommandManager;
+ import com.velocitypowered.api.command.CommandSource;
+@@ -35,20 +35,20 @@ import java.net.URLConnection;
+ import java.nio.charset.StandardCharsets;
+ import lombok.Getter;
+ import lombok.ToString;
++import net.elytrium.elytraproxy.commands.ElytraProxyCommand;
++import net.elytrium.elytraproxy.commands.FindCommand;
++import net.elytrium.elytraproxy.commands.SendCommand;
+ import net.kyori.adventure.identity.Identity;
+ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+ import org.apache.logging.log4j.LogManager;
+ import org.apache.logging.log4j.Logger;
+-import ru.elytrium.elytraproxy.botfilter.protocol.cache.netty.MultiplePreparedPacketsEncoder;
+-import ru.elytrium.elytraproxy.botfilter.protocol.cache.netty.PreparedPacketEncoder;
+-import ru.elytrium.elytraproxy.botfilter.server.BotFilterSessionHandler;
+-import ru.elytrium.elytraproxy.botfilter.server.VirtualServer;
+-import ru.elytrium.elytraproxy.commands.AlertCommand;
+-import ru.elytrium.elytraproxy.commands.ElytraProxyCommand;
+-import ru.elytrium.elytraproxy.commands.FindCommand;
+-import ru.elytrium.elytraproxy.commands.SendCommand;
+-import ru.elytrium.elytraproxy.config.Settings;
+-import ru.elytrium.elytraproxy.stats.Statistics;
++import net.elytrium.elytraproxy.botfilter.protocol.cache.netty.MultiplePreparedPacketsEncoder;
++import net.elytrium.elytraproxy.botfilter.protocol.cache.netty.PreparedPacketEncoder;
++import net.elytrium.elytraproxy.botfilter.server.BotFilterSessionHandler;
++import net.elytrium.elytraproxy.botfilter.server.VirtualServer;
++import net.elytrium.elytraproxy.commands.AlertCommand;
++import net.elytrium.elytraproxy.config.Settings;
++import net.elytrium.elytraproxy.stats.Statistics;
+ 
+ @Getter
+ @ToString
+@@ -159,20 +159,18 @@ public class ElytraProxy {
+       source.sendMessage(Identity.nil(),
+           LegacyComponentSerializer
+               .legacyAmpersand()
+-              .deserialize((
+-                  Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX
+-                  + Settings.IMP.MESSAGES.ELYTRAPROXY.RELOAD_SUCCESS)
+-                      .replace("{NL}", "\n")
++              .deserialize(Settings.IMP.MESSAGES.ELYTRAPROXY.RELOAD_SUCCESS
++                  .replace("{NL}", "\n")
++                  .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
+               ));
+     } catch (Exception e) {
+       logger.error("Unable to reload configuration", e);
+       source.sendMessage(Identity.nil(),
+           LegacyComponentSerializer
+               .legacyAmpersand()
+-              .deserialize((
+-                  Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX
+-                  + Settings.IMP.MESSAGES.ELYTRAPROXY.RELOAD_FAILURE)
+-                      .replace("{NL}", "\n")
++              .deserialize(Settings.IMP.MESSAGES.ELYTRAPROXY.RELOAD_FAILURE
++                  .replace("{NL}", "\n")
++                  .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
+               ));
+     }
+   }
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/BotFilterProtocol.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/BotFilterProtocol.java
+similarity index 90%
+rename from proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/BotFilterProtocol.java
+rename to proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/BotFilterProtocol.java
+index aa2cfcc9..24d2a5ad 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/BotFilterProtocol.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/BotFilterProtocol.java
+@@ -17,7 +17,7 @@
+  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ 
+-package ru.elytrium.elytraproxy.botfilter.protocol;
++package net.elytrium.elytraproxy.botfilter.protocol;
+ 
+ import static com.velocitypowered.api.network.ProtocolVersion.MINECRAFT_1_13;
+ import static com.velocitypowered.api.network.ProtocolVersion.MINECRAFT_1_14;
+@@ -31,11 +31,11 @@ import static com.velocitypowered.proxy.protocol.StateRegistry.map;
+ 
+ import com.velocitypowered.api.network.ProtocolVersion;
+ import com.velocitypowered.proxy.protocol.StateRegistry;
+-import ru.elytrium.elytraproxy.botfilter.protocol.packet.JoinGame;
+-import ru.elytrium.elytraproxy.botfilter.protocol.packet.PlayerPositionAndLook;
+-import ru.elytrium.elytraproxy.botfilter.protocol.packet.UpdateViewPosition;
+-import ru.elytrium.elytraproxy.botfilter.protocol.packet.world.ChunkData;
+-import ru.elytrium.elytraproxy.botfilter.protocol.packet.world.UpdateLight;
++import net.elytrium.elytraproxy.botfilter.protocol.packet.JoinGame;
++import net.elytrium.elytraproxy.botfilter.protocol.packet.PlayerPositionAndLook;
++import net.elytrium.elytraproxy.botfilter.protocol.packet.world.ChunkData;
++import net.elytrium.elytraproxy.botfilter.protocol.packet.world.UpdateLight;
++import net.elytrium.elytraproxy.botfilter.protocol.packet.UpdateViewPosition;
+ 
+ public class BotFilterProtocol {
+ 
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/cache/ByteBufCreator.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/cache/ByteBufCreator.java
+similarity index 96%
+rename from proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/cache/ByteBufCreator.java
+rename to proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/cache/ByteBufCreator.java
+index ae48e734..eaddde7a 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/cache/ByteBufCreator.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/cache/ByteBufCreator.java
+@@ -17,7 +17,7 @@
+  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ 
+-package ru.elytrium.elytraproxy.botfilter.protocol.cache;
++package net.elytrium.elytraproxy.botfilter.protocol.cache;
+ 
+ import com.velocitypowered.natives.compression.VelocityCompressor;
+ import com.velocitypowered.natives.util.BufferPreference;
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/cache/MultiplePreparedPackets.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/cache/MultiplePreparedPackets.java
+similarity index 98%
+rename from proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/cache/MultiplePreparedPackets.java
+rename to proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/cache/MultiplePreparedPackets.java
+index 30d1d98e..5c7a907c 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/cache/MultiplePreparedPackets.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/cache/MultiplePreparedPackets.java
+@@ -17,7 +17,7 @@
+  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ 
+-package ru.elytrium.elytraproxy.botfilter.protocol.cache;
++package net.elytrium.elytraproxy.botfilter.protocol.cache;
+ 
+ import com.google.common.base.Preconditions;
+ import com.velocitypowered.api.network.ProtocolVersion;
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/cache/PacketCompressor.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/cache/PacketCompressor.java
+similarity index 97%
+rename from proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/cache/PacketCompressor.java
+rename to proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/cache/PacketCompressor.java
+index b4b6b724..97590be3 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/cache/PacketCompressor.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/cache/PacketCompressor.java
+@@ -17,7 +17,7 @@
+  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ 
+-package ru.elytrium.elytraproxy.botfilter.protocol.cache;
++package net.elytrium.elytraproxy.botfilter.protocol.cache;
+ 
+ import com.velocitypowered.natives.compression.VelocityCompressor;
+ import com.velocitypowered.natives.util.Natives;
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/cache/PreparedPacket.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/cache/PreparedPacket.java
+similarity index 98%
+rename from proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/cache/PreparedPacket.java
+rename to proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/cache/PreparedPacket.java
+index a2168d08..9d2e722d 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/cache/PreparedPacket.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/cache/PreparedPacket.java
+@@ -17,7 +17,7 @@
+  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ 
+-package ru.elytrium.elytraproxy.botfilter.protocol.cache;
++package net.elytrium.elytraproxy.botfilter.protocol.cache;
+ 
+ import com.velocitypowered.api.network.ProtocolVersion;
+ import com.velocitypowered.proxy.connection.MinecraftConnection;
+@@ -32,7 +32,7 @@ import java.util.EnumSet;
+ import java.util.HashSet;
+ import java.util.Map;
+ import java.util.Map.Entry;
+-import ru.elytrium.elytraproxy.botfilter.protocol.BotFilterProtocol;
++import net.elytrium.elytraproxy.botfilter.protocol.BotFilterProtocol;
+ 
+ public class PreparedPacket<T extends MinecraftPacket> {
+ 
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/cache/netty/MultiplePreparedPacketsEncoder.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/cache/netty/MultiplePreparedPacketsEncoder.java
+similarity index 94%
+rename from proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/cache/netty/MultiplePreparedPacketsEncoder.java
+rename to proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/cache/netty/MultiplePreparedPacketsEncoder.java
+index 9ef2cc61..dfd775ca 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/cache/netty/MultiplePreparedPacketsEncoder.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/cache/netty/MultiplePreparedPacketsEncoder.java
+@@ -17,7 +17,7 @@
+  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ 
+-package ru.elytrium.elytraproxy.botfilter.protocol.cache.netty;
++package net.elytrium.elytraproxy.botfilter.protocol.cache.netty;
+ 
+ import com.velocitypowered.api.network.ProtocolVersion;
+ import io.netty.buffer.ByteBuf;
+@@ -28,7 +28,7 @@ import java.util.EnumMap;
+ import java.util.List;
+ import java.util.Map;
+ import lombok.RequiredArgsConstructor;
+-import ru.elytrium.elytraproxy.botfilter.protocol.cache.MultiplePreparedPackets;
++import net.elytrium.elytraproxy.botfilter.protocol.cache.MultiplePreparedPackets;
+ 
+ @Sharable
+ @RequiredArgsConstructor
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/cache/netty/PreparedPacketEncoder.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/cache/netty/PreparedPacketEncoder.java
+similarity index 95%
+rename from proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/cache/netty/PreparedPacketEncoder.java
+rename to proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/cache/netty/PreparedPacketEncoder.java
+index c36a017b..da613aa7 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/cache/netty/PreparedPacketEncoder.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/cache/netty/PreparedPacketEncoder.java
+@@ -17,7 +17,7 @@
+  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ 
+-package ru.elytrium.elytraproxy.botfilter.protocol.cache.netty;
++package net.elytrium.elytraproxy.botfilter.protocol.cache.netty;
+ 
+ import com.google.common.collect.HashBasedTable;
+ import com.google.common.collect.Table;
+@@ -30,7 +30,7 @@ import io.netty.channel.ChannelHandlerContext;
+ import io.netty.handler.codec.MessageToMessageEncoder;
+ import java.util.List;
+ import lombok.RequiredArgsConstructor;
+-import ru.elytrium.elytraproxy.botfilter.protocol.cache.PreparedPacket;
++import net.elytrium.elytraproxy.botfilter.protocol.cache.PreparedPacket;
+ 
+ @Sharable
+ @RequiredArgsConstructor
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/data/registry/Biome.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/data/registry/Biome.java
+similarity index 97%
+rename from proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/data/registry/Biome.java
+rename to proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/data/registry/Biome.java
+index 7759d00b..fb35f4d1 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/data/registry/Biome.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/data/registry/Biome.java
+@@ -17,7 +17,7 @@
+  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ 
+-package ru.elytrium.elytraproxy.botfilter.protocol.data.registry;
++package net.elytrium.elytraproxy.botfilter.protocol.data.registry;
+ 
+ import javax.annotation.Nullable;
+ import lombok.Data;
+@@ -25,7 +25,7 @@ import lombok.NonNull;
+ import lombok.RequiredArgsConstructor;
+ import net.kyori.adventure.nbt.CompoundBinaryTag;
+ import net.kyori.adventure.nbt.CompoundBinaryTag.Builder;
+-import ru.elytrium.elytraproxy.botfilter.protocol.data.registry.Biome.Effects.MoodSound;
++import net.elytrium.elytraproxy.botfilter.protocol.data.registry.Biome.Effects.MoodSound;
+ 
+ public class Biome {
+ 
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/data/registry/Dimension.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/data/registry/Dimension.java
+similarity index 97%
+rename from proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/data/registry/Dimension.java
+rename to proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/data/registry/Dimension.java
+index a2fc2af5..c661943c 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/data/registry/Dimension.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/data/registry/Dimension.java
+@@ -17,7 +17,7 @@
+  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ 
+-package ru.elytrium.elytraproxy.botfilter.protocol.data.registry;
++package net.elytrium.elytraproxy.botfilter.protocol.data.registry;
+ 
+ import com.velocitypowered.api.network.ProtocolVersion;
+ import lombok.AllArgsConstructor;
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/data/registry/DimensionRegistry.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/data/registry/DimensionRegistry.java
+similarity index 98%
+rename from proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/data/registry/DimensionRegistry.java
+rename to proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/data/registry/DimensionRegistry.java
+index 253c6de3..6fa56c9e 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/data/registry/DimensionRegistry.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/data/registry/DimensionRegistry.java
+@@ -17,7 +17,7 @@
+  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ 
+-package ru.elytrium.elytraproxy.botfilter.protocol.data.registry;
++package net.elytrium.elytraproxy.botfilter.protocol.data.registry;
+ 
+ import com.google.common.base.Preconditions;
+ import com.velocitypowered.api.network.ProtocolVersion;
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/data/storage/BlockStorage.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/data/storage/BlockStorage.java
+similarity index 87%
+rename from proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/data/storage/BlockStorage.java
+rename to proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/data/storage/BlockStorage.java
+index 2198206e..8f207fa2 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/data/storage/BlockStorage.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/data/storage/BlockStorage.java
+@@ -17,14 +17,14 @@
+  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ 
+-package ru.elytrium.elytraproxy.botfilter.protocol.data.storage;
++package net.elytrium.elytraproxy.botfilter.protocol.data.storage;
+ 
+ import com.velocitypowered.api.network.ProtocolVersion;
+ import io.netty.buffer.ByteBuf;
+ import lombok.NonNull;
+ import org.jetbrains.annotations.NotNull;
+-import ru.elytrium.elytraproxy.botfilter.server.world.SimpleBlock;
+-import ru.elytrium.elytraproxy.botfilter.server.world.SimpleBlock.Version;
++import net.elytrium.elytraproxy.botfilter.server.world.SimpleBlock;
++import net.elytrium.elytraproxy.botfilter.server.world.SimpleBlock.Version;
+ 
+ public interface BlockStorage {
+ 
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/data/storage/BlockStorage17.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/data/storage/BlockStorage17.java
+similarity index 90%
+rename from proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/data/storage/BlockStorage17.java
+rename to proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/data/storage/BlockStorage17.java
+index 277d4b07..755d5a11 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/data/storage/BlockStorage17.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/data/storage/BlockStorage17.java
+@@ -17,7 +17,7 @@
+  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ 
+-package ru.elytrium.elytraproxy.botfilter.protocol.data.storage;
++package net.elytrium.elytraproxy.botfilter.protocol.data.storage;
+ 
+ import com.velocitypowered.api.network.ProtocolVersion;
+ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+@@ -27,10 +27,10 @@ import lombok.AccessLevel;
+ import lombok.NonNull;
+ import lombok.RequiredArgsConstructor;
+ import org.jetbrains.annotations.NotNull;
+-import ru.elytrium.elytraproxy.botfilter.protocol.util.mcprotocollib.NibbleArray3d;
+-import ru.elytrium.elytraproxy.botfilter.server.world.SimpleBlock;
+-import ru.elytrium.elytraproxy.botfilter.server.world.SimpleBlock.Version;
+-import ru.elytrium.elytraproxy.botfilter.server.world.chunk.SimpleChunk;
++import net.elytrium.elytraproxy.botfilter.protocol.util.mcprotocollib.NibbleArray3d;
++import net.elytrium.elytraproxy.botfilter.server.world.SimpleBlock;
++import net.elytrium.elytraproxy.botfilter.server.world.SimpleBlock.Version;
++import net.elytrium.elytraproxy.botfilter.server.world.chunk.SimpleChunk;
+ 
+ @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
+ public class BlockStorage17 implements BlockStorage {
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/data/storage/BlockStorage19.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/data/storage/BlockStorage19.java
+similarity index 91%
+rename from proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/data/storage/BlockStorage19.java
+rename to proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/data/storage/BlockStorage19.java
+index 67b4feac..708be90c 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/data/storage/BlockStorage19.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/data/storage/BlockStorage19.java
+@@ -17,7 +17,7 @@
+  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ 
+-package ru.elytrium.elytraproxy.botfilter.protocol.data.storage;
++package net.elytrium.elytraproxy.botfilter.protocol.data.storage;
+ 
+ import com.velocitypowered.api.network.ProtocolVersion;
+ import com.velocitypowered.proxy.protocol.ProtocolUtils;
+@@ -31,12 +31,12 @@ import lombok.AccessLevel;
+ import lombok.AllArgsConstructor;
+ import lombok.NonNull;
+ import org.jetbrains.annotations.NotNull;
+-import ru.elytrium.elytraproxy.botfilter.protocol.util.CompactStorage;
+-import ru.elytrium.elytraproxy.botfilter.protocol.util.mcprotocollib.BitStorage116;
+-import ru.elytrium.elytraproxy.botfilter.protocol.util.mcprotocollib.BitStorage19;
+-import ru.elytrium.elytraproxy.botfilter.server.world.SimpleBlock;
+-import ru.elytrium.elytraproxy.botfilter.server.world.SimpleBlock.Version;
+-import ru.elytrium.elytraproxy.botfilter.server.world.chunk.SimpleChunk;
++import net.elytrium.elytraproxy.botfilter.protocol.util.CompactStorage;
++import net.elytrium.elytraproxy.botfilter.protocol.util.mcprotocollib.BitStorage116;
++import net.elytrium.elytraproxy.botfilter.protocol.util.mcprotocollib.BitStorage19;
++import net.elytrium.elytraproxy.botfilter.server.world.SimpleBlock;
++import net.elytrium.elytraproxy.botfilter.server.world.SimpleBlock.Version;
++import net.elytrium.elytraproxy.botfilter.server.world.chunk.SimpleChunk;
+ 
+ @AllArgsConstructor(access = AccessLevel.PRIVATE)
+ public class BlockStorage19 implements BlockStorage {
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/packet/JoinGame.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/packet/JoinGame.java
+similarity index 96%
+rename from proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/packet/JoinGame.java
+rename to proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/packet/JoinGame.java
+index 8a3abcdc..ab8d3f63 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/packet/JoinGame.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/packet/JoinGame.java
+@@ -17,7 +17,7 @@
+  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ 
+-package ru.elytrium.elytraproxy.botfilter.protocol.packet;
++package net.elytrium.elytraproxy.botfilter.protocol.packet;
+ 
+ import com.velocitypowered.api.network.ProtocolVersion;
+ import com.velocitypowered.proxy.connection.registry.DimensionInfo;
+@@ -28,7 +28,7 @@ import lombok.AllArgsConstructor;
+ import lombok.Builder;
+ import lombok.Data;
+ import lombok.NoArgsConstructor;
+-import ru.elytrium.elytraproxy.botfilter.protocol.data.registry.DimensionRegistry;
++import net.elytrium.elytraproxy.botfilter.protocol.data.registry.DimensionRegistry;
+ 
+ @Data
+ @Builder
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/packet/PlayerPositionAndLook.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/packet/PlayerPositionAndLook.java
+similarity index 97%
+rename from proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/packet/PlayerPositionAndLook.java
+rename to proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/packet/PlayerPositionAndLook.java
+index d63fa4b5..23f3a7cb 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/packet/PlayerPositionAndLook.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/packet/PlayerPositionAndLook.java
+@@ -17,7 +17,7 @@
+  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ 
+-package ru.elytrium.elytraproxy.botfilter.protocol.packet;
++package net.elytrium.elytraproxy.botfilter.protocol.packet;
+ 
+ import com.velocitypowered.api.network.ProtocolVersion;
+ import com.velocitypowered.proxy.connection.MinecraftSessionHandler;
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/packet/UpdateViewPosition.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/packet/UpdateViewPosition.java
+similarity index 96%
+rename from proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/packet/UpdateViewPosition.java
+rename to proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/packet/UpdateViewPosition.java
+index 0dd5ed62..4e17995a 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/packet/UpdateViewPosition.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/packet/UpdateViewPosition.java
+@@ -17,7 +17,7 @@
+  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ 
+-package ru.elytrium.elytraproxy.botfilter.protocol.packet;
++package net.elytrium.elytraproxy.botfilter.protocol.packet;
+ 
+ import com.velocitypowered.api.network.ProtocolVersion;
+ import com.velocitypowered.proxy.protocol.MinecraftPacket;
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/packet/world/ChunkData.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/packet/world/ChunkData.java
+similarity index 92%
+rename from proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/packet/world/ChunkData.java
+rename to proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/packet/world/ChunkData.java
+index 86d543e0..3b4b1af0 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/packet/world/ChunkData.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/packet/world/ChunkData.java
+@@ -17,7 +17,7 @@
+  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ 
+-package ru.elytrium.elytraproxy.botfilter.protocol.packet.world;
++package net.elytrium.elytraproxy.botfilter.protocol.packet.world;
+ 
+ import com.google.common.base.Preconditions;
+ import com.velocitypowered.api.network.ProtocolVersion;
+@@ -36,16 +36,16 @@ import java.util.Map;
+ import java.util.Map.Entry;
+ import java.util.zip.Deflater;
+ import lombok.Getter;
++import net.elytrium.elytraproxy.botfilter.protocol.data.registry.Biome;
+ import net.kyori.adventure.nbt.CompoundBinaryTag;
+-import ru.elytrium.elytraproxy.botfilter.protocol.data.registry.Biome;
+-import ru.elytrium.elytraproxy.botfilter.protocol.util.CompactStorage;
+-import ru.elytrium.elytraproxy.botfilter.protocol.util.NetworkSection;
+-import ru.elytrium.elytraproxy.botfilter.protocol.util.mcprotocollib.BitStorage116;
+-import ru.elytrium.elytraproxy.botfilter.protocol.util.mcprotocollib.BitStorage19;
+-import ru.elytrium.elytraproxy.botfilter.server.world.SimpleBlock;
+-import ru.elytrium.elytraproxy.botfilter.server.world.chunk.ChunkSnapshot;
+-import ru.elytrium.elytraproxy.botfilter.server.world.chunk.LightSection;
+-import ru.elytrium.elytraproxy.botfilter.server.world.chunk.SimpleChunk;
++import net.elytrium.elytraproxy.botfilter.protocol.util.CompactStorage;
++import net.elytrium.elytraproxy.botfilter.protocol.util.NetworkSection;
++import net.elytrium.elytraproxy.botfilter.protocol.util.mcprotocollib.BitStorage116;
++import net.elytrium.elytraproxy.botfilter.protocol.util.mcprotocollib.BitStorage19;
++import net.elytrium.elytraproxy.botfilter.server.world.SimpleBlock;
++import net.elytrium.elytraproxy.botfilter.server.world.chunk.ChunkSnapshot;
++import net.elytrium.elytraproxy.botfilter.server.world.chunk.LightSection;
++import net.elytrium.elytraproxy.botfilter.server.world.chunk.SimpleChunk;
+ 
+ public class ChunkData implements MinecraftPacket {
+ 
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/packet/world/UpdateLight.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/packet/world/UpdateLight.java
+similarity index 93%
+rename from proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/packet/world/UpdateLight.java
+rename to proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/packet/world/UpdateLight.java
+index 707e1af7..e0083dca 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/packet/world/UpdateLight.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/packet/world/UpdateLight.java
+@@ -17,7 +17,7 @@
+  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ 
+-package ru.elytrium.elytraproxy.botfilter.protocol.packet.world;
++package net.elytrium.elytraproxy.botfilter.protocol.packet.world;
+ 
+ import com.velocitypowered.api.network.ProtocolVersion;
+ import com.velocitypowered.proxy.protocol.MinecraftPacket;
+@@ -25,9 +25,9 @@ import com.velocitypowered.proxy.protocol.ProtocolUtils;
+ import com.velocitypowered.proxy.protocol.ProtocolUtils.Direction;
+ import io.netty.buffer.ByteBuf;
+ import java.util.BitSet;
+-import ru.elytrium.elytraproxy.botfilter.protocol.util.mcprotocollib.NibbleArray3d;
+-import ru.elytrium.elytraproxy.botfilter.server.world.chunk.ChunkSnapshot;
+-import ru.elytrium.elytraproxy.botfilter.server.world.chunk.LightSection;
++import net.elytrium.elytraproxy.botfilter.protocol.util.mcprotocollib.NibbleArray3d;
++import net.elytrium.elytraproxy.botfilter.server.world.chunk.ChunkSnapshot;
++import net.elytrium.elytraproxy.botfilter.server.world.chunk.LightSection;
+ 
+ public class UpdateLight implements MinecraftPacket {
+ 
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/util/CompactStorage.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/util/CompactStorage.java
+similarity index 95%
+rename from proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/util/CompactStorage.java
+rename to proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/util/CompactStorage.java
+index e884c127..0be862f1 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/util/CompactStorage.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/util/CompactStorage.java
+@@ -17,7 +17,7 @@
+  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ 
+-package ru.elytrium.elytraproxy.botfilter.protocol.util;
++package net.elytrium.elytraproxy.botfilter.protocol.util;
+ 
+ import com.velocitypowered.api.network.ProtocolVersion;
+ import io.netty.buffer.ByteBuf;
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/util/NetworkSection.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/util/NetworkSection.java
+similarity index 91%
+rename from proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/util/NetworkSection.java
+rename to proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/util/NetworkSection.java
+index 2fb72a3f..f4fa8d89 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/util/NetworkSection.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/util/NetworkSection.java
+@@ -17,18 +17,18 @@
+  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ 
+-package ru.elytrium.elytraproxy.botfilter.protocol.util;
++package net.elytrium.elytraproxy.botfilter.protocol.util;
+ 
+ import com.velocitypowered.api.network.ProtocolVersion;
+ import io.netty.buffer.ByteBuf;
+ import java.util.EnumMap;
+ import java.util.Map;
+ import lombok.NonNull;
+-import ru.elytrium.elytraproxy.botfilter.protocol.data.storage.BlockStorage;
+-import ru.elytrium.elytraproxy.botfilter.protocol.util.mcprotocollib.NibbleArray3d;
+-import ru.elytrium.elytraproxy.botfilter.server.world.SimpleBlock;
+-import ru.elytrium.elytraproxy.botfilter.server.world.SimpleBlock.Version;
+-import ru.elytrium.elytraproxy.botfilter.server.world.chunk.SimpleSection;
++import net.elytrium.elytraproxy.botfilter.protocol.data.storage.BlockStorage;
++import net.elytrium.elytraproxy.botfilter.protocol.util.mcprotocollib.NibbleArray3d;
++import net.elytrium.elytraproxy.botfilter.server.world.SimpleBlock;
++import net.elytrium.elytraproxy.botfilter.server.world.SimpleBlock.Version;
++import net.elytrium.elytraproxy.botfilter.server.world.chunk.SimpleSection;
+ 
+ public class NetworkSection {
+ 
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/util/mcprotocollib/BitStorage116.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/util/mcprotocollib/BitStorage116.java
+similarity index 97%
+rename from proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/util/mcprotocollib/BitStorage116.java
+rename to proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/util/mcprotocollib/BitStorage116.java
+index fbb5a2fa..24f1099f 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/util/mcprotocollib/BitStorage116.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/util/mcprotocollib/BitStorage116.java
+@@ -22,7 +22,7 @@
+  * OR OTHER DEALINGS IN THE SOFTWARE.
+  */
+ 
+-package ru.elytrium.elytraproxy.botfilter.protocol.util.mcprotocollib;
++package net.elytrium.elytraproxy.botfilter.protocol.util.mcprotocollib;
+ 
+ import com.velocitypowered.api.network.ProtocolVersion;
+ import com.velocitypowered.proxy.protocol.ProtocolUtils;
+@@ -30,7 +30,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+ import io.netty.buffer.ByteBuf;
+ import java.util.Arrays;
+ import lombok.Getter;
+-import ru.elytrium.elytraproxy.botfilter.protocol.util.CompactStorage;
++import net.elytrium.elytraproxy.botfilter.protocol.util.CompactStorage;
+ 
+ public class BitStorage116 implements CompactStorage {
+ 
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/util/mcprotocollib/BitStorage19.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/util/mcprotocollib/BitStorage19.java
+similarity index 96%
+rename from proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/util/mcprotocollib/BitStorage19.java
+rename to proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/util/mcprotocollib/BitStorage19.java
+index 2982f556..9ad241f9 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/util/mcprotocollib/BitStorage19.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/util/mcprotocollib/BitStorage19.java
+@@ -22,14 +22,14 @@
+  * OR OTHER DEALINGS IN THE SOFTWARE.
+  */
+ 
+-package ru.elytrium.elytraproxy.botfilter.protocol.util.mcprotocollib;
++package net.elytrium.elytraproxy.botfilter.protocol.util.mcprotocollib;
+ 
+ import com.velocitypowered.api.network.ProtocolVersion;
+ import com.velocitypowered.proxy.protocol.ProtocolUtils;
+ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+ import io.netty.buffer.ByteBuf;
+ import java.util.Arrays;
+-import ru.elytrium.elytraproxy.botfilter.protocol.util.CompactStorage;
++import net.elytrium.elytraproxy.botfilter.protocol.util.CompactStorage;
+ 
+ @SuppressFBWarnings({"EI_EXPOSE_REP2", "EI_EXPOSE_REP"})
+ public class BitStorage19 implements CompactStorage {
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/util/mcprotocollib/NibbleArray3d.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/util/mcprotocollib/NibbleArray3d.java
+similarity index 97%
+rename from proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/util/mcprotocollib/NibbleArray3d.java
+rename to proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/util/mcprotocollib/NibbleArray3d.java
+index f97dc753..596c987c 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/protocol/util/mcprotocollib/NibbleArray3d.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/util/mcprotocollib/NibbleArray3d.java
+@@ -22,7 +22,7 @@
+  * OR OTHER DEALINGS IN THE SOFTWARE.
+  */
+ 
+-package ru.elytrium.elytraproxy.botfilter.protocol.util.mcprotocollib;
++package net.elytrium.elytraproxy.botfilter.protocol.util.mcprotocollib;
+ 
+ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+ import java.util.Arrays;
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/server/BotFilterSessionHandler.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/BotFilterSessionHandler.java
+similarity index 97%
+rename from proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/server/BotFilterSessionHandler.java
+rename to proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/BotFilterSessionHandler.java
+index ccad8cd8..97223ada 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/server/BotFilterSessionHandler.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/BotFilterSessionHandler.java
+@@ -17,7 +17,7 @@
+  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ 
+-package ru.elytrium.elytraproxy.botfilter.server;
++package net.elytrium.elytraproxy.botfilter.server;
+ 
+ import com.velocitypowered.proxy.connection.MinecraftSessionHandler;
+ import com.velocitypowered.proxy.connection.client.ConnectedPlayer;
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/server/ServerPackets.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/ServerPackets.java
+similarity index 87%
+rename from proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/server/ServerPackets.java
+rename to proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/ServerPackets.java
+index 781e4b8c..6919e5e1 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/server/ServerPackets.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/ServerPackets.java
+@@ -17,7 +17,7 @@
+  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ 
+-package ru.elytrium.elytraproxy.botfilter.server;
++package net.elytrium.elytraproxy.botfilter.server;
+ 
+ import com.google.common.collect.ImmutableList;
+ import com.velocitypowered.api.network.ProtocolVersion;
+@@ -28,22 +28,21 @@ import java.util.ArrayList;
+ import java.util.Arrays;
+ import java.util.List;
+ import lombok.Getter;
++import net.elytrium.elytraproxy.botfilter.protocol.cache.MultiplePreparedPackets;
++import net.elytrium.elytraproxy.botfilter.protocol.cache.PacketCompressor;
++import net.elytrium.elytraproxy.botfilter.protocol.cache.PreparedPacket;
++import net.elytrium.elytraproxy.botfilter.protocol.data.registry.Biome;
++import net.elytrium.elytraproxy.botfilter.protocol.data.registry.Dimension;
++import net.elytrium.elytraproxy.botfilter.protocol.data.registry.DimensionRegistry;
++import net.elytrium.elytraproxy.botfilter.protocol.packet.JoinGame;
++import net.elytrium.elytraproxy.botfilter.protocol.packet.PlayerPositionAndLook;
++import net.elytrium.elytraproxy.botfilter.protocol.packet.UpdateViewPosition;
++import net.elytrium.elytraproxy.botfilter.protocol.packet.world.ChunkData;
++import net.elytrium.elytraproxy.botfilter.protocol.packet.world.UpdateLight;
++import net.elytrium.elytraproxy.botfilter.server.world.VirtualWorld;
++import net.elytrium.elytraproxy.botfilter.server.world.chunk.SimpleChunk;
+ import net.kyori.adventure.text.Component;
+ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+-import ru.elytrium.elytraproxy.botfilter.protocol.cache.MultiplePreparedPackets;
+-import ru.elytrium.elytraproxy.botfilter.protocol.cache.PacketCompressor;
+-import ru.elytrium.elytraproxy.botfilter.protocol.cache.PreparedPacket;
+-import ru.elytrium.elytraproxy.botfilter.protocol.data.registry.Biome;
+-import ru.elytrium.elytraproxy.botfilter.protocol.data.registry.Dimension;
+-import ru.elytrium.elytraproxy.botfilter.protocol.data.registry.DimensionRegistry;
+-import ru.elytrium.elytraproxy.botfilter.protocol.packet.JoinGame;
+-import ru.elytrium.elytraproxy.botfilter.protocol.packet.PlayerPositionAndLook;
+-import ru.elytrium.elytraproxy.botfilter.protocol.packet.UpdateViewPosition;
+-import ru.elytrium.elytraproxy.botfilter.protocol.packet.world.ChunkData;
+-import ru.elytrium.elytraproxy.botfilter.protocol.packet.world.UpdateLight;
+-import ru.elytrium.elytraproxy.botfilter.server.world.SimpleBlock;
+-import ru.elytrium.elytraproxy.botfilter.server.world.VirtualWorld;
+-import ru.elytrium.elytraproxy.botfilter.server.world.chunk.SimpleChunk;
+ 
+ @Getter
+ public class ServerPackets {
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/server/VirtualServer.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/VirtualServer.java
+similarity index 93%
+rename from proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/server/VirtualServer.java
+rename to proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/VirtualServer.java
+index 0a1a6214..d9b75a41 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/server/VirtualServer.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/VirtualServer.java
+@@ -17,7 +17,7 @@
+  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ 
+-package ru.elytrium.elytraproxy.botfilter.server;
++package net.elytrium.elytraproxy.botfilter.server;
+ 
+ import com.velocitypowered.proxy.connection.MinecraftConnection;
+ import com.velocitypowered.proxy.connection.client.ConnectedPlayer;
+@@ -25,8 +25,8 @@ import com.velocitypowered.proxy.protocol.StateRegistry;
+ import java.util.concurrent.ConcurrentHashMap;
+ import java.util.concurrent.ConcurrentMap;
+ import lombok.Getter;
+-import ru.elytrium.elytraproxy.ElytraProxy;
+-import ru.elytrium.elytraproxy.botfilter.protocol.cache.PacketCompressor;
++import net.elytrium.elytraproxy.ElytraProxy;
++import net.elytrium.elytraproxy.botfilter.protocol.cache.PacketCompressor;
+ 
+ public class VirtualServer {
+ 
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/server/world/SimpleBlock.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/world/SimpleBlock.java
+similarity index 87%
+rename from proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/server/world/SimpleBlock.java
+rename to proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/world/SimpleBlock.java
+index 83f1f406..fe06742f 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/server/world/SimpleBlock.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/world/SimpleBlock.java
+@@ -17,18 +17,18 @@
+  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ 
+-package ru.elytrium.elytraproxy.botfilter.server.world;
+-
+-import static ru.elytrium.elytraproxy.botfilter.server.world.SimpleBlock.BlockInfo.fallback;
+-import static ru.elytrium.elytraproxy.botfilter.server.world.SimpleBlock.BlockInfo.info;
+-import static ru.elytrium.elytraproxy.botfilter.server.world.SimpleBlock.Version.MINECRAFT_1_13;
+-import static ru.elytrium.elytraproxy.botfilter.server.world.SimpleBlock.Version.MINECRAFT_1_13_1;
+-import static ru.elytrium.elytraproxy.botfilter.server.world.SimpleBlock.Version.MINECRAFT_1_14;
+-import static ru.elytrium.elytraproxy.botfilter.server.world.SimpleBlock.Version.MINECRAFT_1_16;
+-import static ru.elytrium.elytraproxy.botfilter.server.world.SimpleBlock.Version.MINECRAFT_1_16_2;
+-import static ru.elytrium.elytraproxy.botfilter.server.world.SimpleBlock.Version.MINECRAFT_1_17;
+-import static ru.elytrium.elytraproxy.botfilter.server.world.SimpleBlock.Version.MINECRAFT_1_7;
+-import static ru.elytrium.elytraproxy.botfilter.server.world.SimpleBlock.Version.MINECRAFT_1_8;
++package net.elytrium.elytraproxy.botfilter.server.world;
++
++import static net.elytrium.elytraproxy.botfilter.server.world.SimpleBlock.BlockInfo.fallback;
++import static net.elytrium.elytraproxy.botfilter.server.world.SimpleBlock.BlockInfo.info;
++import static net.elytrium.elytraproxy.botfilter.server.world.SimpleBlock.Version.MINECRAFT_1_13;
++import static net.elytrium.elytraproxy.botfilter.server.world.SimpleBlock.Version.MINECRAFT_1_13_1;
++import static net.elytrium.elytraproxy.botfilter.server.world.SimpleBlock.Version.MINECRAFT_1_14;
++import static net.elytrium.elytraproxy.botfilter.server.world.SimpleBlock.Version.MINECRAFT_1_16;
++import static net.elytrium.elytraproxy.botfilter.server.world.SimpleBlock.Version.MINECRAFT_1_16_2;
++import static net.elytrium.elytraproxy.botfilter.server.world.SimpleBlock.Version.MINECRAFT_1_17;
++import static net.elytrium.elytraproxy.botfilter.server.world.SimpleBlock.Version.MINECRAFT_1_7;
++import static net.elytrium.elytraproxy.botfilter.server.world.SimpleBlock.Version.MINECRAFT_1_8;
+ 
+ import com.velocitypowered.api.network.ProtocolVersion;
+ import java.util.Arrays;
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/server/world/VirtualWorld.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/world/VirtualWorld.java
+similarity index 93%
+rename from proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/server/world/VirtualWorld.java
+rename to proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/world/VirtualWorld.java
+index e4d80422..e92d6019 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/server/world/VirtualWorld.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/world/VirtualWorld.java
+@@ -17,7 +17,7 @@
+  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ 
+-package ru.elytrium.elytraproxy.botfilter.server.world;
++package net.elytrium.elytraproxy.botfilter.server.world;
+ 
+ import com.google.common.collect.ImmutableList;
+ import com.velocitypowered.proxy.connection.registry.DimensionInfo;
+@@ -29,11 +29,11 @@ import java.util.function.Function;
+ import java.util.function.Supplier;
+ import lombok.Getter;
+ import lombok.NonNull;
++import net.elytrium.elytraproxy.botfilter.protocol.data.registry.Biome;
++import net.elytrium.elytraproxy.botfilter.protocol.data.registry.Dimension;
+ import org.jetbrains.annotations.NotNull;
+ import org.jetbrains.annotations.Nullable;
+-import ru.elytrium.elytraproxy.botfilter.protocol.data.registry.Biome;
+-import ru.elytrium.elytraproxy.botfilter.protocol.data.registry.Dimension;
+-import ru.elytrium.elytraproxy.botfilter.server.world.chunk.SimpleChunk;
++import net.elytrium.elytraproxy.botfilter.server.world.chunk.SimpleChunk;
+ 
+ public class VirtualWorld {
+ 
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/server/world/chunk/ChunkSnapshot.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/world/chunk/ChunkSnapshot.java
+similarity index 86%
+rename from proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/server/world/chunk/ChunkSnapshot.java
+rename to proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/world/chunk/ChunkSnapshot.java
+index a4f285c6..385bf6e9 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/server/world/chunk/ChunkSnapshot.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/world/chunk/ChunkSnapshot.java
+@@ -17,12 +17,12 @@
+  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ 
+-package ru.elytrium.elytraproxy.botfilter.server.world.chunk;
++package net.elytrium.elytraproxy.botfilter.server.world.chunk;
+ 
+ import lombok.Getter;
+ import lombok.RequiredArgsConstructor;
+-import ru.elytrium.elytraproxy.botfilter.protocol.data.registry.Biome;
+-import ru.elytrium.elytraproxy.botfilter.server.world.SimpleBlock;
++import net.elytrium.elytraproxy.botfilter.protocol.data.registry.Biome;
++import net.elytrium.elytraproxy.botfilter.server.world.SimpleBlock;
+ 
+ @RequiredArgsConstructor
+ @Getter
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/server/world/chunk/LightSection.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/world/chunk/LightSection.java
+similarity index 83%
+rename from proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/server/world/chunk/LightSection.java
+rename to proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/world/chunk/LightSection.java
+index 5b49ebb8..a39a8098 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/server/world/chunk/LightSection.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/world/chunk/LightSection.java
+@@ -17,23 +17,21 @@
+  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ 
+-package ru.elytrium.elytraproxy.botfilter.server.world.chunk;
+-
+-import static ru.elytrium.elytraproxy.botfilter.server.world.chunk.SimpleChunk.MAX_BLOCKS_PER_SECTION;
++package net.elytrium.elytraproxy.botfilter.server.world.chunk;
+ 
+ import com.google.common.base.Preconditions;
+ import lombok.AccessLevel;
+ import lombok.AllArgsConstructor;
+ import lombok.Getter;
+ import lombok.NoArgsConstructor;
+-import ru.elytrium.elytraproxy.botfilter.protocol.util.mcprotocollib.NibbleArray3d;
++import net.elytrium.elytraproxy.botfilter.protocol.util.mcprotocollib.NibbleArray3d;
+ 
+ @AllArgsConstructor(access = AccessLevel.PRIVATE)
+ @NoArgsConstructor
+ public class LightSection {
+ 
+-  public static NibbleArray3d NO_LIGHT = new NibbleArray3d(MAX_BLOCKS_PER_SECTION);
+-  public static NibbleArray3d ALL_LIGHT = new NibbleArray3d(MAX_BLOCKS_PER_SECTION, 15);
++  public static NibbleArray3d NO_LIGHT = new NibbleArray3d(SimpleChunk.MAX_BLOCKS_PER_SECTION);
++  public static NibbleArray3d ALL_LIGHT = new NibbleArray3d(SimpleChunk.MAX_BLOCKS_PER_SECTION, 15);
+   public static final LightSection DEFAULT = new LightSection();
+ 
+   @Getter
+@@ -57,7 +55,7 @@ public class LightSection {
+     checkIndexes(x, y, z);
+     Preconditions.checkArgument(light >= 0 && light <= 15, "light should be between 0 and 15");
+     if (blockLight == NO_LIGHT && light != 0) {
+-      blockLight = new NibbleArray3d(MAX_BLOCKS_PER_SECTION);
++      blockLight = new NibbleArray3d(SimpleChunk.MAX_BLOCKS_PER_SECTION);
+     }
+     blockLight.set(x, y, z, light);
+     lastUpdate = System.nanoTime();
+@@ -67,7 +65,7 @@ public class LightSection {
+     checkIndexes(x, y, z);
+     Preconditions.checkArgument(light >= 0 && light <= 15, "light should be between 0 and 15");
+     if (skyLight == ALL_LIGHT && light != 15) {
+-      skyLight = new NibbleArray3d(MAX_BLOCKS_PER_SECTION);
++      skyLight = new NibbleArray3d(SimpleChunk.MAX_BLOCKS_PER_SECTION);
+     }
+     skyLight.set(x, y, z, light);
+     lastUpdate = System.nanoTime();
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/server/world/chunk/SimpleChunk.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/world/chunk/SimpleChunk.java
+similarity index 94%
+rename from proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/server/world/chunk/SimpleChunk.java
+rename to proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/world/chunk/SimpleChunk.java
+index 125e4e7d..db6ca3a7 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/server/world/chunk/SimpleChunk.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/world/chunk/SimpleChunk.java
+@@ -17,7 +17,7 @@
+  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ 
+-package ru.elytrium.elytraproxy.botfilter.server.world.chunk;
++package net.elytrium.elytraproxy.botfilter.server.world.chunk;
+ 
+ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+ import java.util.Arrays;
+@@ -25,11 +25,11 @@ import java.util.function.Function;
+ import java.util.function.Supplier;
+ import lombok.Getter;
+ import lombok.NonNull;
++import net.elytrium.elytraproxy.botfilter.protocol.data.registry.Biome;
++import net.elytrium.elytraproxy.botfilter.server.world.SimpleBlock;
++import net.elytrium.elytraproxy.botfilter.server.world.VirtualWorld;
+ import org.jetbrains.annotations.NotNull;
+ import org.jetbrains.annotations.Nullable;
+-import ru.elytrium.elytraproxy.botfilter.protocol.data.registry.Biome;
+-import ru.elytrium.elytraproxy.botfilter.server.world.SimpleBlock;
+-import ru.elytrium.elytraproxy.botfilter.server.world.VirtualWorld;
+ 
+ @SuppressFBWarnings("NP_NONNULL_RETURN_VIOLATION")
+ public class SimpleChunk {
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/server/world/chunk/SimpleSection.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/world/chunk/SimpleSection.java
+similarity index 83%
+rename from proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/server/world/chunk/SimpleSection.java
+rename to proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/world/chunk/SimpleSection.java
+index cc2c982c..1a062bd0 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/botfilter/server/world/chunk/SimpleSection.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/world/chunk/SimpleSection.java
+@@ -17,17 +17,16 @@
+  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ 
+-package ru.elytrium.elytraproxy.botfilter.server.world.chunk;
++package net.elytrium.elytraproxy.botfilter.server.world.chunk;
+ 
+ import com.google.common.base.Preconditions;
+ import lombok.AllArgsConstructor;
+ import lombok.Getter;
+ import lombok.RequiredArgsConstructor;
++import net.elytrium.elytraproxy.botfilter.protocol.data.storage.BlockStorage;
++import net.elytrium.elytraproxy.botfilter.protocol.data.storage.BlockStorage19;
++import net.elytrium.elytraproxy.botfilter.server.world.SimpleBlock;
+ import org.jetbrains.annotations.Nullable;
+-import ru.elytrium.elytraproxy.botfilter.protocol.data.storage.BlockStorage;
+-import ru.elytrium.elytraproxy.botfilter.protocol.data.storage.BlockStorage19;
+-import ru.elytrium.elytraproxy.botfilter.server.world.SimpleBlock;
+-import ru.elytrium.elytraproxy.botfilter.server.world.SimpleBlock.Version;
+ 
+ @RequiredArgsConstructor
+ @AllArgsConstructor()
+@@ -38,7 +37,7 @@ public class SimpleSection {
+   private long lastUpdate = System.nanoTime();
+ 
+   public SimpleSection() {
+-    this(new BlockStorage19(Version.MINECRAFT_1_17));
++    this(new BlockStorage19(SimpleBlock.Version.MINECRAFT_1_17));
+   }
+ 
+   public SimpleBlock getBlockAt(int x, int y, int z) {
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/AlertCommand.java b/proxy/src/main/java/net/elytrium/elytraproxy/commands/AlertCommand.java
+similarity index 97%
+rename from proxy/src/main/java/ru/elytrium/elytraproxy/commands/AlertCommand.java
+rename to proxy/src/main/java/net/elytrium/elytraproxy/commands/AlertCommand.java
+index 2f925d91..0b89a84e 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/AlertCommand.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/commands/AlertCommand.java
+@@ -15,7 +15,7 @@
+  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ 
+-package ru.elytrium.elytraproxy.commands;
++package net.elytrium.elytraproxy.commands;
+ 
+ import com.velocitypowered.api.command.CommandSource;
+ import com.velocitypowered.api.command.SimpleCommand;
+@@ -25,7 +25,7 @@ import com.velocitypowered.proxy.VelocityServer;
+ import com.velocitypowered.proxy.connection.client.ConnectedPlayer;
+ import net.kyori.adventure.text.Component;
+ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+-import ru.elytrium.elytraproxy.config.Settings;
++import net.elytrium.elytraproxy.config.Settings;
+ 
+ public class AlertCommand implements SimpleCommand {
+ 
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/ElytraProxyCommand.java b/proxy/src/main/java/net/elytrium/elytraproxy/commands/ElytraProxyCommand.java
+similarity index 98%
+rename from proxy/src/main/java/ru/elytrium/elytraproxy/commands/ElytraProxyCommand.java
+rename to proxy/src/main/java/net/elytrium/elytraproxy/commands/ElytraProxyCommand.java
+index d3df9ccc..1ada9daf 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/ElytraProxyCommand.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/commands/ElytraProxyCommand.java
+@@ -15,7 +15,7 @@
+  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+  */
+ 
+-package ru.elytrium.elytraproxy.commands;
++package net.elytrium.elytraproxy.commands;
+ 
+ import com.google.common.collect.ImmutableList;
+ import com.google.common.collect.ImmutableMap;
+@@ -39,9 +39,9 @@ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+ import org.apache.logging.log4j.LogManager;
+ import org.apache.logging.log4j.Logger;
+ import org.checkerframework.checker.nullness.qual.NonNull;
+-import ru.elytrium.elytraproxy.ElytraProxy;
+-import ru.elytrium.elytraproxy.config.Settings;
+-import ru.elytrium.elytraproxy.stats.Statistics;
++import net.elytrium.elytraproxy.ElytraProxy;
++import net.elytrium.elytraproxy.config.Settings;
++import net.elytrium.elytraproxy.stats.Statistics;
+ 
+ public class ElytraProxyCommand implements SimpleCommand {
+ 
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/FindCommand.java b/proxy/src/main/java/net/elytrium/elytraproxy/commands/FindCommand.java
+similarity index 97%
+rename from proxy/src/main/java/ru/elytrium/elytraproxy/commands/FindCommand.java
+rename to proxy/src/main/java/net/elytrium/elytraproxy/commands/FindCommand.java
+index ed436526..780f6b21 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/FindCommand.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/commands/FindCommand.java
+@@ -15,7 +15,7 @@
+  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ 
+-package ru.elytrium.elytraproxy.commands;
++package net.elytrium.elytraproxy.commands;
+ 
+ import com.velocitypowered.api.command.CommandSource;
+ import com.velocitypowered.api.command.SimpleCommand;
+@@ -26,7 +26,7 @@ import java.util.List;
+ import java.util.Optional;
+ import java.util.stream.Collectors;
+ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+-import ru.elytrium.elytraproxy.config.Settings;
++import net.elytrium.elytraproxy.config.Settings;
+ 
+ public class FindCommand implements SimpleCommand {
+ 
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/MessageCommand.java b/proxy/src/main/java/net/elytrium/elytraproxy/commands/MessageCommand.java
+similarity index 97%
+rename from proxy/src/main/java/ru/elytrium/elytraproxy/commands/MessageCommand.java
+rename to proxy/src/main/java/net/elytrium/elytraproxy/commands/MessageCommand.java
+index 17d8786b..6389ca5e 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/MessageCommand.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/commands/MessageCommand.java
+@@ -15,7 +15,7 @@
+  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ 
+-package ru.elytrium.elytraproxy.commands;
++package net.elytrium.elytraproxy.commands;
+ 
+ import com.google.common.collect.ImmutableList;
+ import com.velocitypowered.api.command.CommandSource;
+@@ -29,7 +29,7 @@ import java.util.Optional;
+ import java.util.stream.Collectors;
+ import net.kyori.adventure.text.Component;
+ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+-import ru.elytrium.elytraproxy.config.Settings;
++import net.elytrium.elytraproxy.config.Settings;
+ 
+ public class MessageCommand implements SimpleCommand {
+ 
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/SendCommand.java b/proxy/src/main/java/net/elytrium/elytraproxy/commands/SendCommand.java
+similarity index 98%
+rename from proxy/src/main/java/ru/elytrium/elytraproxy/commands/SendCommand.java
+rename to proxy/src/main/java/net/elytrium/elytraproxy/commands/SendCommand.java
+index 7c868faf..dc44933d 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/commands/SendCommand.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/commands/SendCommand.java
+@@ -15,7 +15,7 @@
+  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ 
+-package ru.elytrium.elytraproxy.commands;
++package net.elytrium.elytraproxy.commands;
+ 
+ import com.velocitypowered.api.command.CommandSource;
+ import com.velocitypowered.api.command.SimpleCommand;
+@@ -31,7 +31,7 @@ import java.util.List;
+ import java.util.stream.Collectors;
+ import net.kyori.adventure.text.Component;
+ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+-import ru.elytrium.elytraproxy.config.Settings;
++import net.elytrium.elytraproxy.config.Settings;
+ 
+ public class SendCommand implements SimpleCommand {
+ 
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/config/Config.java b/proxy/src/main/java/net/elytrium/elytraproxy/config/Config.java
+similarity index 98%
+rename from proxy/src/main/java/ru/elytrium/elytraproxy/config/Config.java
+rename to proxy/src/main/java/net/elytrium/elytraproxy/config/Config.java
+index 06720f23..ee69f5cc 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/config/Config.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/config/Config.java
+@@ -15,7 +15,7 @@
+  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ 
+-package ru.elytrium.elytraproxy.config;
++package net.elytrium.elytraproxy.config;
+ 
+ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+ import java.io.File;
+@@ -43,9 +43,9 @@ import java.util.Collection;
+ import java.util.List;
+ import org.apache.logging.log4j.LogManager;
+ import org.apache.logging.log4j.Logger;
+-import ru.elytrium.elytraproxy.config.helpers.Configuration;
+-import ru.elytrium.elytraproxy.config.helpers.ConfigurationProvider;
+-import ru.elytrium.elytraproxy.config.helpers.YamlConfiguration;
++import net.elytrium.elytraproxy.config.helpers.Configuration;
++import net.elytrium.elytraproxy.config.helpers.ConfigurationProvider;
++import net.elytrium.elytraproxy.config.helpers.YamlConfiguration;
+ 
+ @SuppressFBWarnings("RV_RETURN_VALUE_IGNORED")
+ public class Config {
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/config/Settings.java b/proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java
+similarity index 95%
+rename from proxy/src/main/java/ru/elytrium/elytraproxy/config/Settings.java
+rename to proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java
+index f19780e3..9a425c5d 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/config/Settings.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java
+@@ -15,7 +15,7 @@
+  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ 
+-package ru.elytrium.elytraproxy.config;
++package net.elytrium.elytraproxy.config;
+ 
+ import java.io.File;
+ import java.util.Arrays;
+@@ -36,6 +36,7 @@ public class Settings extends Config {
+   public static class MESSAGES {
+     @Create
+     public MESSAGES.ELYTRAPROXY ELYTRAPROXY;
++
+     @Create
+     public MESSAGES.VELOCITY VELOCITY;
+ 
+@@ -152,6 +153,9 @@ public class Settings extends Config {
+     @Create
+     public MAIN_SETTINGS.HOSTNAMES_MANAGER HOSTNAMES_MANAGER;
+ 
++    @Create
++    public MAIN_SETTINGS.MAINTENANCE MAINTENANCE;
++
+     @Comment({
+         "Allows you to reject connection to the server for all domains except yours and direct ip",
+         "Most likely does not work with SRV records"
+@@ -168,6 +172,15 @@ public class Settings extends Config {
+     }
+     @Comment("Players who are on these servers will not be counted in ping request and in the query request.")
+     public List<String> IGNORE_ONLINE_AT = Arrays.asList("auth");
++
++    public static class MAINTENANCE {
++      public boolean ENABLED = false;
++      public String PING_VERSION = "Maintenance";
++      @Comment("Works only if you don't using motd plugin.")
++      public String MOTD = "Maintenance, place wait.";
++      public String DISCONNECT_REASON = "Sorry, but now server is not available due to maintenance";
++      public List<String> IGNORED_PLAYERS = Arrays.asList("4anonymous4");
++    }
+   }
+ 
+   @Create
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/config/helpers/Configuration.java b/proxy/src/main/java/net/elytrium/elytraproxy/config/helpers/Configuration.java
+similarity index 99%
+rename from proxy/src/main/java/ru/elytrium/elytraproxy/config/helpers/Configuration.java
+rename to proxy/src/main/java/net/elytrium/elytraproxy/config/helpers/Configuration.java
+index a4e85a4d..00e952da 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/config/helpers/Configuration.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/config/helpers/Configuration.java
+@@ -31,7 +31,7 @@
+  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+  */
+ 
+-package ru.elytrium.elytraproxy.config.helpers;
++package net.elytrium.elytraproxy.config.helpers;
+ 
+ import java.util.ArrayList;
+ import java.util.Collection;
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/config/helpers/ConfigurationProvider.java b/proxy/src/main/java/net/elytrium/elytraproxy/config/helpers/ConfigurationProvider.java
+similarity index 98%
+rename from proxy/src/main/java/ru/elytrium/elytraproxy/config/helpers/ConfigurationProvider.java
+rename to proxy/src/main/java/net/elytrium/elytraproxy/config/helpers/ConfigurationProvider.java
+index 6928c64a..f822dec9 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/config/helpers/ConfigurationProvider.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/config/helpers/ConfigurationProvider.java
+@@ -31,7 +31,7 @@
+  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+  */
+ 
+-package ru.elytrium.elytraproxy.config.helpers;
++package net.elytrium.elytraproxy.config.helpers;
+ 
+ import java.io.File;
+ import java.io.IOException;
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/config/helpers/YamlConfiguration.java b/proxy/src/main/java/net/elytrium/elytraproxy/config/helpers/YamlConfiguration.java
+similarity index 99%
+rename from proxy/src/main/java/ru/elytrium/elytraproxy/config/helpers/YamlConfiguration.java
+rename to proxy/src/main/java/net/elytrium/elytraproxy/config/helpers/YamlConfiguration.java
+index 0a63a153..5dad48c8 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/config/helpers/YamlConfiguration.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/config/helpers/YamlConfiguration.java
+@@ -31,7 +31,7 @@
+  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+  */
+ 
+-package ru.elytrium.elytraproxy.config.helpers;
++package net.elytrium.elytraproxy.config.helpers;
+ 
+ import com.google.common.base.Charsets;
+ import java.io.File;
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/database/Database.java b/proxy/src/main/java/net/elytrium/elytraproxy/database/Database.java
+similarity index 97%
+rename from proxy/src/main/java/ru/elytrium/elytraproxy/database/Database.java
+rename to proxy/src/main/java/net/elytrium/elytraproxy/database/Database.java
+index 17df7274..09325f56 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/database/Database.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/database/Database.java
+@@ -15,7 +15,7 @@
+  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ 
+-package ru.elytrium.elytraproxy.database;
++package net.elytrium.elytraproxy.database;
+ 
+ import java.util.List;
+ import java.util.Map;
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/database/MySqlDatabase.java b/proxy/src/main/java/net/elytrium/elytraproxy/database/MySqlDatabase.java
+similarity index 99%
+rename from proxy/src/main/java/ru/elytrium/elytraproxy/database/MySqlDatabase.java
+rename to proxy/src/main/java/net/elytrium/elytraproxy/database/MySqlDatabase.java
+index d8471518..1c671c22 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/database/MySqlDatabase.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/database/MySqlDatabase.java
+@@ -15,7 +15,7 @@
+  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ 
+-package ru.elytrium.elytraproxy.database;
++package net.elytrium.elytraproxy.database;
+ 
+ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+ import java.lang.reflect.Field;
+diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/stats/Statistics.java b/proxy/src/main/java/net/elytrium/elytraproxy/stats/Statistics.java
+similarity index 98%
+rename from proxy/src/main/java/ru/elytrium/elytraproxy/stats/Statistics.java
+rename to proxy/src/main/java/net/elytrium/elytraproxy/stats/Statistics.java
+index d60ebed8..51c98d40 100644
+--- a/proxy/src/main/java/ru/elytrium/elytraproxy/stats/Statistics.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/stats/Statistics.java
+@@ -15,7 +15,7 @@
+  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ 
+-package ru.elytrium.elytraproxy.stats;
++package net.elytrium.elytraproxy.stats;
+ 
+ import java.util.Timer;
+ import java.util.TimerTask;
+-- 
+2.24.1.windows.2
+
