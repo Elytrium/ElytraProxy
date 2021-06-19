@@ -1,4 +1,4 @@
-From 9c3cc75f574210afbd15a93076c5a6c859507799 Mon Sep 17 00:00:00 2001
+From e81aca9a77bd57880072de11368289cd959776f6 Mon Sep 17 00:00:00 2001
 From: Petr Ilin <hevav@hevav.dev>
 Date: Mon, 24 May 2021 04:19:59 +0900
 Subject: [PATCH] Init Skins System, Many Config Options, Fix bugs, Code
@@ -917,7 +917,7 @@ index 00000000..07ae9aa1
 +}
 diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/database/MySqlDatabase.java b/proxy/src/main/java/ru/elytrium/elytraproxy/database/MySqlDatabase.java
 new file mode 100644
-index 00000000..d6fdf8cf
+index 00000000..46f96202
 --- /dev/null
 +++ b/proxy/src/main/java/ru/elytrium/elytraproxy/database/MySqlDatabase.java
 @@ -0,0 +1,232 @@
@@ -992,7 +992,7 @@ index 00000000..d6fdf8cf
 +
 +  @Override
 +  public void makeTable(String table, Map<String, String> keys) {
-+    query("CREATE TABLE " + table + " ("
++    query("CREATE TABLE IF NOT EXISTS " + table + " ("
 +            + keyFromStream(keys.entrySet().stream().map(e -> e.getKey() + " " + e.getValue()))
 +        + ")");
 +  }

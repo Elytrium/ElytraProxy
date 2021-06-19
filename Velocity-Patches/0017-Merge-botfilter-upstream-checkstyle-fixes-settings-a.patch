@@ -1,4 +1,4 @@
-From 36cc3761ad66d5694a8778547967a4dc379b1ee5 Mon Sep 17 00:00:00 2001
+From 776993f0a2298d0b106db29173cc206dab8b2900 Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Thu, 17 Jun 2021 04:09:51 +0900
 Subject: [PATCH] Merge botfilter upstream, checkstyle fixes, settings and
@@ -5798,7 +5798,7 @@ index 34fa8a99..0a63a153 100644
  import lombok.NoArgsConstructor;
  import org.yaml.snakeyaml.DumperOptions;
 diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/database/MySqlDatabase.java b/proxy/src/main/java/ru/elytrium/elytraproxy/database/MySqlDatabase.java
-index 4afa15e3..d8471518 100644
+index 4ea1015e..5f70bb3d 100644
 --- a/proxy/src/main/java/ru/elytrium/elytraproxy/database/MySqlDatabase.java
 +++ b/proxy/src/main/java/ru/elytrium/elytraproxy/database/MySqlDatabase.java
 @@ -18,7 +18,6 @@
@@ -5837,7 +5837,7 @@ index 4afa15e3..d8471518 100644
 @@ -70,8 +70,7 @@ public class MySqlDatabase extends Database {
    @Override
    public void makeTable(String table, Map<String, String> keys) {
-     query("CREATE TABLE " + table + " ("
+     query("CREATE TABLE IF NOT EXISTS " + table + " ("
 -            + keyFromStream(keys.entrySet().stream().map(e -> e.getKey() + " " + e.getValue()))
 -        + ")");
 +        + keyFromStream(keys.entrySet().stream().map(e -> e.getKey() + " " + e.getValue())) + ")");

@@ -24,8 +24,7 @@ jobs:
             - name: Cache gradle
               uses: actions/cache@v2.1.6
               with:
-                path: |
-                  ~/.gradle
+                path: ~/.gradle
                 key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
                 restore-keys: ${{ runner.os }}-gradle-
             - name: Configure git
