@@ -1,0 +1,463 @@
+From 3999291dd7f3d1e5a68981234d82af3fb25451e1 Mon Sep 17 00:00:00 2001
+From: mdxd44 <mdxd44@ely.su>
+Date: Sat, 19 Jun 2021 09:39:46 +0900
+Subject: [PATCH] More comments
+
+
+diff --git a/proxy/build.gradle b/proxy/build.gradle
+index 8b7d77fd..d06fd870 100644
+--- a/proxy/build.gradle
++++ b/proxy/build.gradle
+@@ -70,6 +70,8 @@ dependencies {
+     implementation project(':elytraproxy-api').sourceSets.ap.output
+     implementation project(':elytraproxy-native')
+ 
++    implementation "org.mariadb.jdbc:mariadb-java-client:2.7.3"
++
+     implementation "io.netty:netty-codec:${nettyVersion}"
+     implementation "io.netty:netty-codec-haproxy:${nettyVersion}"
+     implementation "io.netty:netty-codec-http:${nettyVersion}"
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/Metrics.java b/proxy/src/main/java/com/velocitypowered/proxy/Metrics.java
+index 4e2c25cf..5e4bf99a 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/Metrics.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/Metrics.java
+@@ -18,13 +18,11 @@
+ package com.velocitypowered.proxy;
+ 
+ import com.velocitypowered.proxy.config.VelocityConfiguration;
+-
+ import java.io.File;
+ import java.io.IOException;
+ import java.nio.file.Paths;
+ import java.util.HashMap;
+ import java.util.Map;
+-
+ import org.apache.logging.log4j.LogManager;
+ import org.apache.logging.log4j.Logger;
+ import org.bstats.MetricsBase;
+@@ -89,6 +87,7 @@ public class Metrics {
+   }
+ 
+   private void appendPlatformData(JsonObjectBuilder builder) {
++    // ElytraProxy
+     builder.appendField("osName", "ElytraProxy Fork");
+     builder.appendField("osArch", "ElytraProxy Fork");
+     builder.appendField("osVersion", "ElytraProxy Fork");
+@@ -108,20 +107,20 @@ public class Metrics {
+       metrics.addCustomChart(
+           new SingleLineChart("managed_servers", () -> server.getAllServers().size())
+       );
++      // ElytraProxy
++      metrics.addCustomChart(
++          new SimplePie("online_mode", () -> "ElytraProxy Fork")
++      );
+       metrics.addCustomChart(
+-          new SimplePie("online_mode",
+-              () -> "ElytraProxy Fork")
++          new SimplePie("velocity_version", () -> "ElytraProxy Fork")
+       );
+-      metrics.addCustomChart(new SimplePie("velocity_version",
+-          () -> "ElytraProxy Fork"));
+ 
+       metrics.addCustomChart(new DrilldownPie("java_version", () -> {
+         Map<String, Map<String, Integer>> map = new HashMap<>();
+-        String javaVersion = "ElytraProxy Fork";
++        // ElytraProxy
+         Map<String, Integer> entry = new HashMap<>();
+-        entry.put(javaVersion, 1);
+-        String release = "ElytraProxy Fork";
+-        map.put(release, entry);
++        entry.put("ElytraProxy Fork", 1);
++        map.put("ElytraProxy Fork", entry);
+ 
+         return map;
+       }));
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/ProxyOptions.java b/proxy/src/main/java/com/velocitypowered/proxy/ProxyOptions.java
+index c80b471a..8ac26cda 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/ProxyOptions.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/ProxyOptions.java
+@@ -27,6 +27,7 @@ import org.apache.logging.log4j.Logger;
+ import org.checkerframework.checker.nullness.qual.Nullable;
+ 
+ public final class ProxyOptions {
++
+   private static final Logger logger = LogManager.getLogger(ProxyOptions.class);
+   private final boolean help;
+   private final @Nullable Integer port;
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/Velocity.java b/proxy/src/main/java/com/velocitypowered/proxy/Velocity.java
+index 5a41892c..49ad384f 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/Velocity.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/Velocity.java
+@@ -78,8 +78,10 @@ public class Velocity {
+ 
+     double bootTime = (System.currentTimeMillis() - startTime) / 1000d;
+     logger.info("Done ({}s)!", new DecimalFormat("#.##").format(bootTime));
++
++    // ElytraProxy
+     logger.warn("PLEASE REPORT ALL BUGS, ERRORS AND JUST NOTES"
+-            + " OR SUGGESTIONS TO ME IN PM (mdxd44#5001)");
++            + " OR SUGGESTIONS ON GITHUB PAGE. (https://github.com/Elytrium/ElytraProxy/issues)");
+     server.getConsoleCommandSource().start();
+ 
+     // If we don't have a console available (because SimpleTerminalConsole returned), then we still
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
+index 3bf1fa0e..5c150585 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
+@@ -133,6 +133,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+   private final VelocityPluginManager pluginManager;
+   private final AdventureBossBarManager bossBarManager;
+ 
++  // ElytraProxy
+   @Getter
+   private static final Map<UUID, ConnectedPlayer> connectionsByUuid = new ConcurrentHashMap<>();
+   private final Map<String, ConnectedPlayer> connectionsByName = new ConcurrentHashMap<>();
+@@ -141,7 +142,9 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+   private final VelocityEventManager eventManager;
+   private final VelocityScheduler scheduler;
+   private final VelocityChannelRegistrar channelRegistrar = new VelocityChannelRegistrar();
+-  private ElytraProxy elytraProxy; // ElytraProxy
++  // ElytraProxy
++  @Getter
++  private ElytraProxy elytraProxy;
+ 
+   VelocityServer(final ProxyOptions options) {
+     pluginManager = new VelocityPluginManager(this);
+@@ -171,13 +174,14 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+     String implVersion;
+     String implVendor;
+     if (pkg != null) {
++      // ElytraProxy
+       implName = MoreObjects.firstNonNull(pkg.getImplementationTitle(), "ElytraProxy");
+       implVersion = MoreObjects.firstNonNull(pkg.getImplementationVersion(), "<unknown>");
+-      implVendor = MoreObjects.firstNonNull(pkg.getImplementationVendor(), "Velocity Contributors");
++      implVendor = MoreObjects.firstNonNull(pkg.getImplementationVendor(), "Velocity Contributors, ElytraProxy Contributors");
+     } else {
+       implName = "ElytraProxy";
+       implVersion = "<unknown>";
+-      implVendor = "Velocity Contributors";
++      implVendor = "Velocity Contributors, ElytraProxy Contributors";
+     }
+ 
+     return new ProxyVersion(implName, implVendor, implVersion);
+@@ -195,6 +199,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+   @EnsuresNonNull({"serverKeyPair", "servers", "pluginManager", "eventManager", "scheduler",
+       "console", "cm", "configuration"})
+   void start() {
++    // ElytraProxy
+     logger.info("Booting up {} {}...", getVersion().getName(), Settings.IMP.VERSION);
+     console.setupStreams();
+ 
+@@ -203,7 +208,9 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+     cm.logChannelInformation();
+ 
+     // Initialize commands first
+-    //commandManager.register("elytraproxy", new ElytraProxyCommand(this)); - Init in ElytraProxy
++
++    // ElytraProxy: Move initialization to ElytraProxy main class
++    // commandManager.register("elytraproxy", new ElytraProxyCommand(this));
+     commandManager.register("server", new ServerCommand(this));
+     commandManager.register("shutdown", new ShutdownCommand(this),"end");
+     new GlistCommand(this).register();
+@@ -215,7 +222,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+     }
+ 
+     ipAttemptLimiter = Ratelimiters.createWithMilliseconds(configuration.getLoginRatelimit(),
+-            configuration.getLoginRatelimitAttempts()); //BotFilter - global rate limiter
++            configuration.getLoginRatelimitAttempts()); // BotFilter backport: global rate limiter
+     loadPlugins();
+ 
+     // Go ahead and fire the proxy initialization event. We block since plugins should have a chance
+@@ -239,6 +246,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+ 
+     Metrics.VelocityMetrics.startMetrics(this, configuration.getMetrics());
+ 
++    // ElytraProxy
+     this.elytraProxy = new ElytraProxy(this);
+   }
+ 
+@@ -255,8 +263,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+         System.exit(1);
+       }
+     } catch (Exception e) {
+-      logger.error("Unable to read/load/save your velocity.toml or elytraproxy.yml."
+-              + "The server will shut down.", e);
++      logger.error("Unable to read/load/save your velocity.toml. The server will shut down.", e);
+       LogManager.shutdown();
+       System.exit(1);
+     }
+@@ -393,7 +400,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+     }
+ 
+     ipAttemptLimiter = Ratelimiters.createWithMilliseconds(newConfiguration.getLoginRatelimit(),
+-            newConfiguration.getLoginRatelimitAttempts()); //BotFilter - global rate limiter
++            newConfiguration.getLoginRatelimitAttempts()); // BotFilter backport: global rate limiter
+     this.configuration = newConfiguration;
+     eventManager.fireAndForget(new ProxyReloadEvent());
+     return true;
+@@ -598,6 +605,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+ 
+   @Override
+   public int getPlayerCount() {
++    // ElytraProxy: Exclude online at servers in list
+     return (int) getAllPlayers().stream().filter(p ->
+         !Settings.IMP.MAIN_SETTINGS.IGNORE_ONLINE_AT.contains(p.getCurrentServer()
+         .get().getServerInfo().getName())).count();
+@@ -674,10 +682,6 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+     return bossBarManager;
+   }
+ 
+-  public ElytraProxy getElytraProxy() {
+-    return elytraProxy;
+-  }
+-
+   public static Gson getPingGsonInstance(ProtocolVersion version) {
+     return version.compareTo(ProtocolVersion.MINECRAFT_1_16) >= 0 ? POST_1_16_PING_SERIALIZER
+         : PRE_1_16_PING_SERIALIZER;
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
+index 6c4ec6fc..01f7ecc1 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
+@@ -84,6 +84,7 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+ 
+   private final ConnectedPlayer player;
+   private boolean spawned = false;
++  // ElytraProxy
+   private boolean checkedBySettings = false;
+   private boolean checkedByBrand = false;
+   private boolean willBeKickedChat = false;
+@@ -121,6 +122,7 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+     }
+   }
+ 
++  // ElytraProxy
+   private void kickIfCheckNotPassed() {
+     if (Settings.IMP.ANTIBOT.ENABLE) {
+       if ((!checkedBySettings) && Settings.IMP.ANTIBOT.CHECK_CLIENT_SETTINGS) {
+@@ -165,6 +167,7 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+   @Override
+   public boolean handle(ClientSettings packet) {
+     player.setPlayerSettings(packet);
++    // ElytraProxy
+     // TODO: Move to botfilter check
+     String toStringPacket = "{} send settings \"locale= '"
+         + packet.getLocale() + '\''
+@@ -223,6 +226,7 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+ 
+   @Override
+   public boolean handle(Chat packet) {
++    // ElytraProxy
+     // TODO: Move to botfilter check
+     if (!willBeKickedChat) {
+       kickIfCheckNotPassed();
+@@ -244,6 +248,7 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+           .thenComposeAsync(event -> processCommandExecuteResult(originalCommand,
+               event.getResult()))
+           .whenComplete((ignored, throwable) -> {
++            // ElytraProxy Start
+             for (ConnectedPlayer player1 : ElytraProxyCommand.getPlayersWithSpy()) {
+               if (player1.hasPermission("elytraproxy.command.commandspy")) {
+                 if (!player1.getUsername().equals(player.getUsername())) {
+@@ -279,6 +284,7 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+                         .replace("{NL}", "\n")
+                         .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
+                     ));
++            // ElytraProxy End
+             return null;
+           });
+     } else {
+@@ -433,6 +439,7 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+     if (smc != null && !smc.isClosed() && serverConnection.getPhase().consideredComplete()) {
+       smc.write(buf.retain());
+     }
++    // ElytraProxy
+     // TODO: Move to botfilter check
+     if (!willBeKickedUnk) {
+       kickIfCheckNotPassed();
+@@ -447,6 +454,7 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+ 
+   @Override
+   public void exception(Throwable throwable) {
++    // ElytraProxy
+     player.disconnect(
+         LegacyComponentSerializer
+             .legacyAmpersand()
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
+index 308bb67c..74f095c5 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
+@@ -468,6 +468,7 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
+       }
+     }
+ 
++    // Velocity 2.0 backport && ElytraProxy
+     Component friendlyError;
+     if (connectedServer != null && connectedServer.getServerInfo().equals(server.getServerInfo())) {
+       friendlyError = LegacyComponentSerializer
+@@ -504,7 +505,8 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
+       return;
+     }
+ 
+-    //VelocityConfiguration.Messages messages = this.server.getConfiguration().getMessages();
++    // ElytraProxy
++    // VelocityConfiguration.Messages messages = this.server.getConfiguration().getMessages();
+     Component disconnectReason = GsonComponentSerializer.gson().deserialize(disconnect.getReason());
+     if (connectedServer != null && connectedServer.getServerInfo().equals(server.getServerInfo())) {
+       logger.info("{}: kicked from server {}: {}", this, server.getServerInfo().getName(),
+@@ -623,6 +625,7 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
+                           getProtocolVersion()), ((Impl) status).isSafe());
+                       break;
+                     case SUCCESS:
++                      // ElytraProxy
+                       sendMessage(Identity.nil(),
+                           LegacyComponentSerializer
+                               .legacyAmpersand()
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/HandshakeSessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/HandshakeSessionHandler.java
+index 3dc5a545..0f398877 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/HandshakeSessionHandler.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/HandshakeSessionHandler.java
+@@ -69,6 +69,7 @@ public class HandshakeSessionHandler implements MinecraftSessionHandler {
+ 
+   @Override
+   public boolean handle(LegacyHandshake packet) {
++    // ElytraProxy
+     connection.closeWith(LegacyDisconnect
+         .from(
+             LegacyComponentSerializer
+@@ -127,7 +128,7 @@ public class HandshakeSessionHandler implements MinecraftSessionHandler {
+       return;
+     }
+ 
+-    //BotFilter start - global rate limiter
++    // BotFilter backport start: global rate limiter
+     /*
+     InetAddress address = ((InetSocketAddress) connection.getRemoteAddress()).getAddress();
+     if (!server.getIpAttemptLimiter().attempt(address)) {
+@@ -141,7 +142,7 @@ public class HandshakeSessionHandler implements MinecraftSessionHandler {
+       return;
+     }
+     */
+-    //BotFilter end - global rate limiter
++    // BotFilter backport end - global rate limiter
+ 
+     connection.setType(getHandshakeConnectionType(handshake));
+ 
+@@ -149,6 +150,7 @@ public class HandshakeSessionHandler implements MinecraftSessionHandler {
+     // and lower, otherwise IP information will never get forwarded.
+     if (server.getConfiguration().getPlayerInfoForwardingMode() == PlayerInfoForwarding.MODERN
+         && handshake.getProtocolVersion().compareTo(ProtocolVersion.MINECRAFT_1_13) < 0) {
++      // ElytraProxy
+       ic.disconnectQuietly(
+           LegacyComponentSerializer
+               .legacyAmpersand()
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
+index 29853729..61f6b257 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
+@@ -150,6 +150,7 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+                 GameProfile.class), true);
+           } else if (profileResponse.getStatusCode() == 204) {
+             // Apparently an offline-mode user logged onto this online-mode proxy.
++            // ElytraProxy
+             inbound.disconnect(
+                 LegacyComponentSerializer
+                     .legacyAmpersand()
+@@ -180,6 +181,7 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+   }
+ 
+   private void beginPreLogin() {
++    // ElytraProxy
+     server.getElytraProxy().getStatistics().addTotalConnectionPerSecond();
+     ServerLogin login = this.login;
+     if (login == null) {
+@@ -236,6 +238,7 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+         onlineMode);
+     final GameProfile finalProfile = profile;
+ 
++    // BotFilter backport
+     server.getEventManager().fire(profileRequestEvent).thenAcceptAsync(profileEvent -> {
+       if (mcConnection.isClosed()) {
+         // The player disconnected while event execution
+@@ -246,6 +249,7 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+       ConnectedPlayer player = new ConnectedPlayer(server, profileEvent.getGameProfile(),
+           mcConnection, inbound.getVirtualHost().orElse(null), onlineMode);
+       this.connectedPlayer = player;
++      // ElytraProxy Start: BotFilter and other
+       if (!server.canRegisterConnection(player)) {
+         player.disconnect0(
+             LegacyComponentSerializer
+@@ -267,7 +271,6 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+       }
+       */
+       logger.info("{} has connected", player);
+-      // ElytraProxy Start
+       server.getElytraProxy().getStatistics().addConnectionPerSecond();
+       if (Settings.IMP.MAIN_SETTINGS.MAINTENANCE.ENABLED
+           && !Settings.IMP.MAIN_SETTINGS.MAINTENANCE
+@@ -298,7 +301,6 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+         completeLoginProtocol(player, true);
+         initialize(player);
+       }
+-      // ElytraProxy End
+     }, mcConnection.eventLoop()).exceptionally((ex) -> {
+       logger.error("Exception during connection of {}", finalProfile, ex);
+       return null;
+@@ -416,6 +418,7 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+           return null;
+         });
+   }
++  // ElytraProxy End
+ 
+   private CompletableFuture<Void> connectToInitialServer(ConnectedPlayer player) {
+     Optional<RegisteredServer> initialFromConfig = player.getNextServerToTry();
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/StatusSessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/StatusSessionHandler.java
+index d1fc82cb..eb4614c7 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/StatusSessionHandler.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/StatusSessionHandler.java
+@@ -61,6 +61,7 @@ public class StatusSessionHandler implements MinecraftSessionHandler {
+   private final MinecraftConnection connection;
+   private final InboundConnection inbound;
+   private boolean pingReceived = false;
++  // ElytraProxy
+   private Component maintenanceMotd;
+ 
+   StatusSessionHandler(VelocityServer server, MinecraftConnection connection,
+@@ -76,9 +77,11 @@ public class StatusSessionHandler implements MinecraftSessionHandler {
+       logger.info("{} is pinging the server with version {}", this.inbound,
+           this.connection.getProtocolVersion());
+     }
++    // ElytraProxy
+     server.getElytraProxy().getStatistics().addPingPerSecond();
+   }
+ 
++  // ElytraProxy
+   private Component getMaintenanceMotd() {
+     if (Settings.IMP.MAIN_SETTINGS.MAINTENANCE.ENABLED) {
+       if (Settings.IMP.MAIN_SETTINGS.MAINTENANCE.MOTD.startsWith("{")) {
+@@ -103,6 +106,7 @@ public class StatusSessionHandler implements MinecraftSessionHandler {
+   private ServerPing constructLocalPing(ProtocolVersion version) {
+     VelocityConfiguration configuration = server.getConfiguration();
+     return new ServerPing(
++        // ElytraProxy
+         new ServerPing.Version(version.getProtocol(),
+             (Settings.IMP.MAIN_SETTINGS.MAINTENANCE.ENABLED
+                 ? Settings.IMP.MAIN_SETTINGS.MAINTENANCE.PING_VERSION
+@@ -195,6 +199,7 @@ public class StatusSessionHandler implements MinecraftSessionHandler {
+   private CompletableFuture<ServerPing> getInitialPing() {
+     VelocityConfiguration configuration = server.getConfiguration();
+     ProtocolVersion shownVersion;
++    // ElytraProxy
+     if (Settings.IMP.MAIN_SETTINGS.MAINTENANCE.ENABLED) {
+       shownVersion = ProtocolVersion.MAINTENANCE;
+     } else {
+@@ -247,6 +252,7 @@ public class StatusSessionHandler implements MinecraftSessionHandler {
+     this.pingReceived = true;
+ 
+     getInitialPing()
++        // ElytraProxy
+         .thenCompose(Settings.IMP.MAIN_SETTINGS.MAINTENANCE.ENABLED
+             ? ping -> CompletableFuture.completedFuture(new ProxyPingEvent(inbound, ping))
+             : ping -> server.getEventManager().fire(new ProxyPingEvent(inbound, ping)))
+-- 
+2.24.1.windows.2
+
