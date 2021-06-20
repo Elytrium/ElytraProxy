@@ -1,4 +1,4 @@
-From d83001ed16c932edcb683de5c33cdaf47406a177 Mon Sep 17 00:00:00 2001
+From 41c2ef652528faad28e1b866a5f361656e5d057c Mon Sep 17 00:00:00 2001
 From: Petr Ilin <hevav@hevav.dev>
 Date: Sat, 22 May 2021 14:37:12 +0900
 Subject: [PATCH] Init Yaml Config System, Fix bugs, Code Cleanup

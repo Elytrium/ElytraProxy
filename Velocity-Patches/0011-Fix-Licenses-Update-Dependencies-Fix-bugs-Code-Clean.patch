@@ -1,4 +1,4 @@
-From 07c724a0f81dc4222288a172e25d7e44eac3898b Mon Sep 17 00:00:00 2001
+From dc98d698a9b310313f81326d0b236283383c1c94 Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Thu, 3 Jun 2021 20:48:12 +0900
 Subject: [PATCH] Fix Licenses, Update Dependencies, Fix bugs, Code Cleanup And
@@ -1645,7 +1645,7 @@ index 07ae9aa1..17df7274 100644
  
  package ru.elytrium.elytraproxy.database;
 diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/database/MySqlDatabase.java b/proxy/src/main/java/ru/elytrium/elytraproxy/database/MySqlDatabase.java
-index d6fdf8cf..4afa15e3 100644
+index 46f96202..4ea1015e 100644
 --- a/proxy/src/main/java/ru/elytrium/elytraproxy/database/MySqlDatabase.java
 +++ b/proxy/src/main/java/ru/elytrium/elytraproxy/database/MySqlDatabase.java
 @@ -1,18 +1,18 @@

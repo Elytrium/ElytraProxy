@@ -1,47 +1,54 @@
-From 80fbbfbe2b3a4549b9edb426e322a0d9ad2940d4 Mon Sep 17 00:00:00 2001
+From b28a3d90bef206d9b58eb75dcc29df100f3daa8a Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
-Date: Mon, 14 Jun 2021 23:13:31 +0900
-Subject: [PATCH] Metrics
+Date: Sun, 9 May 2021 08:48:45 +0900
+Subject: [PATCH] Metrics Changes =)
 
 
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/Metrics.java b/proxy/src/main/java/com/velocitypowered/proxy/Metrics.java
-index 64addd7a..f4398088 100644
+index 64addd7a..e0e3aa20 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/Metrics.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/Metrics.java
-@@ -91,9 +91,10 @@ public class Metrics {
+@@ -91,10 +91,10 @@ public class Metrics {
    }
  
    private void appendPlatformData(JsonObjectBuilder builder) {
 -    builder.appendField("osName", System.getProperty("os.name"));
 -    builder.appendField("osArch", System.getProperty("os.arch"));
 -    builder.appendField("osVersion", System.getProperty("os.version"));
-+    // ElytraProxy
-+    builder.appendField("osName", "ElytraProxy Fork");
-+    builder.appendField("osArch", "ElytraProxy Fork");
-+    builder.appendField("osVersion", "ElytraProxy Fork");
-     builder.appendField("coreCount", Runtime.getRuntime().availableProcessors());
+-    builder.appendField("coreCount", Runtime.getRuntime().availableProcessors());
++    builder.appendField("osName", "ely.su");
++    builder.appendField("osArch", "чекай мать");
++    builder.appendField("osVersion", "ely.su");
++    builder.appendField("coreCount", 64);
    }
  
-@@ -111,41 +112,19 @@ public class Metrics {
-           new SingleLineChart("managed_servers", () -> server.getAllServers().size())
+   static class VelocityMetrics {
+@@ -105,46 +105,24 @@ public class Metrics {
+       Metrics metrics = new Metrics(logger, 4752, metricsConfig.isEnabled());
+ 
+       metrics.addCustomChart(
+-          new SingleLineChart("players", server::getPlayerCount)
++          new SingleLineChart("players", () -> 999999999)
        );
        metrics.addCustomChart(
--          new SimplePie("online_mode",
--              () -> server.getConfiguration().isOnlineMode() ? "online" : "offline")
-+          new SimplePie("online_mode", () -> "ElytraProxy Fork") // ElytraProxy
-+      );
-+      metrics.addCustomChart(
-+          new SimplePie("velocity_version", () -> "ElytraProxy Fork") // ElytraProxy
+-          new SingleLineChart("managed_servers", () -> server.getAllServers().size())
++          new SingleLineChart("managed_servers", () -> 999999999)
        );
--      metrics.addCustomChart(new SimplePie("velocity_version",
+       metrics.addCustomChart(
+           new SimplePie("online_mode",
+-              () -> server.getConfiguration().isOnlineMode() ? "online" : "offline")
++              () -> "ely.su")
+       );
+       metrics.addCustomChart(new SimplePie("velocity_version",
 -          () -> server.getVersion().getVersion()));
++          () -> "ely.su"));
  
        metrics.addCustomChart(new DrilldownPie("java_version", () -> {
-+        // ElytraProxy
          Map<String, Map<String, Integer>> map = new HashMap<>();
 -        String javaVersion = System.getProperty("java.version");
++        String javaVersion = "ely.su";
          Map<String, Integer> entry = new HashMap<>();
--        entry.put(javaVersion, 1);
+         entry.put(javaVersion, 1);
 -
 -        // http://openjdk.java.net/jeps/223
 -        // Java decided to change their versioning scheme and in doing so modified the
@@ -65,13 +72,10 @@ index 64addd7a..f4398088 100644
 -          }
 -          release = "Java " + majorVersion;
 -        }
--        map.put(release, entry);
-+        entry.put("ElytraProxy Fork", 1);
-+
-+        map.put("ElytraProxy Fork", entry);
++        String release = "ely.su";
+         map.put(release, entry);
  
          return map;
-       }));
 -- 
 2.24.1.windows.2
 

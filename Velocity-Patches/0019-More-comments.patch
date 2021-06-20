@@ -1,4 +1,4 @@
-From 3999291dd7f3d1e5a68981234d82af3fb25451e1 Mon Sep 17 00:00:00 2001
+From 4c15666b08ae6ed032acdaddc8eccc96cf9484b9 Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Sat, 19 Jun 2021 09:39:46 +0900
 Subject: [PATCH] More comments
@@ -283,7 +283,7 @@ index 6c4ec6fc..01f7ecc1 100644
          LegacyComponentSerializer
              .legacyAmpersand()
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
-index 308bb67c..74f095c5 100644
+index dec28589..8303fd1f 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
 @@ -468,6 +468,7 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {

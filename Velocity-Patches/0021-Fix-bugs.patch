@@ -1,0 +1,144 @@
+From c52db79ee0a1b0d9fc95773dbc9800259d5c682f Mon Sep 17 00:00:00 2001
+From: mdxd44 <mdxd44@ely.su>
+Date: Mon, 21 Jun 2021 07:56:29 +0900
+Subject: [PATCH] Fix bugs
+
+
+diff --git a/api/build.gradle b/api/build.gradle
+index c4f10d2c..368004ab 100644
+--- a/api/build.gradle
++++ b/api/build.gradle
+@@ -37,6 +37,7 @@ dependencies {
+     api("net.kyori:adventure-text-serializer-legacy")
+     api("net.kyori:adventure-text-serializer-plain")
+ 
++    // ElytraProxy: Revert deprecated kyori dependencies for backward compatibility
+     api "net.kyori:text-api:${textVersion}"
+     api "net.kyori:text-serializer-gson:${textVersion}"
+     api "net.kyori:text-serializer-legacy:${textVersion}"
+diff --git a/api/src/main/java/com/velocitypowered/api/network/ProtocolVersion.java b/api/src/main/java/com/velocitypowered/api/network/ProtocolVersion.java
+index eb76b5ce..a55cd1a1 100644
+--- a/api/src/main/java/com/velocitypowered/api/network/ProtocolVersion.java
++++ b/api/src/main/java/com/velocitypowered/api/network/ProtocolVersion.java
+@@ -55,7 +55,8 @@ public enum ProtocolVersion {
+   MINECRAFT_1_16_2(751, "1.16.2"),
+   MINECRAFT_1_16_3(753, "1.16.3"),
+   MINECRAFT_1_16_4(754, "1.16.4", "1.16.5"),
+-  MINECRAFT_1_17(755, "1.17");
++  MINECRAFT_1_17(755, "1.17"),
++  MINECRAFT_1_17_1(-1, 36, "1.17.1"); // final version is 756 // temp
+ 
+   private static final int SNAPSHOT_BIT = 30;
+ 
+diff --git a/proxy/build.gradle b/proxy/build.gradle
+index d06fd870..e6cc1298 100644
+--- a/proxy/build.gradle
++++ b/proxy/build.gradle
+@@ -58,7 +58,7 @@ tasks.withType(Checkstyle) {
+ }
+ 
+ dependencies {
+-    //BotFilter add lombok
++    // BotFilter backport
+     compileOnly 'org.projectlombok:lombok:1.18.20'
+     annotationProcessor 'org.projectlombok:lombok:1.18.20'
+ 
+@@ -70,6 +70,7 @@ dependencies {
+     implementation project(':elytraproxy-api').sourceSets.ap.output
+     implementation project(':elytraproxy-native')
+ 
++    // ElytraProxy
+     implementation "org.mariadb.jdbc:mariadb-java-client:2.7.3"
+ 
+     implementation "io.netty:netty-codec:${nettyVersion}"
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
+index b952ca37..d2a2294f 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
+@@ -94,6 +94,7 @@ import net.elytrium.elytraproxy.config.Settings;
+ import net.kyori.adventure.audience.Audience;
+ import net.kyori.adventure.audience.ForwardingAudience;
+ import net.kyori.adventure.text.Component;
++import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+ import org.apache.logging.log4j.LogManager;
+ import org.apache.logging.log4j.Logger;
+ import org.asynchttpclient.AsyncHttpClient;
+@@ -495,7 +496,13 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+    * @param explicitExit whether the user explicitly shut down the proxy
+    */
+   public void shutdown(boolean explicitExit) {
+-    shutdown(explicitExit, Component.text("Proxy shutting down."));
++    shutdown(explicitExit,
++        LegacyComponentSerializer
++            .legacyAmpersand()
++            .deserialize(Settings.IMP.MESSAGES.ELYTRAPROXY.KICK.PROXY_SHUTTING_DOWN
++                .replace("{NL}", "\n")
++                .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
++            ));
+   }
+ 
+   @Override
+@@ -608,9 +615,10 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+   @Override
+   public int getPlayerCount() {
+     // ElytraProxy: Exclude online at servers in list
+-    return (int) getAllPlayers().stream().filter(p ->
++    return (int) getAllPlayers().stream().filter(p -> p
++        .getCurrentServer().isPresent()).filter(p ->
+         !Settings.IMP.MAIN_SETTINGS.IGNORE_ONLINE_AT.contains(p.getCurrentServer()
+-        .get().getServerInfo().getName())).count();
++            .get().getServerInfo().getName())).count();
+   }
+ 
+   @Override
+diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/commands/FindCommand.java b/proxy/src/main/java/net/elytrium/elytraproxy/commands/FindCommand.java
+index 5e60e390..0230c0d7 100644
+--- a/proxy/src/main/java/net/elytrium/elytraproxy/commands/FindCommand.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/commands/FindCommand.java
+@@ -84,9 +84,10 @@ public class FindCommand implements SimpleCommand {
+       } else {
+         source.sendMessage(
+             LegacyComponentSerializer
+-                .legacySection()
++                .legacyAmpersand()
+                 .deserialize(Settings.IMP.MESSAGES.ELYTRAPROXY.USER_NOT_ONLINE
+                     .replace("{NL}", "\n")
++                    .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
+                     .replace("{0}", args[0])
+                 ));
+       }
+diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java b/proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java
+index 51fe66c2..2751d0bc 100644
+--- a/proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java
+@@ -55,8 +55,8 @@ public class Settings extends Config {
+       public String SEND_YOU_GOT_SUMMONED = "{PRFX} &fSummoned to &6{0} &fby &6{1}";
+       public String SEND_NOT_ENOUGH_ARGUMENTS = "{PRFX} &fNot enough arguments, usage: &6/send <server|player|all|current> <target>";
+       public String COMMAND_SPY_FORMAT = "&7 — Player {0} executed command {1}";
+-      public String COMMAND_SPY_ENABLED = "{PRFX} &fNow you see commands from all server in your chat.";
+-      public String COMMAND_SPY_DISABLED = "{PRFX} &fYou're no longer see statistics in your action bar.";
++      public String COMMAND_SPY_ENABLED = "{PRFX} &fYou have successfully activated command spy.";
++      public String COMMAND_SPY_DISABLED = "{PRFX} &fYou have successfully deactivated command spy.";
+       public String CONSOLE_LOG_COMMAND_EXECUTIONS_FORMAT = "{0} -> executed command {1}";
+       public String RELOAD_SUCCESS = "{PRFX} &fElytraProxy configuration successfully reloaded.";
+       public String RELOAD_FAILURE = "{PRFX} &cUnable to reload your ElytraProxy configuration. Check the console for more details.";
+@@ -66,6 +66,7 @@ public class Settings extends Config {
+ 
+       @Comment("Kick messages")
+       public static class KICK {
++        public String PROXY_SHUTTING_DOWN = "&cProxy shutting down.";
+         public String PROTOCOL_BLOCKED = "&c1.7.x not supported";
+         public String NICK_BLOCKED = "&cYour nickname contains forbidden phrases.";
+         public String CLIENT_CHECK_SETTINGS = "&cYour client doesn't send settings packets.";
+@@ -194,7 +195,7 @@ public class Settings extends Config {
+         "In lowercase"
+     })
+     public List<String> BANNED_NICK_PATTERNS = Arrays.asList(
+-        "dropbot", "mcspam", "mcdrop", "mcrage", "mcstorm", "extremebot", "cipher_bot", "biboran"
++        "dropbot", "mcspam", "mcdrop", "mcrage", "mcstorm", "extremebot", "cipher", "biboran"
+     );
+   }
+ 
+-- 
+2.24.1.windows.2
+

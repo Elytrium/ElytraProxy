@@ -1,4 +1,4 @@
-From f4a1879804d9f2fbeab026545e7371c548423835 Mon Sep 17 00:00:00 2001
+From aa16c564d44b0e1c6ea06404cfe0835b367aa922 Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Mon, 7 Jun 2021 04:45:40 +0900
 Subject: [PATCH] Move Messages Section To ElytraProxy Config
@@ -591,7 +591,7 @@ index 4ac74d9d..db97ab23 100644
            return null;
          });
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
-index 85c5b8c3..9f145f58 100644
+index ccbf6be3..52e36229 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
 @@ -48,7 +48,6 @@ import com.velocitypowered.api.proxy.server.RegisteredServer;

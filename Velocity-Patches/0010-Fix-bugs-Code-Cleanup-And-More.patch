@@ -1,4 +1,4 @@
-From d705aee37eaa5198f257b8805ebb559eda6d300b Mon Sep 17 00:00:00 2001
+From 1b4343ff2a1e39494c7b80166837a4bb7298b696 Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Thu, 3 Jun 2021 02:23:42 +0900
 Subject: [PATCH] Fix bugs, Code Cleanup And More
@@ -123,7 +123,7 @@ index 67f890ea..d57b5b2e 100644
          player.disconnect0(Component.text(
                  Settings.IMP.MESSAGES.ELYTRAPROXY_MESSAGES.PROTOCOL_BLOCKED), true);
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/StatusSessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/StatusSessionHandler.java
-index 214a196d..713c3cf5 100644
+index b8e0895a..713c3cf5 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/StatusSessionHandler.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/StatusSessionHandler.java
 @@ -46,6 +46,7 @@ import java.util.Optional;
@@ -138,7 +138,7 @@ index 214a196d..713c3cf5 100644
      VelocityConfiguration configuration = server.getConfiguration();
      return new ServerPing(
          new ServerPing.Version(version.getProtocol(),
--            "ElytraProxy"),
+-            "Velocity " + ProtocolVersion.SUPPORTED_VERSION_STRING),
 +            Settings.IMP.ELYTRAPROXY_SETTINGS.PING_VERSION),
          new ServerPing.Players(server.getPlayerCount(), configuration.getShowMaxPlayers(),
              ImmutableList.of()),

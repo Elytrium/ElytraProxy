@@ -1,4 +1,4 @@
-From 82c984ed27008ef4df5509bd3c9f9aae9021707e Mon Sep 17 00:00:00 2001
+From f65fcecbd68c0be54961da28723c020deb024332 Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Fri, 18 Jun 2021 23:18:35 +0900
 Subject: [PATCH] Maintenance mode
@@ -324,7 +324,7 @@ index 3a61616b..6c4ec6fc 100644
  /**
   * Handles communication with the connected Minecraft client. This is effectively the primary nerve
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
-index fd9aa13b..308bb67c 100644
+index 2e09b212..dec28589 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
 @@ -84,23 +84,21 @@ import java.util.UUID;
@@ -1816,7 +1816,7 @@ diff --git a/proxy/src/main/java/ru/elytrium/elytraproxy/database/MySqlDatabase.
 similarity index 99%
 rename from proxy/src/main/java/ru/elytrium/elytraproxy/database/MySqlDatabase.java
 rename to proxy/src/main/java/net/elytrium/elytraproxy/database/MySqlDatabase.java
-index d8471518..1c671c22 100644
+index 5f70bb3d..1c705b50 100644
 --- a/proxy/src/main/java/ru/elytrium/elytraproxy/database/MySqlDatabase.java
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/database/MySqlDatabase.java
 @@ -15,7 +15,7 @@

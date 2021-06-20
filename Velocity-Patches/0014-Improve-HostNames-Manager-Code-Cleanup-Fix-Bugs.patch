@@ -1,4 +1,4 @@
-From 5557500166b6ae78848cfd2f02f3dc02951242c0 Mon Sep 17 00:00:00 2001
+From e197dc9e20a66cb21a4c29203247f2a5562a016e Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Sat, 5 Jun 2021 17:50:10 +0900
 Subject: [PATCH] Improve HostNames Manager, Code Cleanup, Fix Bugs

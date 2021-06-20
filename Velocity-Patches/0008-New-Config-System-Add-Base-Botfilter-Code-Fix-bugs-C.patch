@@ -1,4 +1,4 @@
-From 951322c069b5f442e50f67877f1622f2b47f12c4 Mon Sep 17 00:00:00 2001
+From 7c8da2d8e4d2c4732a659d8763ded1cf3d9b8ef4 Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Sat, 29 May 2021 02:33:34 +0900
 Subject: [PATCH] New Config System, Add Base Botfilter Code, Fix bugs, Code
@@ -640,7 +640,7 @@ index b42997e3..50ec438a 100644
          .exceptionally((ex) -> {
            logger.error("Exception while completing login initialisation phase for {}", player, ex);
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/StatusSessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/StatusSessionHandler.java
-index 41af8a1d..214a196d 100644
+index 792c5b45..b8e0895a 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/StatusSessionHandler.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/StatusSessionHandler.java
 @@ -215,6 +215,9 @@ public class StatusSessionHandler implements MinecraftSessionHandler {
