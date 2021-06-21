@@ -1,4 +1,4 @@
-From c52db79ee0a1b0d9fc95773dbc9800259d5c682f Mon Sep 17 00:00:00 2001
+From 10420539a8121ff9fe25c72c0313c06e2823142e Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Mon, 21 Jun 2021 07:56:29 +0900
 Subject: [PATCH] Fix bugs
@@ -30,6 +30,25 @@ index eb76b5ce..a55cd1a1 100644
  
    private static final int SNAPSHOT_BIT = 30;
  
+diff --git a/api/src/main/java/com/velocitypowered/api/proxy/ProxyServer.java b/api/src/main/java/com/velocitypowered/api/proxy/ProxyServer.java
+index 1fd5d7cf..eba7721d 100644
+--- a/api/src/main/java/com/velocitypowered/api/proxy/ProxyServer.java
++++ b/api/src/main/java/com/velocitypowered/api/proxy/ProxyServer.java
+@@ -153,6 +153,14 @@ public interface ProxyServer extends Audience {
+    */
+   EventManager getEventManager();
+ 
++  // ElytraProxy
++  /**
++   * Gets the blocked connections.
++   *
++   * @return blocked connections by elytraproxy.
++   */
++  long getBlockedConnections();
++
+   /**
+    * Gets the {@link CommandManager} instance.
+    *
 diff --git a/proxy/build.gradle b/proxy/build.gradle
 index d06fd870..e6cc1298 100644
 --- a/proxy/build.gradle
@@ -52,7 +71,7 @@ index d06fd870..e6cc1298 100644
  
      implementation "io.netty:netty-codec:${nettyVersion}"
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-index b952ca37..d2a2294f 100644
+index b952ca37..3386885a 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
 @@ -94,6 +94,7 @@ import net.elytrium.elytraproxy.config.Settings;
@@ -91,6 +110,40 @@ index b952ca37..d2a2294f 100644
    }
  
    @Override
+@@ -653,6 +661,12 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+     return eventManager;
+   }
+ 
++  // ElytraProxy
++  @Override
++  public long getBlockedConnections() {
++    return getElytraProxy().getStatistics().getBlockedConnections();
++  }
++
+   @Override
+   public VelocityScheduler getScheduler() {
+     return scheduler;
+diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/ElytraProxy.java b/proxy/src/main/java/net/elytrium/elytraproxy/ElytraProxy.java
+index 2356caad..a2dc13bf 100644
+--- a/proxy/src/main/java/net/elytrium/elytraproxy/ElytraProxy.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/ElytraProxy.java
+@@ -44,6 +44,7 @@ import net.elytrium.elytraproxy.commands.ElytraProxyCommand;
+ import net.elytrium.elytraproxy.commands.FindCommand;
+ import net.elytrium.elytraproxy.commands.SendCommand;
+ import net.elytrium.elytraproxy.config.Settings;
++import net.elytrium.elytraproxy.database.Database;
+ import net.elytrium.elytraproxy.stats.Statistics;
+ import net.kyori.adventure.identity.Identity;
+ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+@@ -56,7 +57,7 @@ import org.apache.logging.log4j.Logger;
+     "OBL_UNSATISFIED_OBLIGATION_EXCEPTION_EDGE"})
+ public class ElytraProxy {
+   private final Logger logger = LogManager.getLogger("ElytraProxy");
+-  //private Database database;
++  private Database database;
+ 
+   // BotFilter start
+   private final Logger bfLogger = LogManager.getLogger("BotFilter");
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/commands/FindCommand.java b/proxy/src/main/java/net/elytrium/elytraproxy/commands/FindCommand.java
 index 5e60e390..0230c0d7 100644
 --- a/proxy/src/main/java/net/elytrium/elytraproxy/commands/FindCommand.java
