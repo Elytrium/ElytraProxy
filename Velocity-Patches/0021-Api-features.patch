@@ -1,7 +1,7 @@
-From 10420539a8121ff9fe25c72c0313c06e2823142e Mon Sep 17 00:00:00 2001
+From d09e4f45ee43727bbe310e72c0d94fa4bcf84419 Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Mon, 21 Jun 2021 07:56:29 +0900
-Subject: [PATCH] Fix bugs
+Subject: [PATCH] Api features
 
 
 diff --git a/api/build.gradle b/api/build.gradle
@@ -31,20 +31,28 @@ index eb76b5ce..a55cd1a1 100644
    private static final int SNAPSHOT_BIT = 30;
  
 diff --git a/api/src/main/java/com/velocitypowered/api/proxy/ProxyServer.java b/api/src/main/java/com/velocitypowered/api/proxy/ProxyServer.java
-index 1fd5d7cf..eba7721d 100644
+index 1fd5d7cf..e2ad3f1d 100644
 --- a/api/src/main/java/com/velocitypowered/api/proxy/ProxyServer.java
 +++ b/api/src/main/java/com/velocitypowered/api/proxy/ProxyServer.java
-@@ -153,6 +153,14 @@ public interface ProxyServer extends Audience {
+@@ -153,6 +153,22 @@ public interface ProxyServer extends Audience {
     */
    EventManager getEventManager();
  
-+  // ElytraProxy
++  // ElytraProxy Start
 +  /**
-+   * Gets the blocked connections.
++   * Gets the blocked bots.
 +   *
-+   * @return blocked connections by elytraproxy.
++   * @return blocked bots by elytraproxy antibot system.
 +   */
-+  long getBlockedConnections();
++  long getBlockedBots();
++
++  /**
++   * Gets the total connections per second.
++   *
++   * @return total connections per second from elytraproxy stats.
++   */
++  long getTotalConnectionsPerSecond();
++  // ElytraProxy End
 +
    /**
     * Gets the {@link CommandManager} instance.
@@ -71,7 +79,7 @@ index d06fd870..e6cc1298 100644
  
      implementation "io.netty:netty-codec:${nettyVersion}"
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-index b952ca37..3386885a 100644
+index b952ca37..ae966134 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
 @@ -94,6 +94,7 @@ import net.elytrium.elytraproxy.config.Settings;
@@ -110,19 +118,81 @@ index b952ca37..3386885a 100644
    }
  
    @Override
-@@ -653,6 +661,12 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -653,6 +661,18 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
      return eventManager;
    }
  
-+  // ElytraProxy
++  // ElytraProxy Start
 +  @Override
-+  public long getBlockedConnections() {
-+    return getElytraProxy().getStatistics().getBlockedConnections();
++  public long getBlockedBots() {
++    return getElytraProxy().getStatistics().getBlockedBots();
 +  }
++
++  @Override
++  public long getTotalConnectionsPerSecond() {
++    return getElytraProxy().getStatistics().getTotalConnectionsPerSecond();
++  }
++  // ElytraProxy End
 +
    @Override
    public VelocityScheduler getScheduler() {
      return scheduler;
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
+index 01f7ecc1..6104354f 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
+@@ -134,6 +134,7 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+                     .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
+                 ));
+         server.getElytraProxy().getStatistics().addBlockedConnection();
++        server.getElytraProxy().getStatistics().addBlockedBots();
+       }
+       if ((!checkedByBrand) && Settings.IMP.ANTIBOT.CHECK_CLIENT_BRAND) {
+         player.disconnect(
+@@ -144,6 +145,7 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+                     .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
+                 ));
+         server.getElytraProxy().getStatistics().addBlockedConnection();
++        server.getElytraProxy().getStatistics().addBlockedBots();
+       }
+     }
+   }
+@@ -190,6 +192,7 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+                   ));
+           server.getElytraProxy().getLogger().error("{} has null in settings packet", player);
+           server.getElytraProxy().getStatistics().addBlockedConnection();
++          server.getElytraProxy().getStatistics().addBlockedBots();
+         } else if (!packet.isChatColors()) {
+           logger.error(toStringPacket, player);
+           player.disconnect(
+@@ -203,6 +206,7 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+           server.getElytraProxy().getLogger().error("{} doesn't send isChatColors packet",
+               player);
+           server.getElytraProxy().getStatistics().addBlockedConnection();
++          server.getElytraProxy().getStatistics().addBlockedBots();
+         } else if (packet.getSkinParts() == 0) {
+           logger.error(toStringPacket, player);
+           player.disconnect(
+@@ -216,6 +220,7 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+           server.getElytraProxy().getLogger().error("{} doesn't send skin parts packet",
+               player);
+           server.getElytraProxy().getStatistics().addBlockedConnection();
++          server.getElytraProxy().getStatistics().addBlockedBots();
+         }
+         logger.info(toStringPacket, player);
+       }
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
+index 61f6b257..1395daaf 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
+@@ -319,6 +319,7 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+                   .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
+               ), true);
+       server.getElytraProxy().getStatistics().addBlockedConnection();
++      server.getElytraProxy().getStatistics().addBlockedBots();
+       return;
+     }
+     // injectBotFilterOrFinishLogin(player);
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/ElytraProxy.java b/proxy/src/main/java/net/elytrium/elytraproxy/ElytraProxy.java
 index 2356caad..a2dc13bf 100644
 --- a/proxy/src/main/java/net/elytrium/elytraproxy/ElytraProxy.java
@@ -192,6 +262,71 @@ index 51fe66c2..2751d0bc 100644
      );
    }
  
+diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/stats/Statistics.java b/proxy/src/main/java/net/elytrium/elytraproxy/stats/Statistics.java
+index 51c98d40..98226df1 100644
+--- a/proxy/src/main/java/net/elytrium/elytraproxy/stats/Statistics.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/stats/Statistics.java
+@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicLong;
+ public class Statistics {
+ 
+   private final AtomicLong blockedConnections = new AtomicLong(0L);
++  private final AtomicLong blockedBots = new AtomicLong(0L);
+   private final AtomicInteger connectionsPerSecond = new AtomicInteger();
+   private final AtomicInteger pingsPerSecond = new AtomicInteger();
+   private final AtomicInteger totalConnectionsPerSecond = new AtomicInteger();
+@@ -33,32 +34,40 @@ public class Statistics {
+     blockedConnections.incrementAndGet();
+   }
+ 
++  public void addBlockedBots() {
++    blockedBots.incrementAndGet();
++  }
++
++  public void addConnectionPerSecond() {
++    connectionsPerSecond.incrementAndGet();
++  }
++
++  public void addPingPerSecond() {
++    pingsPerSecond.incrementAndGet();
++  }
++
++  public void addTotalConnectionPerSecond() {
++    totalConnectionsPerSecond.incrementAndGet();
++  }
++
+   public long getBlockedConnections() {
+     return blockedConnections.longValue();
+   }
+ 
+-  public int getTotalConnectionsPerSecond() {
+-    return totalConnectionsPerSecond.get();
++  public long getBlockedBots() {
++    return blockedBots.longValue();
+   }
+ 
+   public int getConnectionsPerSecond() {
+     return connectionsPerSecond.get();
+   }
+ 
+-  public void addConnectionPerSecond() {
+-    connectionsPerSecond.incrementAndGet();
+-  }
+-
+   public int getPingsPerSecond() {
+     return pingsPerSecond.get();
+   }
+ 
+-  public void addPingPerSecond() {
+-    pingsPerSecond.incrementAndGet();
+-  }
+-
+-  public void addTotalConnectionPerSecond() {
+-    totalConnectionsPerSecond.incrementAndGet();
++  public int getTotalConnectionsPerSecond() {
++    return totalConnectionsPerSecond.get();
+   }
+ 
+   public void startUpdating() {
 -- 
 2.24.1.windows.2
 
