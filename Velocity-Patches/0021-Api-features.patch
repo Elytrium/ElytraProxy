@@ -1,4 +1,4 @@
-From d09e4f45ee43727bbe310e72c0d94fa4bcf84419 Mon Sep 17 00:00:00 2001
+From 08548fc7da81ba8770853c584d6397286ec976b5 Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Mon, 21 Jun 2021 07:56:29 +0900
 Subject: [PATCH] Api features
@@ -58,19 +58,27 @@ index 1fd5d7cf..e2ad3f1d 100644
     * Gets the {@link CommandManager} instance.
     *
 diff --git a/proxy/build.gradle b/proxy/build.gradle
-index d06fd870..e6cc1298 100644
+index d06fd870..756ca85f 100644
 --- a/proxy/build.gradle
 +++ b/proxy/build.gradle
-@@ -58,7 +58,7 @@ tasks.withType(Checkstyle) {
+@@ -26,7 +26,6 @@ license {
+         header = project.rootProject.file('HEADER.txt')
+     }
+     header = project.rootProject.file('HEADER.txt')
+-    exclude '**/default-elytraproxy.yml'
+ }
+ 
+ jar {
+@@ -58,7 +57,7 @@ tasks.withType(Checkstyle) {
  }
  
  dependencies {
 -    //BotFilter add lombok
-+    // BotFilter backport
++    // BotFilter backport: Add lombok
      compileOnly 'org.projectlombok:lombok:1.18.20'
      annotationProcessor 'org.projectlombok:lombok:1.18.20'
  
-@@ -70,6 +70,7 @@ dependencies {
+@@ -70,6 +69,7 @@ dependencies {
      implementation project(':elytraproxy-api').sourceSets.ap.output
      implementation project(':elytraproxy-native')
  
@@ -79,18 +87,27 @@ index d06fd870..e6cc1298 100644
  
      implementation "io.netty:netty-codec:${nettyVersion}"
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-index b952ca37..ae966134 100644
+index b952ca37..356fa7b2 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-@@ -94,6 +94,7 @@ import net.elytrium.elytraproxy.config.Settings;
+@@ -94,6 +94,8 @@ import net.elytrium.elytraproxy.config.Settings;
  import net.kyori.adventure.audience.Audience;
  import net.kyori.adventure.audience.ForwardingAudience;
  import net.kyori.adventure.text.Component;
++import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
 +import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
  import org.apache.logging.log4j.LogManager;
  import org.apache.logging.log4j.Logger;
  import org.asynchttpclient.AsyncHttpClient;
-@@ -495,7 +496,13 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -145,6 +147,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+   // ElytraProxy
+   @Getter
+   private ElytraProxy elytraProxy;
++  private Component maintenanceMotd;
+ 
+   VelocityServer(final ProxyOptions options) {
+     pluginManager = new VelocityPluginManager(this);
+@@ -495,7 +498,13 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
     * @param explicitExit whether the user explicitly shut down the proxy
     */
    public void shutdown(boolean explicitExit) {
@@ -105,20 +122,22 @@ index b952ca37..ae966134 100644
    }
  
    @Override
-@@ -608,9 +615,10 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -608,9 +617,11 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
    @Override
    public int getPlayerCount() {
      // ElytraProxy: Exclude online at servers in list
 -    return (int) getAllPlayers().stream().filter(p ->
-+    return (int) getAllPlayers().stream().filter(p -> p
-+        .getCurrentServer().isPresent()).filter(p ->
-         !Settings.IMP.MAIN_SETTINGS.IGNORE_ONLINE_AT.contains(p.getCurrentServer()
+-        !Settings.IMP.MAIN_SETTINGS.IGNORE_ONLINE_AT.contains(p.getCurrentServer()
 -        .get().getServerInfo().getName())).count();
-+            .get().getServerInfo().getName())).count();
++    return (int) getAllPlayers().stream().filter(p -> p.getCurrentServer()
++        .isPresent())
++        .filter(p -> !Settings.IMP.MAIN_SETTINGS.IGNORE_ONLINE_AT
++            .contains(p.getCurrentServer().get().getServerInfo().getName()))
++        .count();
    }
  
    @Override
-@@ -653,6 +661,18 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -653,6 +664,18 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
      return eventManager;
    }
  
@@ -137,6 +156,59 @@ index b952ca37..ae966134 100644
    @Override
    public VelocityScheduler getScheduler() {
      return scheduler;
+@@ -693,4 +716,26 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+   public ResourcePackInfo.Builder createResourcePackBuilder(String url) {
+     return new VelocityResourcePackInfo.BuilderImpl(url);
+   }
++
++  // ElytraProxy
++  public Component getMaintenanceMotd() {
++    if (Settings.IMP.MAIN_SETTINGS.MAINTENANCE.ENABLED) {
++      if (Settings.IMP.MAIN_SETTINGS.MAINTENANCE.MOTD.startsWith("{")) {
++        maintenanceMotd = GsonComponentSerializer
++            .gson()
++            .deserialize(Settings.IMP.MAIN_SETTINGS.MAINTENANCE.MOTD
++                .replace("{NL}", "\n")
++                .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
++            );
++      } else {
++        maintenanceMotd = LegacyComponentSerializer
++            .legacyAmpersand()
++            .deserialize(Settings.IMP.MAIN_SETTINGS.MAINTENANCE.MOTD
++                .replace("{NL}", "\n")
++                .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
++            );
++      }
++    }
++    return maintenanceMotd;
++  }
+ }
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/ShutdownCommand.java b/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/ShutdownCommand.java
+index 2d855e7a..995b6bfc 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/ShutdownCommand.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/ShutdownCommand.java
+@@ -19,6 +19,7 @@ package com.velocitypowered.proxy.command.builtin;
+ 
+ import com.velocitypowered.api.command.RawCommand;
+ import com.velocitypowered.proxy.VelocityServer;
++import net.elytrium.elytraproxy.config.Settings;
+ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+ 
+ public class ShutdownCommand implements RawCommand {
+@@ -35,7 +36,12 @@ public class ShutdownCommand implements RawCommand {
+     if (reason.isEmpty() || reason.trim().isEmpty()) {
+       server.shutdown(true);
+     } else {
+-      server.shutdown(true, LegacyComponentSerializer.legacy('&').deserialize(reason));
++      server.shutdown(true, LegacyComponentSerializer
++          .legacyAmpersand()
++          .deserialize(reason
++              .replace("{NL}", "\n")
++              .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
++          ));
+     }
+   }
+ 
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
 index 01f7ecc1..6104354f 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
@@ -193,6 +265,122 @@ index 61f6b257..1395daaf 100644
        return;
      }
      // injectBotFilterOrFinishLogin(player);
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/StatusSessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/StatusSessionHandler.java
+index eb4614c7..e5ea219d 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/StatusSessionHandler.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/StatusSessionHandler.java
+@@ -45,9 +45,6 @@ import java.util.Locale;
+ import java.util.Optional;
+ import java.util.concurrent.CompletableFuture;
+ import net.elytrium.elytraproxy.config.Settings;
+-import net.kyori.adventure.text.Component;
+-import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
+-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+ import org.apache.logging.log4j.LogManager;
+ import org.apache.logging.log4j.Logger;
+ 
+@@ -61,8 +58,6 @@ public class StatusSessionHandler implements MinecraftSessionHandler {
+   private final MinecraftConnection connection;
+   private final InboundConnection inbound;
+   private boolean pingReceived = false;
+-  // ElytraProxy
+-  private Component maintenanceMotd;
+ 
+   StatusSessionHandler(VelocityServer server, MinecraftConnection connection,
+       InboundConnection inbound) {
+@@ -81,28 +76,6 @@ public class StatusSessionHandler implements MinecraftSessionHandler {
+     server.getElytraProxy().getStatistics().addPingPerSecond();
+   }
+ 
+-  // ElytraProxy
+-  private Component getMaintenanceMotd() {
+-    if (Settings.IMP.MAIN_SETTINGS.MAINTENANCE.ENABLED) {
+-      if (Settings.IMP.MAIN_SETTINGS.MAINTENANCE.MOTD.startsWith("{")) {
+-        maintenanceMotd = GsonComponentSerializer
+-            .gson()
+-            .deserialize(Settings.IMP.MAIN_SETTINGS.MAINTENANCE.MOTD
+-                .replace("{NL}", "\n")
+-                .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
+-            );
+-      } else {
+-        maintenanceMotd = LegacyComponentSerializer
+-            .legacyAmpersand()
+-            .deserialize(Settings.IMP.MAIN_SETTINGS.MAINTENANCE.MOTD
+-                .replace("{NL}", "\n")
+-                .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
+-            );
+-      }
+-    }
+-    return maintenanceMotd;
+-  }
+-
+   private ServerPing constructLocalPing(ProtocolVersion version) {
+     VelocityConfiguration configuration = server.getConfiguration();
+     return new ServerPing(
+@@ -114,10 +87,15 @@ public class StatusSessionHandler implements MinecraftSessionHandler {
+                     .replace('&', '§')
+                     .replace("{NL}", "\n")
+                     .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)),
+-        new ServerPing.Players(server.getPlayerCount(), configuration.getShowMaxPlayers(),
++        new ServerPing.Players(Settings.IMP.MAIN_SETTINGS.MAINTENANCE.ENABLED
++            ? 0
++            : server.getPlayerCount(),
++            Settings.IMP.MAIN_SETTINGS.MAINTENANCE.ENABLED
++            ? 0
++            : configuration.getShowMaxPlayers(),
+             ImmutableList.of()),
+         Settings.IMP.MAIN_SETTINGS.MAINTENANCE.ENABLED
+-            ? getMaintenanceMotd()
++            ? server.getMaintenanceMotd()
+             : configuration.getMotd(),
+         configuration.getFavicon().orElse(null),
+         configuration.isAnnounceForge() ? ModInfo.DEFAULT : null
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/protocol/netty/GS4QueryHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/protocol/netty/GS4QueryHandler.java
+index 55e42236..ac0a9cc0 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/protocol/netty/GS4QueryHandler.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/protocol/netty/GS4QueryHandler.java
+@@ -83,22 +83,31 @@ public class GS4QueryHandler extends SimpleChannelInboundHandler<DatagramPacket>
+ 
+   private QueryResponse createInitialResponse() {
+     return QueryResponse.builder()
+-        .hostname(PlainComponentSerializer.plain().serialize(server.getConfiguration().getMotd()))
++        .hostname(PlainComponentSerializer.plain().serialize(Settings.IMP.MAIN_SETTINGS.MAINTENANCE.ENABLED
++            ? server.getMaintenanceMotd()
++            : server.getConfiguration().getMotd()))
+         .gameVersion("")
+         .map(server.getConfiguration().getQueryMap())
+-        .currentPlayers(server.getPlayerCount())
+-        .maxPlayers(server.getConfiguration().getShowMaxPlayers())
++        .currentPlayers(Settings.IMP.MAIN_SETTINGS.MAINTENANCE.ENABLED
++            ? 0
++            : server.getPlayerCount())
++        .maxPlayers(Settings.IMP.MAIN_SETTINGS.MAINTENANCE.ENABLED
++            ? 0
++            : server.getConfiguration().getShowMaxPlayers())
+         .proxyPort(server.getConfiguration().getBind().getPort())
+         .proxyHost(server.getConfiguration().getBind().getHostString())
+-        .players(server.getAllPlayers().stream().filter(p ->
+-            !Settings.IMP.MAIN_SETTINGS.IGNORE_ONLINE_AT.contains(p.getCurrentServer()
+-                .get().getServerInfo().getName()))
++        .players(server.getAllPlayers().stream().filter(p -> p.getCurrentServer()
++            .isPresent())
++            .filter(p -> !Settings.IMP.MAIN_SETTINGS.IGNORE_ONLINE_AT
++                .contains(p.getCurrentServer().get().getServerInfo().getName()))
+             .map(Player::getUsername)
+             .collect(Collectors.toList()))
+-        .proxyVersion(Settings.IMP.MAIN_SETTINGS.PING_VERSION
+-            .replace('&', '§')
+-            .replace("{NL}", "\n")
+-            .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX))
++        .proxyVersion((Settings.IMP.MAIN_SETTINGS.MAINTENANCE.ENABLED
++            ? Settings.IMP.MAIN_SETTINGS.MAINTENANCE.PING_VERSION
++            : Settings.IMP.MAIN_SETTINGS.PING_VERSION)
++                .replace('&', '§')
++                .replace("{NL}", "\n")
++                .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX))
+         .plugins(
+             server.getConfiguration().shouldQueryShowPlugins() ? getRealPluginInformation()
+                 : Collections.emptyList())
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/ElytraProxy.java b/proxy/src/main/java/net/elytrium/elytraproxy/ElytraProxy.java
 index 2356caad..a2dc13bf 100644
 --- a/proxy/src/main/java/net/elytrium/elytraproxy/ElytraProxy.java
