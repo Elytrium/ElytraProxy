@@ -1,4 +1,4 @@
-From 08548fc7da81ba8770853c584d6397286ec976b5 Mon Sep 17 00:00:00 2001
+From a0b3bc99b5b0abb4db2ed4411966615672cae12a Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Mon, 21 Jun 2021 07:56:29 +0900
 Subject: [PATCH] Api features
@@ -336,15 +336,16 @@ index eb4614c7..e5ea219d 100644
          configuration.getFavicon().orElse(null),
          configuration.isAnnounceForge() ? ModInfo.DEFAULT : null
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/protocol/netty/GS4QueryHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/protocol/netty/GS4QueryHandler.java
-index 55e42236..ac0a9cc0 100644
+index 55e42236..8a711ae6 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/protocol/netty/GS4QueryHandler.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/protocol/netty/GS4QueryHandler.java
-@@ -83,22 +83,31 @@ public class GS4QueryHandler extends SimpleChannelInboundHandler<DatagramPacket>
+@@ -83,22 +83,32 @@ public class GS4QueryHandler extends SimpleChannelInboundHandler<DatagramPacket>
  
    private QueryResponse createInitialResponse() {
      return QueryResponse.builder()
 -        .hostname(PlainComponentSerializer.plain().serialize(server.getConfiguration().getMotd()))
-+        .hostname(PlainComponentSerializer.plain().serialize(Settings.IMP.MAIN_SETTINGS.MAINTENANCE.ENABLED
++        .hostname(PlainComponentSerializer.plain().serialize(
++            Settings.IMP.MAIN_SETTINGS.MAINTENANCE.ENABLED
 +            ? server.getMaintenanceMotd()
 +            : server.getConfiguration().getMotd()))
          .gameVersion("")
