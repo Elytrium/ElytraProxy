@@ -1,0 +1,1694 @@
+From c0c3e0589b8c5e1b48cc435fd483fede4c5c7815 Mon Sep 17 00:00:00 2001
+From: mdxd44 <mdxd44@ely.su>
+Date: Thu, 24 Jun 2021 15:01:38 +0900
+Subject: [PATCH] Captcha generator
+
+
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
+index 356fa7b2..8d7ccd77 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
+@@ -146,7 +146,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+   private final VelocityChannelRegistrar channelRegistrar = new VelocityChannelRegistrar();
+   // ElytraProxy
+   @Getter
+-  private ElytraProxy elytraProxy;
++  private @MonotonicNonNull ElytraProxy elytraProxy;
+   private Component maintenanceMotd;
+ 
+   VelocityServer(final ProxyOptions options) {
+@@ -227,6 +227,10 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+ 
+     ipAttemptLimiter = Ratelimiters.createWithMilliseconds(configuration.getLoginRatelimit(),
+             configuration.getLoginRatelimitAttempts()); // BotFilter backport: global rate limiter
++
++    // ElytraProxy
++    this.elytraProxy = new ElytraProxy(this);
++
+     loadPlugins();
+ 
+     // Go ahead and fire the proxy initialization event. We block since plugins should have a chance
+@@ -249,9 +253,6 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+     }
+ 
+     Metrics.VelocityMetrics.startMetrics(this, configuration.getMetrics());
+-
+-    // ElytraProxy
+-    this.elytraProxy = new ElytraProxy(this);
+   }
+ 
+   @SuppressFBWarnings("DM_EXIT")
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/command/VelocityCommandManager.java b/proxy/src/main/java/com/velocitypowered/proxy/command/VelocityCommandManager.java
+index b2951590..2d0f3856 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/command/VelocityCommandManager.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/command/VelocityCommandManager.java
+@@ -25,7 +25,6 @@ import com.mojang.brigadier.ParseResults;
+ import com.mojang.brigadier.exceptions.CommandSyntaxException;
+ import com.mojang.brigadier.suggestion.Suggestion;
+ import com.mojang.brigadier.tree.RootCommandNode;
+-import com.spotify.futures.CompletableFutures;
+ import com.velocitypowered.api.command.BrigadierCommand;
+ import com.velocitypowered.api.command.Command;
+ import com.velocitypowered.api.command.CommandManager;
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/backend/BackendPlaySessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/backend/BackendPlaySessionHandler.java
+index fa8dddaf..9b544b6c 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/connection/backend/BackendPlaySessionHandler.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/backend/BackendPlaySessionHandler.java
+@@ -21,8 +21,6 @@ import static com.velocitypowered.proxy.connection.backend.BungeeCordMessageResp
+ 
+ import com.google.common.base.Preconditions;
+ import com.google.common.collect.ImmutableList;
+-import com.mojang.brigadier.builder.ArgumentBuilder;
+-import com.mojang.brigadier.tree.CommandNode;
+ import com.mojang.brigadier.tree.RootCommandNode;
+ import com.velocitypowered.api.command.CommandSource;
+ import com.velocitypowered.api.event.command.PlayerAvailableCommandsEvent;
+@@ -52,7 +50,6 @@ import io.netty.buffer.ByteBufUtil;
+ import io.netty.buffer.Unpooled;
+ import io.netty.channel.Channel;
+ import io.netty.handler.timeout.ReadTimeoutException;
+-import java.util.Collection;
+ import java.util.regex.Pattern;
+ import org.apache.logging.log4j.LogManager;
+ import org.apache.logging.log4j.Logger;
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
+index 1395daaf..28605dbe 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
+@@ -322,11 +322,11 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+       server.getElytraProxy().getStatistics().addBlockedBots();
+       return;
+     }
+-    // injectBotFilterOrFinishLogin(player);
++    injectBotFilterOrFinishLogin(player);
+ 
+     // temp
+-    completeLoginProtocol(player, true);
+-    initialize(player);
++    // completeLoginProtocol(player, true);
++    // initialize(player);
+   }
+ 
+   private void injectBotFilterOrFinishLogin(ConnectedPlayer player) {
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/plugin/VelocityPluginManager.java b/proxy/src/main/java/com/velocitypowered/proxy/plugin/VelocityPluginManager.java
+index 682d5bc7..20a40ce1 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/plugin/VelocityPluginManager.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/plugin/VelocityPluginManager.java
+@@ -43,7 +43,6 @@ import java.nio.file.Path;
+ import java.util.ArrayList;
+ import java.util.Collection;
+ import java.util.Collections;
+-import java.util.HashMap;
+ import java.util.HashSet;
+ import java.util.IdentityHashMap;
+ import java.util.LinkedHashMap;
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/protocol/StateRegistry.java b/proxy/src/main/java/com/velocitypowered/proxy/protocol/StateRegistry.java
+index 1d786691..2ec0ac34 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/protocol/StateRegistry.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/protocol/StateRegistry.java
+@@ -297,7 +297,7 @@ public enum StateRegistry {
+       clientbound.register(LoginPluginMessage.class, LoginPluginMessage::new,
+           map(0x04, MINECRAFT_1_13, false));
+     }
+-  }, BotFilter{};
++  }, BotFilter {};
+ 
+   public static final int STATUS_ID = 1;
+   public static final int LOGIN_ID = 2;
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/protocol/packet/AvailableCommands.java b/proxy/src/main/java/com/velocitypowered/proxy/protocol/packet/AvailableCommands.java
+index b40d13f0..50424f5e 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/protocol/packet/AvailableCommands.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/protocol/packet/AvailableCommands.java
+@@ -43,7 +43,6 @@ import com.velocitypowered.proxy.protocol.packet.brigadier.ArgumentPropertyRegis
+ import com.velocitypowered.proxy.util.collect.IdentityHashStrategy;
+ import io.netty.buffer.ByteBuf;
+ import it.unimi.dsi.fastutil.objects.Object2IntLinkedOpenCustomHashMap;
+-import it.unimi.dsi.fastutil.objects.Object2IntLinkedOpenHashMap;
+ import it.unimi.dsi.fastutil.objects.Object2IntMap;
+ import java.util.ArrayDeque;
+ import java.util.Arrays;
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/protocol/packet/Handshake.java b/proxy/src/main/java/com/velocitypowered/proxy/protocol/packet/Handshake.java
+index d2b425a7..6853c25b 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/protocol/packet/Handshake.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/protocol/packet/Handshake.java
+@@ -21,7 +21,6 @@ import static com.velocitypowered.proxy.connection.forge.legacy.LegacyForgeConst
+ 
+ import com.velocitypowered.api.network.ProtocolVersion;
+ import com.velocitypowered.proxy.connection.MinecraftSessionHandler;
+-import com.velocitypowered.proxy.connection.forge.legacy.LegacyForgeConstants;
+ import com.velocitypowered.proxy.protocol.MinecraftPacket;
+ import com.velocitypowered.proxy.protocol.ProtocolUtils;
+ import io.netty.buffer.ByteBuf;
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/protocol/packet/brigadier/ArgumentPropertyRegistry.java b/proxy/src/main/java/com/velocitypowered/proxy/protocol/packet/brigadier/ArgumentPropertyRegistry.java
+index 8f0b035a..7a9e2668 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/protocol/packet/brigadier/ArgumentPropertyRegistry.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/protocol/packet/brigadier/ArgumentPropertyRegistry.java
+@@ -36,7 +36,6 @@ import com.velocitypowered.proxy.protocol.ProtocolUtils;
+ import io.netty.buffer.ByteBuf;
+ import java.util.HashMap;
+ import java.util.Map;
+-import org.checkerframework.checker.nullness.qual.Nullable;
+ 
+ public class ArgumentPropertyRegistry {
+   private ArgumentPropertyRegistry() {
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/protocol/packet/title/GenericTitlePacket.java b/proxy/src/main/java/com/velocitypowered/proxy/protocol/packet/title/GenericTitlePacket.java
+index 38c890c0..e3dc636e 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/protocol/packet/title/GenericTitlePacket.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/protocol/packet/title/GenericTitlePacket.java
+@@ -21,7 +21,6 @@ import com.velocitypowered.api.network.ProtocolVersion;
+ import com.velocitypowered.proxy.protocol.MinecraftPacket;
+ import com.velocitypowered.proxy.protocol.ProtocolUtils;
+ import io.netty.buffer.ByteBuf;
+-import org.checkerframework.checker.nullness.qual.Nullable;
+ 
+ public abstract class GenericTitlePacket implements MinecraftPacket {
+ 
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/protocol/util/ByteBufDataOutput.java b/proxy/src/main/java/com/velocitypowered/proxy/protocol/util/ByteBufDataOutput.java
+index e7ff5d62..50945ae8 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/protocol/util/ByteBufDataOutput.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/protocol/util/ByteBufDataOutput.java
+@@ -20,7 +20,6 @@ package com.velocitypowered.proxy.protocol.util;
+ import com.google.common.io.ByteArrayDataOutput;
+ import io.netty.buffer.ByteBuf;
+ import io.netty.buffer.ByteBufUtil;
+-import java.io.DataOutput;
+ import java.io.DataOutputStream;
+ import java.io.IOException;
+ import java.io.OutputStream;
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/protocol/util/VelocityLegacyHoverEventSerializer.java b/proxy/src/main/java/com/velocitypowered/proxy/protocol/util/VelocityLegacyHoverEventSerializer.java
+index 9d706d3d..563523a0 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/protocol/util/VelocityLegacyHoverEventSerializer.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/protocol/util/VelocityLegacyHoverEventSerializer.java
+@@ -24,7 +24,6 @@ import net.kyori.adventure.nbt.CompoundBinaryTag;
+ import net.kyori.adventure.nbt.TagStringIO;
+ import net.kyori.adventure.nbt.api.BinaryTagHolder;
+ import net.kyori.adventure.text.Component;
+-import net.kyori.adventure.text.TextComponent;
+ import net.kyori.adventure.text.event.HoverEvent;
+ import net.kyori.adventure.text.event.HoverEvent.ShowEntity;
+ import net.kyori.adventure.text.event.HoverEvent.ShowItem;
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/scheduler/VelocityScheduler.java b/proxy/src/main/java/com/velocitypowered/proxy/scheduler/VelocityScheduler.java
+index 8f33b355..a09cb3b9 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/scheduler/VelocityScheduler.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/scheduler/VelocityScheduler.java
+@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableList;
+ import com.google.common.collect.Multimap;
+ import com.google.common.collect.Multimaps;
+ import com.google.common.util.concurrent.ThreadFactoryBuilder;
+-import com.velocitypowered.api.plugin.PluginContainer;
+ import com.velocitypowered.api.plugin.PluginManager;
+ import com.velocitypowered.api.scheduler.ScheduledTask;
+ import com.velocitypowered.api.scheduler.Scheduler;
+diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/ElytraProxy.java b/proxy/src/main/java/net/elytrium/elytraproxy/ElytraProxy.java
+index a2dc13bf..78a32f28 100644
+--- a/proxy/src/main/java/net/elytrium/elytraproxy/ElytraProxy.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/ElytraProxy.java
+@@ -35,6 +35,7 @@ import java.net.URLConnection;
+ import java.nio.charset.StandardCharsets;
+ import lombok.Getter;
+ import lombok.ToString;
++import net.elytrium.elytraproxy.botfilter.captcha.CaptchaGeneration;
+ import net.elytrium.elytraproxy.botfilter.protocol.cache.netty.MultiplePreparedPacketsEncoder;
+ import net.elytrium.elytraproxy.botfilter.protocol.cache.netty.PreparedPacketEncoder;
+ import net.elytrium.elytraproxy.botfilter.server.BotFilterSessionHandler;
+@@ -68,20 +69,25 @@ public class ElytraProxy {
+   // BotFilter end
+ 
+   public ElytraProxy(VelocityServer velocityServer) {
++    Settings.IMP.reload(new File("ElytraProxy", "config.yml"));
++    statistics = new Statistics();
++    statistics.startUpdating();
+     // BotFilter start
+     this.velocityServer = velocityServer;
+     this.virtualServer = new VirtualServer(this);
+     this.virtualServer.reload();
++    CaptchaGeneration.init();
++    startCaptchaGenerationThread();
+     // BotFilter end
+-    Settings.IMP.reload(new File("ElytraProxy", "config.yml"));
+     registerCommand(velocityServer);
+     //initDatabase(velocityServer);
+-    statistics = new Statistics();
+-    statistics.startUpdating();
+     checkForUpdates();
+     logger.info("ElytraProxy was loaded.");
+   }
+ 
++  private void startCaptchaGenerationThread() {
++    (new Thread(CaptchaGeneration::generateImages)).start();
++  }
+   ///**
+   // * Initializes database, creates missing tables.
+   // * Инициализирует базу данных, создает отсутствующие таблицы.
+@@ -128,6 +134,10 @@ public class ElytraProxy {
+ 
+   public void setupPipelineAndStartCheck(ConnectedPlayer player, LoginSessionHandler handler) {
+     try {
++      if (!player.isOnlineMode() && velocityServer.getConfiguration().isOnlineMode()) {
++        return;
++      }
++
+       BotFilterSessionHandler sessionHandler = new BotFilterSessionHandler(player, handler,
+           virtualServer);
+       bfLogger.info(sessionHandler.getPlayer().getUsername());
+diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/captcha/CaptchaGeneration.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/captcha/CaptchaGeneration.java
+new file mode 100644
+index 00000000..8cfcdf82
+--- /dev/null
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/captcha/CaptchaGeneration.java
+@@ -0,0 +1,150 @@
++/*
++ * This file is part of Velocity-BotFilter, licensed under the AGPLv3 License (AGPLv3).
++ *
++ * Copyright (C) 2021 Vjatšeslav Maspanov <Leymooo>
++ *
++ * This program is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU Affero General Public License as published by
++ * the Free Software Foundation, either version 3 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU Affero General Public License for more details.
++ *
++ * You should have received a copy of the GNU Affero General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ */
++
++package net.elytrium.elytraproxy.botfilter.captcha;
++
++import java.awt.Color;
++import java.awt.Font;
++import java.awt.FontFormatException;
++import java.awt.GraphicsEnvironment;
++import java.awt.image.BufferedImage;
++import java.io.File;
++import java.io.IOException;
++import java.util.ArrayList;
++import java.util.List;
++import java.util.Random;
++import java.util.concurrent.ExecutorService;
++import java.util.concurrent.Executors;
++import java.util.concurrent.ThreadPoolExecutor;
++import javax.imageio.ImageIO;
++import lombok.experimental.UtilityClass;
++import net.elytrium.elytraproxy.config.Settings;
++import net.elytrium.elytraproxy.botfilter.captcha.generator.CaptchaPainter;
++import net.elytrium.elytraproxy.botfilter.captcha.generator.map.CraftMapCanvas;
++import net.elytrium.elytraproxy.botfilter.captcha.generator.map.MapPalette;
++import net.elytrium.elytraproxy.botfilter.protocol.cache.CachedCaptcha;
++import net.elytrium.elytraproxy.botfilter.protocol.packet.MapDataPacket;
++import org.apache.logging.log4j.LogManager;
++import org.apache.logging.log4j.Logger;
++
++/**
++ * @author Leymooo
++ */
++@UtilityClass
++public class CaptchaGeneration {
++  private final Logger logger = LogManager.getLogger("ElytraProxy");
++  private final CaptchaPainter painter = new CaptchaPainter();
++  private final List<Font> fonts = new ArrayList<>();
++  private final Random rnd = new Random();
++
++  public void init() {
++    int fontSize = Settings.IMP.ANTIBOT.FONT_SIZE;
++
++    fonts.clear();
++    if (Settings.IMP.ANTIBOT.USE_STANDARD_FONTS) {
++      fonts.add(new Font( Font.SANS_SERIF, Font.PLAIN, fontSize ));
++      fonts.add(new Font( Font.SERIF, Font.PLAIN, fontSize ));
++      fonts.add(new Font( Font.MONOSPACED, Font.BOLD, fontSize ));
++    }
++
++    GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
++
++    if (Settings.IMP.ANTIBOT.CAPTCHA_FONTS_PATH != null) {
++      Settings.IMP.ANTIBOT.CAPTCHA_FONTS_PATH.forEach(e -> {
++        try {
++          if (!e.equals("")) {
++            logger.info("Loading font " + e);
++            Font font = Font.createFont(Font.TRUETYPE_FONT, new File(e));
++            ge.registerFont(font);
++            fonts.add(font.deriveFont(Font.PLAIN).deriveFont((float) fontSize));
++          }
++        } catch (FontFormatException | IOException fontFormatException) {
++          fontFormatException.printStackTrace();
++        }
++      });
++    }
++  }
++
++  public void generateImages() {
++    ExecutorService executor =
++        Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
++    MapPalette.prepareColors();
++    for (int i = 100; i <= 999; i++) {
++      executor.execute(CaptchaGeneration::genNewPacket);
++    }
++
++    long start = System.currentTimeMillis();
++    ThreadPoolExecutor ex = (ThreadPoolExecutor) executor;
++    while (ex.getActiveCount() != 0) {
++      //logger.info("Generating captcha [{}/900]", 900 - ex.getQueue().size() - ex.getActiveCount());
++      try {
++        Thread.sleep(1000L);
++      } catch (InterruptedException ex1) {
++        logger.error("Unable to generate captcha.", ex1);
++        System.exit(0);
++        return;
++      }
++    }
++    executor.shutdownNow();
++    System.gc();
++    logger.info("Captcha generated in {} ms.", System.currentTimeMillis() - start);
++  }
++
++  public void genNewPacket() {
++    String answer = randomAnswer();
++    BufferedImage image =
++        painter.draw(fonts.get(rnd.nextInt(fonts.size())), randomNotWhiteColor(), answer);
++    final CraftMapCanvas map = new CraftMapCanvas();
++    try {
++      if (!Settings.IMP.ANTIBOT.CAPTCHA_BACKPLATE_PATH.equals("")) {
++          map.drawImage(0, 0, ImageIO.read(new File(Settings.IMP.ANTIBOT.CAPTCHA_BACKPLATE_PATH)));
++      }
++    } catch (IOException e) {
++      e.printStackTrace();
++    }
++    map.drawImage(0, 0, image);
++    MapDataPacket packet = new MapDataPacket(0, (byte) 0, map.getMapData());
++    CachedCaptcha.createCaptchaPacket(packet, answer);
++  }
++
++  private Color randomNotWhiteColor() {
++    Color color = MapPalette.colors()[rnd.nextInt(MapPalette.colors().length)];
++
++    if (color.getRed() == 255 && color.getGreen() == 255 && color.getBlue() == 255) {
++      return randomNotWhiteColor();
++    }
++
++    if (color.getRed() == 220 && color.getGreen() == 220 && color.getBlue() == 220) {
++      return randomNotWhiteColor();
++    }
++    return color;
++  }
++
++  private String randomAnswer() {
++    int length = 4;
++    String alphabet = Settings.IMP.ANTIBOT.CAPTCHA_PATTERN;
++    if (rnd.nextBoolean()) ++length;
++
++    char[] text = new char[length];
++    for (int i = 0; i < length; i++) {
++      text[i] = alphabet.charAt(rnd.nextInt(alphabet.length()));
++    }
++    return new String(text);
++  }
++}
+diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/captcha/generator/CaptchaPainter.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/captcha/generator/CaptchaPainter.java
+new file mode 100644
+index 00000000..6f83f90f
+--- /dev/null
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/captcha/generator/CaptchaPainter.java
+@@ -0,0 +1,221 @@
++/*
++ * This file is part of Velocity-BotFilter, licensed under the AGPLv3 License (AGPLv3).
++ *
++ * Copyright (C) 2021 Vjatšeslav Maspanov <Leymooo>
++ *
++ * This program is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU Affero General Public License as published by
++ * the Free Software Foundation, either version 3 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU Affero General Public License for more details.
++ *
++ * You should have received a copy of the GNU Affero General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ */
++
++package net.elytrium.elytraproxy.botfilter.captcha.generator;
++
++import java.awt.Color;
++import java.awt.Font;
++import java.awt.Graphics;
++import java.awt.Graphics2D;
++import java.awt.Rectangle;
++import java.awt.RenderingHints;
++import java.awt.font.GlyphVector;
++import java.awt.geom.AffineTransform;
++import java.awt.geom.Point2D;
++import java.awt.geom.Rectangle2D;
++import java.awt.image.BufferedImage;
++import java.awt.image.ConvolveOp;
++import java.awt.image.Kernel;
++import java.util.Random;
++
++public class CaptchaPainter {
++
++  private static final int width = 128;
++  private static final int height = 128;
++  //private final Color background = Color.WHITE;
++  private final Random rnd = new Random();
++
++  public BufferedImage draw(Font font, Color fGround, String text) {
++    if (font == null) {
++      throw new IllegalArgumentException("Font can not be null.");
++    }
++    if (fGround == null) {
++      throw new IllegalArgumentException("Foreground color can not be null.");
++    }
++    if (text == null || text.length() < 1) {
++      throw new IllegalArgumentException("No text given.");
++    }
++
++    BufferedImage img = createImage();
++
++    final Graphics g = img.getGraphics();
++    try {
++      final Graphics2D g2 = configureGraphics(g, font, fGround);
++
++      draw(g2, text);
++    } finally {
++      g.dispose();
++    }
++
++    img = postProcess(img);
++
++    return img;
++  }
++
++  protected BufferedImage createImage() {
++    return new BufferedImage(width, height, BufferedImage.TYPE_3BYTE_BGR);
++  }
++
++  protected Graphics2D configureGraphics(Graphics g, Font font, Color fGround) {
++    if (!(g instanceof Graphics2D)) {
++      throw new IllegalStateException("Graphics (" + g
++          + ") that is not an instance of Graphics2D.");
++    }
++    final Graphics2D g2 = (Graphics2D) g;
++
++    configureGraphicsQuality(g2);
++
++    g2.setColor(fGround);
++    //g2.setBackground(background);
++    g2.setFont(font);
++
++    //g2.clearRect(0, 0, width, height);
++
++    return g2;
++  }
++
++  protected void configureGraphicsQuality(Graphics2D g2) {
++
++    g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING,
++        RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
++    g2.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS,
++        RenderingHints.VALUE_FRACTIONALMETRICS_ON);
++    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
++        RenderingHints.VALUE_ANTIALIAS_ON);
++    g2.setRenderingHint(RenderingHints.KEY_COLOR_RENDERING,
++        RenderingHints.VALUE_COLOR_RENDER_QUALITY);
++    g2.setRenderingHint(RenderingHints.KEY_DITHERING,
++        RenderingHints.VALUE_DITHER_ENABLE);
++    g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION,
++        RenderingHints.VALUE_INTERPOLATION_BICUBIC);
++    g2.setRenderingHint(RenderingHints.KEY_ALPHA_INTERPOLATION,
++        RenderingHints.VALUE_ALPHA_INTERPOLATION_QUALITY);
++    g2.setRenderingHint(RenderingHints.KEY_RENDERING,
++        RenderingHints.VALUE_RENDER_QUALITY);
++
++  }
++
++  protected void draw(Graphics2D g, String text) {
++    final GlyphVector vector = g.getFont().createGlyphVector(
++        g.getFontRenderContext(), text);
++
++    transform(g, text, vector);
++
++    final Rectangle bounds = vector.getPixelBounds(null, 0, height);
++    final float bw = (float) bounds.getWidth();
++    final float bh = (float) bounds.getHeight();
++
++    final boolean outlineEnabled = true;
++
++    final float wr = width / bw
++        * (rnd.nextFloat() / 20 + (outlineEnabled ? 0.89f : 0.92f))
++        * 1;
++    final float hr = height / bh
++        * (rnd.nextFloat() / 20 + (outlineEnabled ? 0.68f : 0.75f))
++        * 1;
++    g.translate((width - bw * wr) / 2, (height - bh * hr) / 2);
++    g.scale(wr, hr);
++
++    final float bx = (float) bounds.getX();
++    final float by = (float) bounds.getY();
++    if (outlineEnabled) {
++      g.draw(vector.getOutline(Math.signum(rnd.nextFloat() - 0.5f) * 1
++          * width / 200 - bx, Math.signum(rnd.nextFloat() - 0.5f) * 1
++          * height / 70 + height - by));
++    }
++    g.drawGlyphVector(vector, -bx, height - by);
++  }
++
++  protected void transform(Graphics2D g, String text, GlyphVector v) {
++    final int glyphNum = v.getNumGlyphs();
++
++    Point2D prePos = null;
++    Rectangle2D preBounds = null;
++
++    double rotateCur = (rnd.nextDouble() - 0.5) * Math.PI / 8;
++    double rotateStep = Math.signum(rotateCur)
++        * (rnd.nextDouble() * 3 * Math.PI / 8 / glyphNum);
++    final boolean rotateEnabled = true;
++
++    for (int fi = 0; fi < glyphNum; fi++) {
++      if (rotateEnabled) {
++        final AffineTransform tr = AffineTransform
++            .getRotateInstance(rotateCur);
++        if (rnd.nextDouble() < 0.25) {
++          rotateStep *= -1;
++        }
++        rotateCur += rotateStep;
++        v.setGlyphTransform(fi, tr);
++      }
++      final Point2D pos = v.getGlyphPosition(fi);
++      final Rectangle2D bounds = v.getGlyphVisualBounds(fi).getBounds2D();
++      Point2D newPos;
++      if (prePos == null) {
++        newPos = new Point2D.Double(pos.getX() - bounds.getX(),
++            pos.getY());
++      } else {
++        newPos = new Point2D.Double(
++            preBounds.getMaxX()
++                + pos.getX()
++                - bounds.getX()
++                - Math.min(preBounds.getWidth(),
++                bounds.getWidth())
++                * (rnd.nextDouble() / 20 + (rotateEnabled ? 0.27
++                : 0.1)), pos.getY());
++      }
++      v.setGlyphPosition(fi, newPos);
++      prePos = newPos;
++      preBounds = v.getGlyphVisualBounds(fi).getBounds2D();
++    }
++  }
++
++  protected BufferedImage postProcess(BufferedImage img) {
++    if ( /*effectConfig.isRippleEnabled()*/ true) {
++      final Rippler.AxisConfig vertical = new Rippler.AxisConfig(
++          rnd.nextDouble() * 2 * Math.PI, (1 + rnd.nextDouble() * 2)
++          * Math.PI, img.getHeight() / 10.0);
++      final Rippler.AxisConfig horizontal = new Rippler.AxisConfig(
++          rnd.nextDouble() * 2 * Math.PI, (2 + rnd.nextDouble() * 2)
++          * Math.PI, img.getWidth() / 100.0);
++      final Rippler op = new Rippler(vertical, horizontal);
++
++      img = op.filter(img, createImage());
++    }
++    if ( /*effectConfig.isBlurEnabled()*/ true) {
++      final float[] blurArray = new float[9];
++      fillBlurArray(blurArray);
++      final ConvolveOp op = new ConvolveOp(new Kernel(3, 3, blurArray),
++          ConvolveOp.EDGE_NO_OP, null);
++
++      img = op.filter(img, createImage());
++    }
++    return img;
++  }
++
++  protected void fillBlurArray(float[] array) {
++    float sum = 0;
++    for (int fi = 0; fi < array.length; fi++) {
++      array[fi] = rnd.nextFloat();
++      sum += array[fi];
++    }
++    for (int fi = 0; fi < array.length; fi++) {
++      array[fi] /= sum;
++    }
++  }
++}
+diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/captcha/generator/Rippler.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/captcha/generator/Rippler.java
+new file mode 100644
+index 00000000..2f14b2ff
+--- /dev/null
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/captcha/generator/Rippler.java
+@@ -0,0 +1,175 @@
++/*
++ * This file is part of Velocity-BotFilter, licensed under the AGPLv3 License (AGPLv3).
++ *
++ * Copyright (C) 2021 Vjatšeslav Maspanov <Leymooo>
++ *
++ * This program is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU Affero General Public License as published by
++ * the Free Software Foundation, either version 3 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU Affero General Public License for more details.
++ *
++ * You should have received a copy of the GNU Affero General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ */
++
++package net.elytrium.elytraproxy.botfilter.captcha.generator;
++
++import java.awt.image.BufferedImage;
++
++/**
++ * A filter to generate ripple (wave) effected images. Uses a transformed sinus
++ * wave for this. This class is thread safe.
++ *
++ * @author akiraly
++ */
++public class Rippler {
++
++  /**
++   * Class to respresent wave tranforming information for an axis.
++   */
++  public static class AxisConfig {
++
++    private final double start;
++
++    private final double length;
++
++    private final double amplitude;
++
++    /**
++     * Constructor.
++     *
++     * @param start     the starting x offset to generate wave values. Should be
++     *                  between 0 and 2 * {@link Math#PI}.
++     * @param length    the length of x to be used to generate wave values.
++     *                  Should be between 0 and 4 * {@link Math#PI}.
++     * @param amplitude the maximum y value, if it is too big, some
++     *                  important parts of the image (like the text) can "wave" out on the
++     *                  top or on the bottom of the image.
++     */
++    public AxisConfig(double start, double length, double amplitude) {
++      this.start = normalize(start, 2);
++      this.length = normalize(length, 4);
++      this.amplitude = amplitude;
++    }
++
++    /**
++     * Normalizes parameter to fall into [0, multi * {@link Math#PI}].
++     *
++     * @param a     to be normalized
++     * @param multi multiplicator used for end value
++     * @return normalized value
++     */
++    protected double normalize(double a, int multi) {
++      final double piMulti = multi * Math.PI;
++
++      a = Math.abs(a);
++      final double d = Math.floor(a / piMulti);
++
++      return a - d * piMulti;
++    }
++
++    /**
++     * @return wave part start value
++     */
++    public double getStart() {
++      return start;
++    }
++
++    /**
++     * @return wave part length
++     */
++    public double getLength() {
++      return length;
++    }
++
++    /**
++     * @return amplitude used to transform the wave part
++     */
++    public double getAmplitude() {
++      return amplitude;
++    }
++  }
++
++  private final AxisConfig vertical;
++
++  private final AxisConfig horizontal;
++
++  /**
++   * Constructor.
++   *
++   * @param vertical   config to calculate waving deltas from x axis (so to
++   *                   modify y values), not null
++   * @param horizontal config to calculate waving deltas from y axis (so to
++   *                   modify x values), not null
++   */
++  public Rippler(AxisConfig vertical, AxisConfig horizontal) {
++    this.vertical = vertical;
++    this.horizontal = horizontal;
++  }
++
++  /**
++   * Draws a rippled (waved) variant of source into destination.
++   *
++   * @param src  to be transformed, not null
++   * @param dest to hold the result, not null
++   * @return dest is returned
++   */
++  public BufferedImage filter(BufferedImage src, BufferedImage dest) {
++    final int width = src.getWidth();
++    final int height = src.getHeight();
++
++    final int[] verticalDelta = calcDeltaArray(vertical, width);
++
++    final int[] horizontalDelta = calcDeltaArray(horizontal, height);
++
++    for (int x = 0; x < width; x++) {
++      for (int y = 0; y < height; y++) {
++        final int ny = (y + verticalDelta[x] + height) % height;
++        final int nx = (x + horizontalDelta[ny] + width) % width;
++        dest.setRGB(nx, ny, src.getRGB(x, y));
++      }
++    }
++
++    return dest;
++  }
++
++  /**
++   * Calculates wave delta array.
++   *
++   * @param axisConfig config object to transform the wave, not null
++   * @param num        number of points needed, positive
++   * @return the calculated num length delta array
++   */
++  protected int[] calcDeltaArray(AxisConfig axisConfig, int num) {
++    final int[] delta = new int[num];
++
++    final double start = axisConfig.getStart();
++    final double period = axisConfig.getLength() / num;
++    final double amplitude = axisConfig.getAmplitude();
++
++    for (int fi = 0; fi < num; fi++) {
++      delta[fi] = (int) Math.round(amplitude * Math.sin(start + fi * period));
++    }
++
++    return delta;
++  }
++
++  /**
++   * @return vertical config, not null
++   */
++  public AxisConfig getVertical() {
++    return vertical;
++  }
++
++  /**
++   * @return horizontal config, not null
++   */
++  public AxisConfig getHorizontal() {
++    return horizontal;
++  }
++}
+diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/captcha/generator/map/CraftMapCanvas.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/captcha/generator/map/CraftMapCanvas.java
+new file mode 100644
+index 00000000..d054409f
+--- /dev/null
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/captcha/generator/map/CraftMapCanvas.java
+@@ -0,0 +1,62 @@
++/*
++ * This file is part of Velocity-BotFilter, licensed under the AGPLv3 License (AGPLv3).
++ *
++ * Copyright (C) 2021 Vjatšeslav Maspanov <Leymooo>
++ *
++ * This program is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU Affero General Public License as published by
++ * the Free Software Foundation, either version 3 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU Affero General Public License for more details.
++ *
++ * You should have received a copy of the GNU Affero General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ */
++
++package net.elytrium.elytraproxy.botfilter.captcha.generator.map;
++
++import java.awt.image.BufferedImage;
++import java.util.Arrays;
++import net.elytrium.elytraproxy.botfilter.protocol.packet.MapDataPacket;
++
++public class CraftMapCanvas {
++
++  private static final ThreadLocal<byte[]> mcPixelsBuffer =
++      ThreadLocal.withInitial(() -> new byte[128 * 128]);
++  private final byte[] buffer;
++
++  public CraftMapCanvas() {
++    this.buffer = mcPixelsBuffer.get();
++    Arrays.fill(this.buffer, (byte) -1);
++  }
++
++  public void setPixel(int x, int y, byte color) {
++    if (x >= 0 && y >= 0 && x < 128 && y < 128) {
++      if (this.buffer[y * 128 + x] != color) {
++        this.buffer[y * 128 + x] = color;
++      }
++    }
++  }
++
++  @SuppressWarnings("deprecation")
++  public void drawImage(int x, int y, BufferedImage image) {
++    int[] bytes = MapPalette.imageToBytes(image);
++    int width = image.getWidth(null);
++    int height = image.getHeight(null);
++
++    for (int x2 = 0; x2 < width; ++x2) {
++      for (int y2 = 0; y2 < height; ++y2) {
++        this.setPixel(x + x2, y + y2, (byte) bytes[y2 * width + x2]);
++      }
++    }
++
++  }
++
++  public MapDataPacket.MapData getMapData() {
++    return new MapDataPacket.MapData(128, 128, 0, 0, this.buffer);
++  }
++}
+diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/captcha/generator/map/MapPalette.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/captcha/generator/map/MapPalette.java
+new file mode 100644
+index 00000000..9300a596
+--- /dev/null
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/captcha/generator/map/MapPalette.java
+@@ -0,0 +1,155 @@
++/*
++ * This file is part of Velocity-BotFilter, licensed under the AGPLv3 License (AGPLv3).
++ *
++ * Copyright (C) 2021 Vjatšeslav Maspanov <Leymooo>
++ *
++ * This program is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU Affero General Public License as published by
++ * the Free Software Foundation, either version 3 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU Affero General Public License for more details.
++ *
++ * You should have received a copy of the GNU Affero General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ */
++
++package net.elytrium.elytraproxy.botfilter.captcha.generator.map;
++
++import java.awt.Color;
++import java.awt.image.BufferedImage;
++import java.util.HashMap;
++import java.util.Map;
++
++public final class MapPalette {
++
++  private static final ThreadLocal<int[]> rgbBuffer =
++      ThreadLocal.withInitial(() -> new int[128 * 128]);
++
++  public static Color[] colors() {
++    return new Color[] {
++        c(0, 0, 0), c(0, 0, 0), c(0, 0, 0), c(0, 0, 0),
++        c(89, 125, 39), c(109, 153, 48), c(127, 178, 56), c(67, 94, 29),
++        c(174, 164, 115), c(213, 201, 140), c(247, 233, 163), c(130, 123, 86),
++        c(140, 140, 140), c(171, 171, 171), c(199, 199, 199), c(105, 105, 105),
++        c(180, 0, 0), c(220, 0, 0), c(255, 0, 0), c(135, 0, 0),
++        c(112, 112, 180), c(138, 138, 220), c(160, 160, 255), c(84, 84, 135),
++        c(117, 117, 117), c(144, 144, 144), c(167, 167, 167), c(88, 88, 88),
++        c(0, 87, 0), c(0, 106, 0), c(0, 124, 0), c(0, 65, 0),
++        c(180, 180, 180), c(220, 220, 220), c(255, 255, 255), c(135, 135, 135),
++        c(115, 118, 129), c(141, 144, 158), c(164, 168, 184), c(86, 88, 97),
++        c(106, 76, 54), c(130, 94, 66), c(151, 109, 77), c(79, 57, 40),
++        c(79, 79, 79), c(96, 96, 96), c(112, 112, 112), c(59, 59, 59),
++        c(45, 45, 180), c(55, 55, 220), c(64, 64, 255), c(33, 33, 135),
++        c(100, 84, 50), c(123, 102, 62), c(143, 119, 72), c(75, 63, 38),
++        c(180, 177, 172), c(220, 217, 211), c(255, 252, 245), c(135, 133, 129),
++        c(152, 89, 36), c(186, 109, 44), c(216, 127, 51), c(114, 67, 27),
++        c(125, 53, 152), c(153, 65, 186), c(178, 76, 216), c(94, 40, 114),
++        c(72, 108, 152), c(88, 132, 186), c(102, 153, 216), c(54, 81, 114),
++        c(161, 161, 36), c(197, 197, 44), c(229, 229, 51), c(121, 121, 27),
++        c(89, 144, 17), c(109, 176, 21), c(127, 204, 25), c(67, 108, 13),
++        c(170, 89, 116), c(208, 109, 142), c(242, 127, 165), c(128, 67, 87),
++        c(53, 53, 53), c(65, 65, 65), c(76, 76, 76), c(40, 40, 40),
++        c(108, 108, 108), c(132, 132, 132), c(153, 153, 153), c(81, 81, 81),
++        c(53, 89, 108), c(65, 109, 132), c(76, 127, 153), c(40, 67, 81),
++        c(89, 44, 125), c(109, 54, 153), c(127, 63, 178), c(67, 33, 94),
++        c(36, 53, 125), c(44, 65, 153), c(51, 76, 178), c(27, 40, 94),
++        c(72, 53, 36), c(88, 65, 44), c(102, 76, 51), c(54, 40, 27),
++        c(72, 89, 36), c(88, 109, 44), c(102, 127, 51), c(54, 67, 27),
++        c(108, 36, 36), c(132, 44, 44), c(153, 51, 51), c(81, 27, 27),
++        c(17, 17, 17), c(21, 21, 21), c(25, 25, 25), c(13, 13, 13),
++        c(176, 168, 54), c(215, 205, 66), c(250, 238, 77), c(132, 126, 40),
++        c(64, 154, 150), c(79, 188, 183), c(92, 219, 213), c(48, 115, 112),
++        c(52, 90, 180), c(63, 110, 220), c(74, 128, 255), c(39, 67, 135),
++        c(0, 153, 40), c(0, 187, 50), c(0, 217, 58), c(0, 114, 30),
++        c(91, 60, 34), c(111, 74, 42), c(129, 86, 49), c(68, 45, 25),
++        c(79, 1, 0), c(96, 1, 0), c(112, 2, 0), c(59, 1, 0),
++    };
++  }
++
++  private static final Map<Integer, Byte> colorToIndexMap = new HashMap<>();
++
++  public static void prepareColors() {
++    for (int i = 4; i < MapPalette.colors().length; ++i) {
++      Color color = MapPalette.colors()[i];
++      byte index = (byte) (i < 128 ? i : -129 + (i - 127));
++      colorToIndexMap.put(color.getRGB(), index);
++    }
++  }
++
++  private static Color c(int r, int g, int b) {
++    return new Color(r, g, b);
++  }
++
++  private static double getDistance(Color c1, Color c2) {
++    double rmean = (double) (c1.getRed() + c2.getRed()) / 2.0D;
++    double r = (double) (c1.getRed() - c2.getRed());
++    double g = (double) (c1.getGreen() - c2.getGreen());
++    int b = c1.getBlue() - c2.getBlue();
++    double weightR = 2.0D + rmean / 256.0D;
++    double weightG = 4.0D;
++    double weightB = 2.0D + (255.0D - rmean) / 256.0D;
++
++    return weightR * r * r + weightG * g * g + weightB * (double) b * (double) b;
++  }
++
++  /**
++   * Convert an Image to a byte[] using the palette.
++   *
++   * @param image The image to convert.
++   * @return A byte[] containing the pixels of the image.
++   * @deprecated Magic value
++   */
++  @Deprecated
++  public static int[] imageToBytes(final BufferedImage image) {
++    int[] result = rgbBuffer.get();
++    image.getRGB(0, 0, image.getWidth(), image.getHeight(), result, 0, image.getWidth());
++    for (int i = 0; i < result.length; ++i) {
++      result[i] = tryFastMatchColor(result[i]);
++    }
++    return result;
++  }
++
++  public static byte tryFastMatchColor(int rgb) {
++    if (((rgb >> 24) & 0xFF) < 120) {
++      return -1;
++    }
++    Byte color = colorToIndexMap.get(rgb);
++    if (color != null) {
++      return color;
++    }
++    return matchColor(new Color(rgb, true));
++  }
++
++  /**
++   * Get the index of the closest matching color in the palette to the given
++   * color.
++   *
++   * @param color The Color to match.
++   * @return The index in the palette.
++   * @deprecated Magic value
++   */
++  @Deprecated
++  public static byte matchColor(Color color) {
++    if (color.getAlpha() < 128) {
++      return (byte) -1;
++    } else {
++      int index = 0;
++      double best = -1.0D;
++
++      for (int i = 4; i < MapPalette.colors().length; ++i) {
++        double distance = getDistance(color, MapPalette.colors()[i]);
++
++        if (distance < best || best == -1.0D) {
++          best = distance;
++          index = i;
++        }
++      }
++
++      return (byte) (index < 128 ? index : -129 + (index - 127));
++    }
++  }
++}
+diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/BotFilterProtocol.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/BotFilterProtocol.java
+index 24d2a5ad..dfa5167d 100644
+--- a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/BotFilterProtocol.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/BotFilterProtocol.java
+@@ -32,7 +32,9 @@ import static com.velocitypowered.proxy.protocol.StateRegistry.map;
+ import com.velocitypowered.api.network.ProtocolVersion;
+ import com.velocitypowered.proxy.protocol.StateRegistry;
+ import net.elytrium.elytraproxy.botfilter.protocol.packet.JoinGame;
++import net.elytrium.elytraproxy.botfilter.protocol.packet.MapDataPacket;
+ import net.elytrium.elytraproxy.botfilter.protocol.packet.PlayerPositionAndLook;
++import net.elytrium.elytraproxy.botfilter.protocol.packet.SetSlot;
+ import net.elytrium.elytraproxy.botfilter.protocol.packet.world.ChunkData;
+ import net.elytrium.elytraproxy.botfilter.protocol.packet.world.UpdateLight;
+ import net.elytrium.elytraproxy.botfilter.protocol.packet.UpdateViewPosition;
+@@ -61,8 +63,8 @@ public class BotFilterProtocol {
+         map(0x36, ProtocolVersion.MINECRAFT_1_15, true),
+         map(0x35, ProtocolVersion.MINECRAFT_1_16, true),
+         map(0x34, ProtocolVersion.MINECRAFT_1_16_2, true),
+-        map(0x38, ProtocolVersion.MINECRAFT_1_17, true));
+-
++        map(0x38, ProtocolVersion.MINECRAFT_1_17, true)
++    );
+     StateRegistry.BotFilter.clientbound.register(
+         ChunkData.class, ChunkData::new,
+         map(0x21, ProtocolVersion.MINECRAFT_1_7_2, true),
+@@ -73,19 +75,43 @@ public class BotFilterProtocol {
+         map(0x22, ProtocolVersion.MINECRAFT_1_15, true),
+         map(0x21, ProtocolVersion.MINECRAFT_1_16, true),
+         map(0x20, ProtocolVersion.MINECRAFT_1_16_2, true),
+-        map(0x22, ProtocolVersion.MINECRAFT_1_17, true));
+-
++        map(0x22, ProtocolVersion.MINECRAFT_1_17, true)
++    );
++    StateRegistry.BotFilter.clientbound.register(
++        SetSlot.class, SetSlot::new,
++        map(0x2F, ProtocolVersion.MINECRAFT_1_7_2, true),
++        map(0x2F, ProtocolVersion.MINECRAFT_1_8, true),
++        map(0x16, ProtocolVersion.MINECRAFT_1_9, true),
++        map(0x17, ProtocolVersion.MINECRAFT_1_13, true),
++        map(0x16, ProtocolVersion.MINECRAFT_1_14, true),
++        map(0x17, ProtocolVersion.MINECRAFT_1_15, true),
++        map(0x16, ProtocolVersion.MINECRAFT_1_16, true),
++        map(0x15, ProtocolVersion.MINECRAFT_1_16_2, true),
++        map(0x16, ProtocolVersion.MINECRAFT_1_17, true)
++    );
+     StateRegistry.BotFilter.clientbound.register(
+         UpdateLight.class, UpdateLight::new,
+         map(0x24, ProtocolVersion.MINECRAFT_1_14, true),
+         map(0x25, ProtocolVersion.MINECRAFT_1_15, true),
+         map(0x24, ProtocolVersion.MINECRAFT_1_16, true),
+         map(0x23, ProtocolVersion.MINECRAFT_1_16_2, true),
+-        map(0x25, ProtocolVersion.MINECRAFT_1_17, true));
+-
++        map(0x25, ProtocolVersion.MINECRAFT_1_17, true)
++    );
++    StateRegistry.BotFilter.clientbound.register(
++        MapDataPacket.class, MapDataPacket::new,
++        map(0x34, ProtocolVersion.MINECRAFT_1_7_2, true),
++        map(0x34, ProtocolVersion.MINECRAFT_1_8, true),
++        map(0x24, ProtocolVersion.MINECRAFT_1_9, true),
++        map(0x26, ProtocolVersion.MINECRAFT_1_13, true),
++        map(0x26, ProtocolVersion.MINECRAFT_1_14, true),
++        map(0x27, ProtocolVersion.MINECRAFT_1_15, true),
++        map(0x26, ProtocolVersion.MINECRAFT_1_16, true),
++        map(0x25, ProtocolVersion.MINECRAFT_1_16_2, true),
++        map(0x27, ProtocolVersion.MINECRAFT_1_17, true)
++    );
+     StateRegistry.BotFilter.clientbound.register(
+         UpdateViewPosition.class, UpdateViewPosition::new,
+-        map(0x49, ProtocolVersion.MINECRAFT_1_17, true));
+-
++        map(0x49, ProtocolVersion.MINECRAFT_1_17, true)
++    );
+   }
+ }
+diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/cache/CachedCaptcha.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/cache/CachedCaptcha.java
+new file mode 100644
+index 00000000..e87a4ff3
+--- /dev/null
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/cache/CachedCaptcha.java
+@@ -0,0 +1,44 @@
++/*
++ * This file is part of Velocity-BotFilter, licensed under the AGPLv3 License (AGPLv3).
++ *
++ * Copyright (C) 2021 Vjatšeslav Maspanov <Leymooo>
++ *
++ * This program is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU Affero General Public License as published by
++ * the Free Software Foundation, either version 3 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU Affero General Public License for more details.
++ *
++ * You should have received a copy of the GNU Affero General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ */
++
++package net.elytrium.elytraproxy.botfilter.protocol.cache;
++
++import net.elytrium.elytraproxy.botfilter.protocol.packet.MapDataPacket;
++
++import java.util.ArrayList;
++import java.util.List;
++import java.util.Random;
++
++/**
++ * @author Leymooo
++ */
++public class CachedCaptcha {
++
++  private static final Random random = new Random();
++
++  private static final List<CaptchaHandler> captchas = new ArrayList<>();
++
++  public static void createCaptchaPacket(MapDataPacket map, String answer) {
++    captchas.add(new CaptchaHandler(map, answer));
++  }
++
++  public static CaptchaHandler randomCaptcha() {
++    return captchas.get(random.nextInt(captchas.size()));
++  }
++}
+diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/cache/CaptchaHandler.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/cache/CaptchaHandler.java
+new file mode 100644
+index 00000000..ea5d835d
+--- /dev/null
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/cache/CaptchaHandler.java
+@@ -0,0 +1,33 @@
++/*
++ * This file is part of Velocity-BotFilter, licensed under the AGPLv3 License (AGPLv3).
++ *
++ * Copyright (C) 2021 Vjatšeslav Maspanov <Leymooo>
++ *
++ * This program is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU Affero General Public License as published by
++ * the Free Software Foundation, either version 3 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU Affero General Public License for more details.
++ *
++ * You should have received a copy of the GNU Affero General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ */
++
++package net.elytrium.elytraproxy.botfilter.protocol.cache;
++
++import lombok.AllArgsConstructor;
++import lombok.Getter;
++import lombok.NoArgsConstructor;
++import net.elytrium.elytraproxy.botfilter.protocol.packet.MapDataPacket;
++
++@NoArgsConstructor
++@AllArgsConstructor
++@Getter
++public class CaptchaHandler {
++    private MapDataPacket map;
++    private String answer;
++}
+\ No newline at end of file
+diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/cache/MultiplePreparedPackets.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/cache/MultiplePreparedPackets.java
+index 5c7a907c..6bd66bff 100644
+--- a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/cache/MultiplePreparedPackets.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/cache/MultiplePreparedPackets.java
+@@ -30,9 +30,9 @@ import java.util.Map;
+ 
+ public class MultiplePreparedPackets {
+ 
+-  private Map<ProtocolVersion, ByteBuf> multiplePayloadBuf = new EnumMap<ProtocolVersion, ByteBuf>(
++  private final Map<ProtocolVersion, ByteBuf> multiplePayloadBuf = new EnumMap<>(
+       ProtocolVersion.class);
+-  private PreparedPacket[] onlineModePackets;
++  private final PreparedPacket[] onlineModePackets;
+ 
+   public MultiplePreparedPackets(PreparedPacket... preparedPackets) {
+     for (PreparedPacket packet : preparedPackets) {
+diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/cache/PacketUtils.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/cache/PacketUtils.java
+new file mode 100644
+index 00000000..ec057776
+--- /dev/null
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/cache/PacketUtils.java
+@@ -0,0 +1,35 @@
++/*
++ * This file is part of Velocity-BotFilter, licensed under the AGPLv3 License (AGPLv3).
++ *
++ * Copyright (C) 2021 Vjatšeslav Maspanov <Leymooo>
++ *
++ * This program is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU Affero General Public License as published by
++ * the Free Software Foundation, either version 3 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU Affero General Public License for more details.
++ *
++ * You should have received a copy of the GNU Affero General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ */
++
++package net.elytrium.elytraproxy.botfilter.protocol.cache;
++
++import com.velocitypowered.api.network.ProtocolVersion;
++import com.velocitypowered.proxy.protocol.MinecraftPacket;
++import com.velocitypowered.proxy.protocol.ProtocolUtils;
++import io.netty.buffer.ByteBuf;
++import io.netty.buffer.ByteBufAllocator;
++
++public class PacketUtils {
++  public static ByteBuf createPacket(MinecraftPacket packet, int id, ProtocolVersion protocol) {
++    final ByteBuf buffer = ByteBufAllocator.DEFAULT.buffer();
++    ProtocolUtils.writeVarInt(buffer, id);
++    packet.encode(buffer, ProtocolUtils.Direction.CLIENTBOUND, protocol);
++    return buffer;
++  }
++}
+diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/cache/netty/PreparedPacketEncoder.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/cache/netty/PreparedPacketEncoder.java
+index da613aa7..57300da4 100644
+--- a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/cache/netty/PreparedPacketEncoder.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/cache/netty/PreparedPacketEncoder.java
+@@ -50,7 +50,6 @@ public class PreparedPacketEncoder extends MessageToMessageEncoder<PreparedPacke
+   private final ProtocolVersion protocolVersion;
+   private final boolean onlineMode;
+ 
+-
+   @Override
+   protected void encode(ChannelHandlerContext ctx, PreparedPacket msg, List<Object> out)
+       throws Exception {
+diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/data/registry/Biome.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/data/registry/Biome.java
+index fb35f4d1..98ed2118 100644
+--- a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/data/registry/Biome.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/data/registry/Biome.java
+@@ -29,7 +29,7 @@ import net.elytrium.elytraproxy.botfilter.protocol.data.registry.Biome.Effects.M
+ 
+ public class Biome {
+ 
+-  public static final Biome PLAINTS = new Biome("minecraft:plains", 1,
++  public static final Biome PLAINS = new Biome("minecraft:plains", 1,
+       new Element("rain", 0.125f, 0.8f, 0.05f, 0.4f, "plains",
+           Effects.builder(7907327, 329011, 12638463, 415920)
+               .moodSound(MoodSound.of(6000, 2.0d, 8, "minecraft:ambient.cave")).build()));
+@@ -45,6 +45,7 @@ public class Biome {
+           Effects.builder(7907327, 329011, 12638463, 415920).grassColorModifier("swamp")
+               .foliageColor(6975545)
+               .moodSound(MoodSound.of(6000, 2.0d, 8, "minecraft:ambient.cave")).build()));
++
+   public final String name;
+   public final int id;
+   public final Element element;
+diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/data/registry/Dimension.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/data/registry/Dimension.java
+index c661943c..69ce35c9 100644
+--- a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/data/registry/Dimension.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/data/registry/Dimension.java
+@@ -30,9 +30,11 @@ import net.kyori.adventure.nbt.CompoundBinaryTag.Builder;
+ @Data
+ public class Dimension {
+ 
+-  public static final Dimension OVERWORLD = new Dimension("minecraft:overworld", 0, false, true,
+-      0.0f, null, false, "minecraft:infiniburn_overworld",
+-      false, true, true, "minecraft:overworld", true, 0, 256, 256, 1.0f, false, false);
++  public static Dimension getDimension(String modernKey, int id) {
++    return new Dimension(modernKey, id, false, true,
++        0.0f, null, false, "minecraft:infiniburn_nether",
++        false, true, true, modernKey, true, 0, 256, 256, 1.0f, false, false);
++  }
+ 
+   @NonNull
+   private final String key;
+diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/packet/MapDataPacket.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/packet/MapDataPacket.java
+new file mode 100644
+index 00000000..b665e5f7
+--- /dev/null
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/packet/MapDataPacket.java
+@@ -0,0 +1,74 @@
++/*
++ * This file is part of Velocity-BotFilter, licensed under the AGPLv3 License (AGPLv3).
++ *
++ * Copyright (C) 2021 Vjatšeslav Maspanov <Leymooo>
++ *
++ * This program is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU Affero General Public License as published by
++ * the Free Software Foundation, either version 3 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU Affero General Public License for more details.
++ *
++ * You should have received a copy of the GNU Affero General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ */
++
++package net.elytrium.elytraproxy.botfilter.protocol.packet;
++
++import com.velocitypowered.api.network.ProtocolVersion;
++import com.velocitypowered.proxy.protocol.MinecraftPacket;
++import com.velocitypowered.proxy.protocol.ProtocolUtils;
++import io.netty.buffer.ByteBuf;
++import lombok.AllArgsConstructor;
++import lombok.Data;
++import lombok.EqualsAndHashCode;
++import lombok.Getter;
++import lombok.NoArgsConstructor;
++
++@Data
++@NoArgsConstructor
++@AllArgsConstructor
++@EqualsAndHashCode(callSuper = false)
++public class MapDataPacket implements MinecraftPacket {
++
++  private int mapId;
++  private byte scale;
++  private MapData data;
++
++  @Override
++  public void encode(ByteBuf buf, ProtocolUtils.Direction direction, ProtocolVersion version) {
++    ProtocolUtils.writeVarInt(buf, this.mapId);
++    buf.writeByte(this.scale);
++    if (version.isAfterOrEq(ProtocolVersion.MINECRAFT_1_9) &&
++        version.isBefore(ProtocolVersion.MINECRAFT_1_17)) {
++      buf.writeBoolean(false);
++    }
++    if (version.isAfterOrEq(ProtocolVersion.MINECRAFT_1_14)) {
++      buf.writeBoolean(false);
++    }
++    if (version.isAfterOrEq(ProtocolVersion.MINECRAFT_1_17)) {
++      buf.writeBoolean(false);
++    } else {
++      ProtocolUtils.writeVarInt(buf, 0);
++    }
++    buf.writeByte(data.getColumns());
++    buf.writeByte(data.getRows());
++    buf.writeByte(data.getX());
++    buf.writeByte(data.getY());
++    ProtocolUtils.writeByteArray(buf, data.getData());
++  }
++
++  @AllArgsConstructor
++  @Getter
++  public static class MapData {
++    private int columns;
++    private int rows;
++    private int x;
++    private int y;
++    private byte[] data;
++  }
++}
+diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/packet/SetSlot.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/packet/SetSlot.java
+new file mode 100644
+index 00000000..a690bc17
+--- /dev/null
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/packet/SetSlot.java
+@@ -0,0 +1,95 @@
++/*
++ * This file is part of Velocity-BotFilter, licensed under the AGPLv3 License (AGPLv3).
++ *
++ * Copyright (C) 2021 Vjatšeslav Maspanov <Leymooo>
++ *
++ * This program is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU Affero General Public License as published by
++ * the Free Software Foundation, either version 3 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU Affero General Public License for more details.
++ *
++ * You should have received a copy of the GNU Affero General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ */
++
++package net.elytrium.elytraproxy.botfilter.protocol.packet;
++
++import com.velocitypowered.api.network.ProtocolVersion;
++import com.velocitypowered.proxy.protocol.MinecraftPacket;
++import com.velocitypowered.proxy.protocol.ProtocolUtils;
++import io.netty.buffer.ByteBuf;
++import lombok.AllArgsConstructor;
++import lombok.Data;
++import lombok.EqualsAndHashCode;
++import lombok.NoArgsConstructor;
++import net.kyori.adventure.nbt.CompoundBinaryTag;
++import net.kyori.adventure.nbt.IntBinaryTag;
++
++@Data
++@NoArgsConstructor
++@AllArgsConstructor
++@EqualsAndHashCode(callSuper = false)
++public class SetSlot implements MinecraftPacket {
++
++  private int windowId;
++  private int slot;
++  private int item;
++  private int count;
++  private int data;
++
++  @Override
++  public void encode(ByteBuf buf, ProtocolUtils.Direction direction, ProtocolVersion version) {
++    buf.writeByte(this.windowId);
++    buf.writeShort(this.slot);
++    int id = this.item == 358 ? getCaptchaId(version) : this.item;
++    boolean present = id > 0;
++
++    if (version.isAfterOrEq(ProtocolVersion.MINECRAFT_1_13_2)) {
++      buf.writeBoolean(present);
++    }
++
++    if (!present && version.isBefore(ProtocolVersion.MINECRAFT_1_13_2)) {
++      buf.writeShort(-1);
++    }
++
++    if (present) {
++      if (version.isBefore(ProtocolVersion.MINECRAFT_1_13_2)) {
++        buf.writeShort(id);
++      } else {
++        ProtocolUtils.writeVarInt(buf, id);
++      }
++      buf.writeByte(this.count);
++      if (version.isBefore(ProtocolVersion.MINECRAFT_1_13)) {
++        buf.writeShort(this.data);
++      }
++
++      if (version.isBefore(ProtocolVersion.MINECRAFT_1_17)) {
++        buf.writeByte(0); //No Nbt
++      } else {
++        CompoundBinaryTag nbt = CompoundBinaryTag.builder().put("map", IntBinaryTag.of(0)).build();
++        ProtocolUtils.writeCompoundTag(buf, nbt);
++      }
++    }
++  }
++
++  private int getCaptchaId(ProtocolVersion version) {
++    if (version.isBeforeOrEq(ProtocolVersion.MINECRAFT_1_12_2)) {
++      return 358;
++    } else if (version.equals(ProtocolVersion.MINECRAFT_1_13)) {
++      return 608;
++    } else if (version.isBeforeOrEq(ProtocolVersion.MINECRAFT_1_13_2)) {
++      return 613;
++    } else if (version.isBeforeOrEq(ProtocolVersion.MINECRAFT_1_15_2)) {
++      return 671;
++    } else if (version.isBeforeOrEq(ProtocolVersion.MINECRAFT_1_16_4)) {
++      return 733;
++    } else {
++      return 847;
++    }
++  }
++}
+diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/ServerPackets.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/ServerPackets.java
+index 6919e5e1..6d87e196 100644
+--- a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/ServerPackets.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/ServerPackets.java
+@@ -36,11 +36,13 @@ import net.elytrium.elytraproxy.botfilter.protocol.data.registry.Dimension;
+ import net.elytrium.elytraproxy.botfilter.protocol.data.registry.DimensionRegistry;
+ import net.elytrium.elytraproxy.botfilter.protocol.packet.JoinGame;
+ import net.elytrium.elytraproxy.botfilter.protocol.packet.PlayerPositionAndLook;
++import net.elytrium.elytraproxy.botfilter.protocol.packet.SetSlot;
+ import net.elytrium.elytraproxy.botfilter.protocol.packet.UpdateViewPosition;
+ import net.elytrium.elytraproxy.botfilter.protocol.packet.world.ChunkData;
+ import net.elytrium.elytraproxy.botfilter.protocol.packet.world.UpdateLight;
+ import net.elytrium.elytraproxy.botfilter.server.world.VirtualWorld;
+ import net.elytrium.elytraproxy.botfilter.server.world.chunk.SimpleChunk;
++import net.elytrium.elytraproxy.config.Settings;
+ import net.kyori.adventure.text.Component;
+ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+ 
+@@ -50,9 +52,10 @@ public class ServerPackets {
+   private final PacketCompressor packetCompressor;
+   private final VirtualServer virtualServer;
+   private VirtualWorld virtualWorld;
+-  //JoinGame + Chunks + Light + PlayerPosAndLook
+   private MultiplePreparedPackets spawnPackets;
+   private PreparedPacket<Disconnect> alreadyConnected;
++  private PreparedPacket<SetSlot> setSlot;
++  private PreparedPacket<SetSlot> resetSlot;
+ 
+   public ServerPackets(PacketCompressor packetCompressor,
+       VirtualServer virtualServer) {
+@@ -62,8 +65,11 @@ public class ServerPackets {
+ 
+   public void createPackets() {
+     releaseAll();
+-    this.virtualWorld = new VirtualWorld(Dimension.OVERWORLD,
+-        new DimensionInfo(Dimension.OVERWORLD.getKey(), Dimension.OVERWORLD.getKey(), true, false));
++    String key = Settings.IMP.ANTIBOT.DIMENSION_MODERN_KEY;
++    int dimensionId = Settings.IMP.ANTIBOT.DIMENSION_ID;
++    Dimension dimension = Dimension.getDimension(key, dimensionId);
++    this.virtualWorld = new VirtualWorld(dimension,
++        new DimensionInfo(key, key, true, false));
+     virtualWorld.setSkyLight(0, 60, 0,
+         (byte) 1); //1.7 workaround //TODO: Maybe broken with new light system realiztion
+ 
+@@ -99,21 +105,25 @@ public class ServerPackets {
+     preparedPackets.add(createPlayerPosAndLookPacket());
+     spawnPackets = new MultiplePreparedPackets(preparedPackets.toArray(new PreparedPacket[0]));
+     alreadyConnected = createDisconnectPacket("&cAlready connected", StateRegistry.LOGIN);
++    setSlot = createSetSlotPacket(0, 36, 358, 1, 0);
++    resetSlot = createSetSlotPacket(0, 36, -1, 0, 0);
+     virtualWorld = null;
+   }
+ 
+-  //TODO use Dimensions ids for < 1.16 version
+   private PreparedPacket<JoinGame> createJoinGamePacket() {
++    String key = Settings.IMP.ANTIBOT.DIMENSION_MODERN_KEY;
++    int dimensionId = Settings.IMP.ANTIBOT.DIMENSION_ID;
++    Dimension dimension = Dimension.getDimension(key, dimensionId);
+     DimensionRegistry dimensionRegistry = new DimensionRegistry();
+     dimensionRegistry.addDimension(
+-        Dimension.OVERWORLD, ImmutableList.of(Biome.PLAINTS, Biome.SWAMP, Biome.SWAMP_HILLS));
+-    dimensionRegistry.setActiveDimension(Dimension.OVERWORLD);
++        dimension, ImmutableList.of(Biome.PLAINS, Biome.SWAMP, Biome.SWAMP_HILLS));
++    dimensionRegistry.setActiveDimension(dimension);
+     dimensionRegistry.setActiveDimensionInfo(
+-        new DimensionInfo("minecraft:overworld", "minecraft:overworld", false, false));
++        new DimensionInfo(key, key, false, false));
+     PreparedPacket<JoinGame> joinGame = new PreparedPacket<>();
+-    joinGame.prepare(JoinGame.builder().entityId(0).gamemode((short) 1).dimension(0).
++    joinGame.prepare(JoinGame.builder().entityId(0).gamemode((short) 2).dimension(dimensionId).
+         partialHashedSeed(1).difficulty((short) 0).maxPlayers(1).levelType("flat").viewDistance(4)
+-        .reducedDebugInfo(false).showRespawnScreen(true).hardcore(false)
++        .reducedDebugInfo(true).showRespawnScreen(true).hardcore(true)
+         .dimensionRegistry(dimensionRegistry).build());
+ 
+     return processCompression(joinGame);
+@@ -140,6 +150,12 @@ public class ServerPackets {
+     return processCompression(chunkPacket);
+   }
+ 
++  private PreparedPacket<SetSlot> createSetSlotPacket(int windowId, int slot, int item, int count, int data) {
++    PreparedPacket<SetSlot> slotPacket = new PreparedPacket<>();
++    slotPacket.prepare(new SetSlot(windowId, slot, item, count, data));
++    return processCompression(slotPacket);
++  }
++
+   private List<PreparedPacket<UpdateLight>> createUpdateLightPackets() {
+     List<PreparedPacket<UpdateLight>> packets = new ArrayList<>();
+     for (SimpleChunk chunk : virtualWorld.getChunks()) {
+diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/VirtualServer.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/VirtualServer.java
+index d9b75a41..686dd6a9 100644
+--- a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/VirtualServer.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/VirtualServer.java
+@@ -26,6 +26,8 @@ import java.util.concurrent.ConcurrentHashMap;
+ import java.util.concurrent.ConcurrentMap;
+ import lombok.Getter;
+ import net.elytrium.elytraproxy.ElytraProxy;
++import net.elytrium.elytraproxy.botfilter.protocol.cache.CachedCaptcha;
++import net.elytrium.elytraproxy.botfilter.protocol.cache.CaptchaHandler;
+ import net.elytrium.elytraproxy.botfilter.protocol.cache.PacketCompressor;
+ 
+ public class VirtualServer {
+@@ -35,6 +37,7 @@ public class VirtualServer {
+   private final ConcurrentMap<String, BotFilterSessionHandler>
+       activeConnections = new ConcurrentHashMap<>();
+   private final ServerPackets packets;
++  private String captchaAnswer;
+ 
+   public VirtualServer(ElytraProxy elytraProxy) {
+     this.elytraProxy = elytraProxy;
+@@ -61,9 +64,17 @@ public class VirtualServer {
+     user.getOriginalHandler().completeLoginProtocol(player, false);
+     connection.setState(StateRegistry.BotFilter);
+     packets.getSpawnPackets().write(connection, player.isOnlineMode());
++    sendCaptcha(connection);
+     connection.flush();
+   }
+ 
++  private void sendCaptcha(MinecraftConnection connection) {
++    CaptchaHandler captchaHandler = CachedCaptcha.randomCaptcha();
++    captchaAnswer = captchaHandler.getAnswer();
++    connection.write(packets.getSetSlot());
++    connection.write(captchaHandler.getMap());
++  }
++
+   public void disconnected(BotFilterSessionHandler botFilterConnection) {
+     activeConnections.remove(botFilterConnection.getPlayer().getUsername().toLowerCase());
+   }
+diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/world/VirtualWorld.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/world/VirtualWorld.java
+index e92d6019..33667927 100644
+--- a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/world/VirtualWorld.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/world/VirtualWorld.java
+@@ -71,7 +71,7 @@ public class VirtualWorld {
+   }
+ 
+   public Biome getBiome(int x, int y, int z) {
+-    return chunkAction(x, z, (c) -> c.getBiome(x, y, z), () -> Biome.PLAINTS);
++    return chunkAction(x, z, (c) -> c.getBiome(x, y, z), () -> Biome.PLAINS);
+   }
+ 
+   public byte getBlockLight(int x, int y, int z) {
+diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/world/chunk/SimpleChunk.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/world/chunk/SimpleChunk.java
+index db6ca3a7..2986366f 100644
+--- a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/world/chunk/SimpleChunk.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/world/chunk/SimpleChunk.java
+@@ -50,7 +50,7 @@ public class SimpleChunk {
+     this.world = world;
+     this.x = x;
+     this.z = z;
+-    Arrays.fill(biomes, Biome.PLAINTS);
++    Arrays.fill(biomes, Biome.PLAINS);
+     //Arrays.fill(light, LightSection.DEFAULT);
+   }
+ 
+diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java b/proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java
+index 2751d0bc..944ffe17 100644
+--- a/proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java
+@@ -179,7 +179,7 @@ public class Settings extends Config {
+       public String PING_VERSION = "Maintenance";
+       public String MOTD = "&cMaintenance, please wait.";
+       public String DISCONNECT_REASON = "&cSorry, but now server is not available due to maintenance";
+-      public List<String> IGNORED_PLAYERS = Arrays.asList("4anonymous4");
++      public List<String> IGNORED_PLAYERS = Arrays.asList("mdxd44");
+     }
+   }
+ 
+@@ -197,6 +197,22 @@ public class Settings extends Config {
+     public List<String> BANNED_NICK_PATTERNS = Arrays.asList(
+         "dropbot", "mcspam", "mcdrop", "mcrage", "mcstorm", "extremebot", "cipher", "biboran"
+     );
++    @Comment("Path to the background image to draw on captcha (any format, 128x128), none if empty")
++    public String CAPTCHA_BACKPLATE_PATH = "";
++    @Comment("Path to the fonts to draw on captcha (ttf), standard if empty")
++    public List<String> CAPTCHA_FONTS_PATH = List.of("");
++    @Comment("Use standard fonts(SANS_SERIF/SERIF/MONOSPACED), use false only if you provide fonts path")
++    public boolean USE_STANDARD_FONTS = true;
++    public int FONT_SIZE = 50;
++    /*
++    public boolean FONT_OUTLINE = true;
++    public boolean FONT_ROTATE = true;
++    public boolean FONT_RIPPLE = true;
++    public boolean FONT_BLUR = true;
++    */
++    public int DIMENSION_ID = 1;
++    public String DIMENSION_MODERN_KEY = "minecraft:the_end";
++    public String CAPTCHA_PATTERN = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
+   }
+ 
+   /*
+-- 
+2.24.1.windows.2
+
