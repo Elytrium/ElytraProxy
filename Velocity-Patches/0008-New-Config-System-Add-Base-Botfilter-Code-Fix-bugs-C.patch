@@ -1,4 +1,4 @@
-From 475bd340171d16073f55aa113af5c1d8463edba8 Mon Sep 17 00:00:00 2001
+From 74e70d4be4975ec5366dd4ac5533727a3d71c732 Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Sat, 29 May 2021 02:33:34 +0900
 Subject: [PATCH] New Config System, Add Base Botfilter Code, Fix bugs, Code
@@ -219,7 +219,7 @@ index 165ca840..6d775a0a 100644
  
  test {
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-index b15f52a0..2880e0c6 100644
+index b15f52a0..b2ae9997 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
 @@ -88,6 +88,8 @@ import java.util.concurrent.TimeoutException;
@@ -297,7 +297,7 @@ index b15f52a0..2880e0c6 100644
  
      commandManager.setAnnounceProxyCommands(newConfiguration.isAnnounceProxyCommands());
 -    ipAttemptLimiter = Ratelimiters.createWithMilliseconds(newConfiguration.getLoginRatelimit());
-+    ipAttemptLimiter = Ratelimiters.createWithMilliseconds(newConfiguration.getLoginRatelimit()),
++    ipAttemptLimiter = Ratelimiters.createWithMilliseconds(newConfiguration.getLoginRatelimit(),
 +        newConfiguration.getLoginRatelimitAttempts()); //BotFilter - global rate limiter
      this.configuration = newConfiguration;
      eventManager.fireAndForget(new ProxyReloadEvent());

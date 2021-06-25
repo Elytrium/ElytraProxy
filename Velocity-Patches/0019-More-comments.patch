@@ -1,4 +1,4 @@
-From fba15e1c980322d45f22a918d152947a3cb25343 Mon Sep 17 00:00:00 2001
+From e28f31ff4b1d425698ac10887c0d06267f05a4da Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Sat, 19 Jun 2021 09:39:46 +0900
 Subject: [PATCH] More comments
@@ -101,7 +101,7 @@ index 5a41892c..49ad384f 100644
  
      // If we don't have a console available (because SimpleTerminalConsole returned), then we still
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-index 9c4d8a32..2634c381 100644
+index 64c9a69f..2634c381 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
 @@ -133,6 +133,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
@@ -186,13 +186,11 @@ index 9c4d8a32..2634c381 100644
        LogManager.shutdown();
        System.exit(1);
      }
-@@ -395,8 +402,8 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
-     }
+@@ -396,7 +403,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
  
      commandManager.setAnnounceProxyCommands(newConfiguration.isAnnounceProxyCommands());
--    ipAttemptLimiter = Ratelimiters.createWithMilliseconds(newConfiguration.getLoginRatelimit()),
+     ipAttemptLimiter = Ratelimiters.createWithMilliseconds(newConfiguration.getLoginRatelimit(),
 -        newConfiguration.getLoginRatelimitAttempts()); //BotFilter - global rate limiter
-+    ipAttemptLimiter = Ratelimiters.createWithMilliseconds(newConfiguration.getLoginRatelimit(),
 +        newConfiguration.getLoginRatelimitAttempts()); // BotFilter backport: global rate limiter
      this.configuration = newConfiguration;
      eventManager.fireAndForget(new ProxyReloadEvent());
