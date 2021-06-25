@@ -1,4 +1,4 @@
-From a0b3bc99b5b0abb4db2ed4411966615672cae12a Mon Sep 17 00:00:00 2001
+From 5b0bf56d61ec46d7d3d3dbb0d3cc7a141bd48397 Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Mon, 21 Jun 2021 07:56:29 +0900
 Subject: [PATCH] Api features
@@ -58,7 +58,7 @@ index 1fd5d7cf..e2ad3f1d 100644
     * Gets the {@link CommandManager} instance.
     *
 diff --git a/proxy/build.gradle b/proxy/build.gradle
-index d06fd870..756ca85f 100644
+index fd818b94..578a56e5 100644
 --- a/proxy/build.gradle
 +++ b/proxy/build.gradle
 @@ -26,7 +26,6 @@ license {
@@ -87,7 +87,7 @@ index d06fd870..756ca85f 100644
  
      implementation "io.netty:netty-codec:${nettyVersion}"
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-index b952ca37..356fa7b2 100644
+index 8831b42b..67f4ab0d 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
 @@ -94,6 +94,8 @@ import net.elytrium.elytraproxy.config.Settings;
@@ -107,7 +107,7 @@ index b952ca37..356fa7b2 100644
  
    VelocityServer(final ProxyOptions options) {
      pluginManager = new VelocityPluginManager(this);
-@@ -495,7 +498,13 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -498,7 +501,13 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
     * @param explicitExit whether the user explicitly shut down the proxy
     */
    public void shutdown(boolean explicitExit) {
@@ -122,7 +122,7 @@ index b952ca37..356fa7b2 100644
    }
  
    @Override
-@@ -608,9 +617,11 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -611,9 +620,11 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
    @Override
    public int getPlayerCount() {
      // ElytraProxy: Exclude online at servers in list
@@ -137,7 +137,7 @@ index b952ca37..356fa7b2 100644
    }
  
    @Override
-@@ -653,6 +664,18 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -656,6 +667,18 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
      return eventManager;
    }
  
@@ -156,7 +156,7 @@ index b952ca37..356fa7b2 100644
    @Override
    public VelocityScheduler getScheduler() {
      return scheduler;
-@@ -693,4 +716,26 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -696,4 +719,26 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
    public ResourcePackInfo.Builder createResourcePackBuilder(String url) {
      return new VelocityResourcePackInfo.BuilderImpl(url);
    }

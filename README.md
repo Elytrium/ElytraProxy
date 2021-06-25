@@ -4,6 +4,6 @@ Minecraft proxy server with BotFilter and some helpful stuff, based on Velocity.
 
 # Building
 
-To compile ElytraProxy, you need JDK8, git, linux or mingw64 for windows (git bash) and an internet connection xd.
+To compile ElytraProxy, you need JDK11, git, linux or mingw64 for windows (git bash) and an internet connection xd.
 
 Clone this repo (git clone https://github.com/Elytrium/ElytraProxy/), run ./elytraproxy b from linux bash or mingw64, get jar from ElytraProxy-Build/proxy/build/libs/

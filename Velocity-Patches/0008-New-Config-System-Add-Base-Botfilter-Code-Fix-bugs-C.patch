@@ -1,4 +1,4 @@
-From 7c8da2d8e4d2c4732a659d8763ded1cf3d9b8ef4 Mon Sep 17 00:00:00 2001
+From 475bd340171d16073f55aa113af5c1d8463edba8 Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Sat, 29 May 2021 02:33:34 +0900
 Subject: [PATCH] New Config System, Add Base Botfilter Code, Fix bugs, Code
@@ -143,7 +143,7 @@ index e9809f2a..37b994ba 100644
      this.inflater = new Inflater();
    }
 diff --git a/proxy/build.gradle b/proxy/build.gradle
-index 041094ef..56128db4 100644
+index 165ca840..6d775a0a 100644
 --- a/proxy/build.gradle
 +++ b/proxy/build.gradle
 @@ -2,21 +2,29 @@ import com.github.jengelman.gradle.plugins.shadow.transformers.Log4j2PluginsCach
@@ -201,7 +201,7 @@ index 041094ef..56128db4 100644
      // Note: we depend on the API twice, first the main sourceset, and then the annotation processor.
      implementation project(':elytraproxy-api')
      implementation project(':elytraproxy-api').sourceSets.ap.output
-@@ -87,10 +104,15 @@ dependencies {
+@@ -87,11 +104,16 @@ dependencies {
  
      implementation 'com.github.ben-manes.caffeine:caffeine:3.0.2'
  
@@ -212,13 +212,14 @@ index 041094ef..56128db4 100644
  
      testImplementation "org.junit.jupiter:junit-jupiter-api:${junitVersion}"
      testImplementation "org.junit.jupiter:junit-jupiter-engine:${junitVersion}"
+     testImplementation "org.mockito:mockito-core:3.+"
 +
 +    implementation 'ru.leymooo:AnnotatedYAMLConfiguration-standalone:1.1-SNAPSHOT' //BotFilter
  }
  
  test {
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-index 45fe7b4c..c8877b4a 100644
+index b15f52a0..2880e0c6 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
 @@ -88,6 +88,8 @@ import java.util.concurrent.TimeoutException;
@@ -281,9 +282,9 @@ index 45fe7b4c..c8877b4a 100644
  
        if (!configuration.validate()) {
          logger.error("Your configuration is invalid. Velocity will not start up until the errors "
-@@ -252,7 +255,8 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
-         System.exit(1);
-       }
+@@ -254,7 +257,8 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+ 
+       commandManager.setAnnounceProxyCommands(configuration.isAnnounceProxyCommands());
      } catch (Exception e) {
 -      logger.error("Unable to read/load/save your velocity.toml. The server will shut down.", e);
 +      logger.error("Unable to read/load/save your velocity.toml or elytraproxy.yml."
@@ -291,17 +292,17 @@ index 45fe7b4c..c8877b4a 100644
        LogManager.shutdown();
        System.exit(1);
      }
-@@ -388,7 +392,8 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
-           newConfiguration.getQueryPort());
+@@ -391,7 +395,8 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
      }
  
+     commandManager.setAnnounceProxyCommands(newConfiguration.isAnnounceProxyCommands());
 -    ipAttemptLimiter = Ratelimiters.createWithMilliseconds(newConfiguration.getLoginRatelimit());
-+    ipAttemptLimiter = Ratelimiters.createWithMilliseconds(newConfiguration.getLoginRatelimit(),
-+            newConfiguration.getLoginRatelimitAttempts()); //BotFilter - global rate limiter
++    ipAttemptLimiter = Ratelimiters.createWithMilliseconds(newConfiguration.getLoginRatelimit()),
++        newConfiguration.getLoginRatelimitAttempts()); //BotFilter - global rate limiter
      this.configuration = newConfiguration;
      eventManager.fireAndForget(new ProxyReloadEvent());
      return true;
-@@ -515,7 +520,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -518,7 +523,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
      return !(connectionsByName.containsKey(lowerName)
          || connectionsByUuid.containsKey(connection.getUniqueId()));
    }
@@ -310,7 +311,7 @@ index 45fe7b4c..c8877b4a 100644
    /**
     * Attempts to register the {@code connection} with the proxy.
     * @param connection the connection to register
-@@ -667,6 +672,10 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -670,6 +675,10 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
      return bossBarManager;
    }
  

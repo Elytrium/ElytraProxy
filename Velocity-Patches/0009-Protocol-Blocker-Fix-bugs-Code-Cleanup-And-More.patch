@@ -1,4 +1,4 @@
-From 94f020946b115b188d250cbe09423d08ee13ff00 Mon Sep 17 00:00:00 2001
+From 0464daa2db7e940cdbbf4bb0b7d7dbd4540d6b35 Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Wed, 2 Jun 2021 23:35:32 +0900
 Subject: [PATCH] Protocol Blocker, Fix bugs, Code Cleanup And More
@@ -85,7 +85,7 @@ index 08a2b373..66cc9e59 100644
        <property name="format" value="^[a-z][a-z0-9][a-zA-Z0-9_]*$"/>
        <message key="name.invalidPattern"
 diff --git a/proxy/build.gradle b/proxy/build.gradle
-index 56128db4..c1cb717f 100644
+index 6d775a0a..65169af3 100644
 --- a/proxy/build.gradle
 +++ b/proxy/build.gradle
 @@ -2,11 +2,11 @@ import com.github.jengelman.gradle.plugins.shadow.transformers.Log4j2PluginsCach
@@ -111,7 +111,7 @@ index 56128db4..c1cb717f 100644
      // Note: we depend on the API twice, first the main sourceset, and then the annotation processor.
      implementation project(':elytraproxy-api')
      implementation project(':elytraproxy-api').sourceSets.ap.output
-@@ -104,15 +102,10 @@ dependencies {
+@@ -104,16 +102,11 @@ dependencies {
  
      implementation 'com.github.ben-manes.caffeine:caffeine:3.0.2'
  
@@ -122,13 +122,14 @@ index 56128db4..c1cb717f 100644
  
      testImplementation "org.junit.jupiter:junit-jupiter-api:${junitVersion}"
      testImplementation "org.junit.jupiter:junit-jupiter-engine:${junitVersion}"
+     testImplementation "org.mockito:mockito-core:3.+"
 -
 -    implementation 'ru.leymooo:AnnotatedYAMLConfiguration-standalone:1.1-SNAPSHOT' //BotFilter
  }
  
  test {
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-index c8877b4a..136483bc 100644
+index 2880e0c6..fdd67bab 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
 @@ -134,7 +134,8 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {

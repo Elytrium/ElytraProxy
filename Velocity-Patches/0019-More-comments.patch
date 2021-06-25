@@ -1,11 +1,11 @@
-From 4c15666b08ae6ed032acdaddc8eccc96cf9484b9 Mon Sep 17 00:00:00 2001
+From fba15e1c980322d45f22a918d152947a3cb25343 Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Sat, 19 Jun 2021 09:39:46 +0900
 Subject: [PATCH] More comments
 
 
 diff --git a/proxy/build.gradle b/proxy/build.gradle
-index 8b7d77fd..d06fd870 100644
+index a0f9ab8c..fd818b94 100644
 --- a/proxy/build.gradle
 +++ b/proxy/build.gradle
 @@ -70,6 +70,8 @@ dependencies {
@@ -101,7 +101,7 @@ index 5a41892c..49ad384f 100644
  
      // If we don't have a console available (because SimpleTerminalConsole returned), then we still
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-index 3bf1fa0e..5c150585 100644
+index 9c4d8a32..2634c381 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
 @@ -133,6 +133,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
@@ -164,7 +164,7 @@ index 3bf1fa0e..5c150585 100644
  
      ipAttemptLimiter = Ratelimiters.createWithMilliseconds(configuration.getLoginRatelimit(),
 -            configuration.getLoginRatelimitAttempts()); //BotFilter - global rate limiter
-+            configuration.getLoginRatelimitAttempts()); // BotFilter backport: global rate limiter
++        configuration.getLoginRatelimitAttempts()); // BotFilter backport: global rate limiter
      loadPlugins();
  
      // Go ahead and fire the proxy initialization event. We block since plugins should have a chance
@@ -176,9 +176,9 @@ index 3bf1fa0e..5c150585 100644
      this.elytraProxy = new ElytraProxy(this);
    }
  
-@@ -255,8 +263,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
-         System.exit(1);
-       }
+@@ -257,8 +265,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+ 
+       commandManager.setAnnounceProxyCommands(configuration.isAnnounceProxyCommands());
      } catch (Exception e) {
 -      logger.error("Unable to read/load/save your velocity.toml or elytraproxy.yml."
 -              + "The server will shut down.", e);
@@ -186,16 +186,18 @@ index 3bf1fa0e..5c150585 100644
        LogManager.shutdown();
        System.exit(1);
      }
-@@ -393,7 +400,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -395,8 +402,8 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
      }
  
-     ipAttemptLimiter = Ratelimiters.createWithMilliseconds(newConfiguration.getLoginRatelimit(),
--            newConfiguration.getLoginRatelimitAttempts()); //BotFilter - global rate limiter
-+            newConfiguration.getLoginRatelimitAttempts()); // BotFilter backport: global rate limiter
+     commandManager.setAnnounceProxyCommands(newConfiguration.isAnnounceProxyCommands());
+-    ipAttemptLimiter = Ratelimiters.createWithMilliseconds(newConfiguration.getLoginRatelimit()),
+-        newConfiguration.getLoginRatelimitAttempts()); //BotFilter - global rate limiter
++    ipAttemptLimiter = Ratelimiters.createWithMilliseconds(newConfiguration.getLoginRatelimit(),
++        newConfiguration.getLoginRatelimitAttempts()); // BotFilter backport: global rate limiter
      this.configuration = newConfiguration;
      eventManager.fireAndForget(new ProxyReloadEvent());
      return true;
-@@ -598,6 +605,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -601,6 +608,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
  
    @Override
    public int getPlayerCount() {
@@ -203,7 +205,7 @@ index 3bf1fa0e..5c150585 100644
      return (int) getAllPlayers().stream().filter(p ->
          !Settings.IMP.MAIN_SETTINGS.IGNORE_ONLINE_AT.contains(p.getCurrentServer()
          .get().getServerInfo().getName())).count();
-@@ -674,10 +682,6 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -677,10 +685,6 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
      return bossBarManager;
    }
  
