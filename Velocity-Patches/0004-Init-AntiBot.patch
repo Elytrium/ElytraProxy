@@ -1,4 +1,4 @@
-From 4baf212063c97ba67f3d9b84be761e2a9dd89583 Mon Sep 17 00:00:00 2001
+From 32cafb8261508630c788969a756f6a779b173a43 Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Tue, 11 May 2021 17:51:21 +0900
 Subject: [PATCH] Init AntiBot
@@ -734,7 +734,7 @@ index 91910cd9..3b9ce7db 100644
          reports {
              html {
 diff --git a/proxy/build.gradle b/proxy/build.gradle
-index c7db12b7..5e43729a 100644
+index 3fcae8df..ba9955de 100644
 --- a/proxy/build.gradle
 +++ b/proxy/build.gradle
 @@ -10,6 +10,9 @@ apply from: '../gradle/checkstyle.gradle'
@@ -757,7 +757,7 @@ index c7db12b7..5e43729a 100644
      }
  }
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-index 2d7d3d6b..2e22397a 100644
+index 054e9802..a3f365aa 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
 @@ -41,7 +41,7 @@ import com.velocitypowered.proxy.command.VelocityCommandManager;
@@ -769,7 +769,7 @@ index 2d7d3d6b..2e22397a 100644
  import com.velocitypowered.proxy.config.VelocityConfiguration;
  import com.velocitypowered.proxy.connection.client.ConnectedPlayer;
  import com.velocitypowered.proxy.connection.player.VelocityResourcePackInfo;
-@@ -99,6 +99,7 @@ import org.checkerframework.checker.nullness.qual.EnsuresNonNull;
+@@ -106,6 +106,7 @@ import org.checkerframework.checker.nullness.qual.EnsuresNonNull;
  import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
  import org.checkerframework.checker.nullness.qual.NonNull;
  import org.checkerframework.checker.nullness.qual.Nullable;
@@ -777,7 +777,7 @@ index 2d7d3d6b..2e22397a 100644
  
  public class VelocityServer implements ProxyServer, ForwardingAudience {
  
-@@ -199,7 +200,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -208,7 +209,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
      cm.logChannelInformation();
  
      // Initialize commands first
@@ -786,7 +786,7 @@ index 2d7d3d6b..2e22397a 100644
      commandManager.register("server", new ServerCommand(this));
      commandManager.register("shutdown", new ShutdownCommand(this),"end");
      new GlistCommand(this).register();
-@@ -240,6 +241,8 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -291,6 +292,8 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
      try {
        Path configPath = Paths.get("velocity.toml");
        configuration = VelocityConfiguration.read(configPath);
@@ -995,10 +995,10 @@ index 00000000..8abdba10
 +}
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/VelocityCommand.java b/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/VelocityCommand.java
 deleted file mode 100644
-index 88f42a67..00000000
+index 2bc197d2..00000000
 --- a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/VelocityCommand.java
 +++ /dev/null
-@@ -1,340 +0,0 @@
+@@ -1,338 +0,0 @@
 -/*
 - * Copyright (C) 2018 Velocity Contributors
 - *
@@ -1018,7 +1018,6 @@ index 88f42a67..00000000
 -
 -package com.velocitypowered.proxy.command.builtin;
 -
--import com.google.common.base.Joiner;
 -import com.google.common.collect.ImmutableList;
 -import com.google.common.collect.ImmutableMap;
 -
@@ -1053,6 +1052,7 @@ index 88f42a67..00000000
 -import net.kyori.adventure.identity.Identity;
 -import net.kyori.adventure.text.Component;
 -import net.kyori.adventure.text.TextComponent;
+-import net.kyori.adventure.text.TranslatableComponent;
 -import net.kyori.adventure.text.event.ClickEvent;
 -import net.kyori.adventure.text.event.HoverEvent;
 -import net.kyori.adventure.text.format.NamedTextColor;
@@ -1182,17 +1182,15 @@ index 88f42a67..00000000
 -    public void execute(CommandSource source, String @NonNull [] args) {
 -      try {
 -        if (server.reloadConfiguration()) {
--          source.sendMessage(Identity.nil(), Component.text(
--              "Configuration reloaded.", NamedTextColor.GREEN));
+-          source.sendMessage(Component.translatable("velocity.command.reload-success",
+-              NamedTextColor.GREEN));
 -        } else {
--          source.sendMessage(Identity.nil(), Component.text(
--              "Unable to reload your configuration. Check the console for more details.",
+-          source.sendMessage(Component.translatable("velocity.command.reload-failure",
 -              NamedTextColor.RED));
 -        }
 -      } catch (Exception e) {
 -        logger.error("Unable to reload configuration", e);
--        source.sendMessage(Identity.nil(), Component.text(
--            "Unable to reload your configuration. Check the console for more details.",
+-        source.sendMessage(Component.translatable("velocity.command.reload-failure",
 -            NamedTextColor.RED));
 -      }
 -    }
@@ -1322,7 +1320,7 @@ index 88f42a67..00000000
 -          e.getCause().printStackTrace();
 -        } catch (JsonParseException e) {
 -          source.sendMessage(Component.text()
--                  .content("An error occurred on the Velocity-servers and the dump could not "
+-                  .content("An error occurred on the Velocity servers and the dump could not "
 -                          + "be completed. Please contact the Velocity staff about this problem. "
 -                          + "If you do, provide the details about this error from the Velocity "
 -                          + "console or server log.")
@@ -1368,10 +1366,10 @@ index 773f6d35..7b1c32e3 100644
            logger.error("{}: exception handling exception in {}",
                (association != null ? association : channel.remoteAddress()), sessionHandler, cause);
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
-index c1967e85..ef936950 100644
+index 3ea4b048..c4f2463d 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
-@@ -51,11 +51,14 @@ import com.velocitypowered.proxy.protocol.packet.ServerLogin;
+@@ -51,6 +51,8 @@ import com.velocitypowered.proxy.protocol.packet.ServerLogin;
  import com.velocitypowered.proxy.protocol.packet.ServerLoginSuccess;
  import com.velocitypowered.proxy.protocol.packet.SetCompression;
  import io.netty.buffer.ByteBuf;
@@ -1380,13 +1378,7 @@ index c1967e85..ef936950 100644
  import java.net.InetSocketAddress;
  import java.security.GeneralSecurityException;
  import java.security.KeyPair;
- import java.security.MessageDigest;
- import java.util.Arrays;
-+import java.util.Locale;
- import java.util.Optional;
- import java.util.UUID;
- import java.util.concurrent.CompletableFuture;
-@@ -242,6 +245,21 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+@@ -246,6 +248,21 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
          return CompletableFuture.completedFuture(null);
        }
  

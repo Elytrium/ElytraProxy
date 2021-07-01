@@ -1,4 +1,4 @@
-From f65fcecbd68c0be54961da28723c020deb024332 Mon Sep 17 00:00:00 2001
+From 0d4139d34f6c07c83816291b43853505c5e6c3f9 Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Fri, 18 Jun 2021 23:18:35 +0900
 Subject: [PATCH] Maintenance mode
@@ -17,7 +17,7 @@ index e8f2ef6b..eb76b5ce 100644
            "1.7.2", "1.7.3", "1.7.4", "1.7.5"),
    MINECRAFT_1_7_6(5,
 diff --git a/proxy/build.gradle b/proxy/build.gradle
-index 52e4734f..8b7d77fd 100644
+index 23b24408..a0f9ab8c 100644
 --- a/proxy/build.gradle
 +++ b/proxy/build.gradle
 @@ -53,8 +53,8 @@ shadowJar {
@@ -32,10 +32,10 @@ index 52e4734f..8b7d77fd 100644
  
  dependencies {
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-index ad103cca..3bf1fa0e 100644
+index c87322bc..f5a781ef 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-@@ -88,8 +88,9 @@ import java.util.concurrent.TimeoutException;
+@@ -91,8 +91,9 @@ import java.util.concurrent.TimeoutException;
  import java.util.concurrent.atomic.AtomicBoolean;
  import java.util.function.IntFunction;
  import java.util.stream.Collectors;
@@ -45,8 +45,8 @@ index ad103cca..3bf1fa0e 100644
 +import net.elytrium.elytraproxy.config.Settings;
  import net.kyori.adventure.audience.Audience;
  import net.kyori.adventure.audience.ForwardingAudience;
- import net.kyori.adventure.text.Component;
-@@ -100,8 +101,6 @@ import org.checkerframework.checker.nullness.qual.EnsuresNonNull;
+ import net.kyori.adventure.key.Key;
+@@ -107,8 +108,6 @@ import org.checkerframework.checker.nullness.qual.EnsuresNonNull;
  import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
  import org.checkerframework.checker.nullness.qual.NonNull;
  import org.checkerframework.checker.nullness.qual.Nullable;
@@ -55,7 +55,7 @@ index ad103cca..3bf1fa0e 100644
  
  public class VelocityServer implements ProxyServer, ForwardingAudience {
  
-@@ -142,7 +141,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -149,7 +148,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
    private final VelocityEventManager eventManager;
    private final VelocityScheduler scheduler;
    private final VelocityChannelRegistrar channelRegistrar = new VelocityChannelRegistrar();
@@ -80,10 +80,10 @@ index 0c407be7..59102c9b 100644
  public class CommandMessages {
  
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/GlistCommand.java b/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/GlistCommand.java
-index 4ab3d464..e318e6c2 100644
+index 75c6ffda..f9251320 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/GlistCommand.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/GlistCommand.java
-@@ -33,12 +33,11 @@ import com.velocitypowered.api.proxy.ProxyServer;
+@@ -33,13 +33,13 @@ import com.velocitypowered.api.proxy.ProxyServer;
  import com.velocitypowered.api.proxy.server.RegisteredServer;
  import java.util.List;
  import java.util.Optional;
@@ -91,7 +91,8 @@ index 4ab3d464..e318e6c2 100644
  import net.kyori.adventure.identity.Identity;
  import net.kyori.adventure.text.Component;
  import net.kyori.adventure.text.TextComponent;
--import net.kyori.adventure.text.format.NamedTextColor;
+ import net.kyori.adventure.text.TranslatableComponent;
+ import net.kyori.adventure.text.format.NamedTextColor;
  import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 -import ru.elytrium.elytraproxy.config.Settings;
  
@@ -119,7 +120,7 @@ index 88305e80..fa55a506 100644
  public class ServerCommand implements SimpleCommand {
  
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/config/VelocityConfiguration.java b/proxy/src/main/java/com/velocitypowered/proxy/config/VelocityConfiguration.java
-index 81b9cb0b..4f3d1c12 100644
+index 58794cf1..71469abd 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/config/VelocityConfiguration.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/config/VelocityConfiguration.java
 @@ -28,7 +28,6 @@ import com.google.gson.annotations.Expose;
@@ -162,7 +163,7 @@ index 81b9cb0b..4f3d1c12 100644
    @Expose private boolean onlineModeKickExistingPlayers = false;
    @Expose private PingPassthroughMode pingPassthrough = PingPassthroughMode.DISABLED;
    private final Servers servers;
-@@ -267,9 +266,19 @@ public class VelocityConfiguration implements ProxyConfig {
+@@ -255,9 +254,19 @@ public class VelocityConfiguration implements ProxyConfig {
    public net.kyori.adventure.text.Component getMotd() {
      if (motdAsComponent == null) {
        if (motd.startsWith("{")) {
@@ -184,7 +185,7 @@ index 81b9cb0b..4f3d1c12 100644
        }
      }
      return motdAsComponent;
-@@ -477,8 +486,8 @@ public class VelocityConfiguration implements ProxyConfig {
+@@ -456,8 +465,8 @@ public class VelocityConfiguration implements ProxyConfig {
      PingPassthroughMode pingPassthroughMode = config.getEnumOrElse("ping-passthrough",
          PingPassthroughMode.DISABLED);
  
@@ -195,7 +196,7 @@ index 81b9cb0b..4f3d1c12 100644
      int maxPlayers = config.getIntOrElse("show-max-players", 500);
      Boolean onlineMode = config.getOrElse("online-mode", true);
      Boolean announceForge = config.getOrElse("announce-forge", true);
-@@ -646,18 +655,18 @@ public class VelocityConfiguration implements ProxyConfig {
+@@ -623,18 +632,18 @@ public class VelocityConfiguration implements ProxyConfig {
  
    private static class Advanced {
  
@@ -218,7 +219,7 @@ index 81b9cb0b..4f3d1c12 100644
  
      private Advanced() {
      }
-@@ -665,7 +674,7 @@ public class VelocityConfiguration implements ProxyConfig {
+@@ -642,7 +651,7 @@ public class VelocityConfiguration implements ProxyConfig {
      private Advanced(CommentedConfig config) {
        if (config != null) {
          this.compressionThreshold = config.getIntOrElse("compression-threshold", 512);
@@ -227,7 +228,7 @@ index 81b9cb0b..4f3d1c12 100644
          this.loginRatelimit = config.getIntOrElse("login-ratelimit", 3000);
          this.connectionTimeout = config.getIntOrElse("connection-timeout", 5000);
          this.readTimeout = config.getIntOrElse("read-timeout", 30000);
-@@ -680,7 +689,7 @@ public class VelocityConfiguration implements ProxyConfig {
+@@ -657,7 +666,7 @@ public class VelocityConfiguration implements ProxyConfig {
          this.failoverOnUnexpectedServerDisconnect = config
              .getOrElse("failover-on-unexpected-server-disconnect", true);
          this.announceProxyCommands = config.getOrElse("announce-proxy-commands", true);
@@ -236,7 +237,7 @@ index 81b9cb0b..4f3d1c12 100644
        }
      }
  
-@@ -754,8 +763,8 @@ public class VelocityConfiguration implements ProxyConfig {
+@@ -731,8 +740,8 @@ public class VelocityConfiguration implements ProxyConfig {
    private static class Query {
  
      @Expose private boolean queryEnabled = false;
@@ -247,7 +248,7 @@ index 81b9cb0b..4f3d1c12 100644
      @Expose private boolean showPlugins = false;
  
      private Query() {
-@@ -771,8 +780,8 @@ public class VelocityConfiguration implements ProxyConfig {
+@@ -748,8 +757,8 @@ public class VelocityConfiguration implements ProxyConfig {
      private Query(CommentedConfig config) {
        if (config != null) {
          this.queryEnabled = config.getOrElse("enabled", false);
@@ -324,10 +325,10 @@ index 3a61616b..6c4ec6fc 100644
  /**
   * Handles communication with the connected Minecraft client. This is effectively the primary nerve
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
-index 2e09b212..dec28589 100644
+index d7af4816..9d07ec56 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
-@@ -84,23 +84,21 @@ import java.util.UUID;
+@@ -85,13 +85,13 @@ import java.util.UUID;
  import java.util.concurrent.CompletableFuture;
  import java.util.concurrent.CompletionException;
  import java.util.concurrent.ThreadLocalRandom;
@@ -341,10 +342,8 @@ index 2e09b212..dec28589 100644
 -import net.kyori.adventure.text.TranslatableComponent;
  import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
  import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
--import net.kyori.adventure.text.serializer.plain.PlainComponentSerializer;
- import org.apache.logging.log4j.LogManager;
- import org.apache.logging.log4j.Logger;
- import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
+ import net.kyori.adventure.text.serializer.plain.PlainComponentSerializer;
+@@ -104,7 +104,6 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
  import org.checkerframework.checker.nullness.qual.NonNull;
  import org.checkerframework.checker.nullness.qual.Nullable;
  import org.jetbrains.annotations.NotNull;
@@ -377,7 +376,7 @@ index f1445de5..3dc5a545 100644
  public class HandshakeSessionHandler implements MinecraftSessionHandler {
  
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
-index f6856f57..29853729 100644
+index d9c9553e..627a4dd9 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
 @@ -44,7 +44,6 @@ import com.velocitypowered.proxy.config.VelocityConfiguration;
@@ -394,9 +393,9 @@ index f6856f57..29853729 100644
  import java.util.concurrent.ThreadLocalRandom;
 +import net.elytrium.elytraproxy.config.Settings;
  import net.kyori.adventure.text.Component;
- import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
- import org.apache.logging.log4j.LogManager;
-@@ -69,7 +69,6 @@ import org.apache.logging.log4j.Logger;
+ import net.kyori.adventure.text.format.NamedTextColor;
+ import net.kyori.adventure.translation.GlobalTranslator;
+@@ -71,7 +71,6 @@ import org.apache.logging.log4j.Logger;
  import org.asynchttpclient.ListenableFuture;
  import org.asynchttpclient.Response;
  import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
@@ -404,7 +403,7 @@ index f6856f57..29853729 100644
  
  public class LoginSessionHandler implements MinecraftSessionHandler {
  
-@@ -268,8 +267,20 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+@@ -269,8 +268,20 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
        }
        */
        logger.info("{} has connected", player);
@@ -539,18 +538,18 @@ index ba820796..0ff0dc89 100644
  public class ConnectionMessages {
  
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/console/VelocityConsole.java b/proxy/src/main/java/com/velocitypowered/proxy/console/VelocityConsole.java
-index aca38aa0..22154b78 100644
+index ba9abe0d..0a59858a 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/console/VelocityConsole.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/console/VelocityConsole.java
-@@ -25,6 +25,7 @@ import com.velocitypowered.api.permission.Tristate;
- import com.velocitypowered.api.proxy.ConsoleCommandSource;
+@@ -26,6 +26,7 @@ import com.velocitypowered.api.proxy.ConsoleCommandSource;
  import com.velocitypowered.proxy.VelocityServer;
+ import com.velocitypowered.proxy.util.ClosestLocaleMatcher;
  import java.util.List;
 +import net.elytrium.elytraproxy.config.Settings;
+ import java.util.Locale;
  import net.kyori.adventure.identity.Identity;
  import net.kyori.adventure.permission.PermissionChecker;
- import net.kyori.adventure.pointer.Pointers;
-@@ -40,7 +41,6 @@ import org.jetbrains.annotations.NotNull;
+@@ -47,7 +48,6 @@ import org.jetbrains.annotations.NotNull;
  import org.jline.reader.Candidate;
  import org.jline.reader.LineReader;
  import org.jline.reader.LineReaderBuilder;

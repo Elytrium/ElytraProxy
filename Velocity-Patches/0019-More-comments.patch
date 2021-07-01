@@ -1,4 +1,4 @@
-From e28f31ff4b1d425698ac10887c0d06267f05a4da Mon Sep 17 00:00:00 2001
+From 9199e742d38f3e33d52df9b3e76c9dfe2049d7c3 Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Sat, 19 Jun 2021 09:39:46 +0900
 Subject: [PATCH] More comments
@@ -101,10 +101,10 @@ index 5a41892c..49ad384f 100644
  
      // If we don't have a console available (because SimpleTerminalConsole returned), then we still
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-index 64c9a69f..2634c381 100644
+index f5a781ef..d9358c9e 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-@@ -133,6 +133,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -140,6 +140,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
    private final VelocityPluginManager pluginManager;
    private final AdventureBossBarManager bossBarManager;
  
@@ -112,7 +112,7 @@ index 64c9a69f..2634c381 100644
    @Getter
    private static final Map<UUID, ConnectedPlayer> connectionsByUuid = new ConcurrentHashMap<>();
    private final Map<String, ConnectedPlayer> connectionsByName = new ConcurrentHashMap<>();
-@@ -141,7 +142,9 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -148,7 +149,9 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
    private final VelocityEventManager eventManager;
    private final VelocityScheduler scheduler;
    private final VelocityChannelRegistrar channelRegistrar = new VelocityChannelRegistrar();
@@ -123,7 +123,7 @@ index 64c9a69f..2634c381 100644
  
    VelocityServer(final ProxyOptions options) {
      pluginManager = new VelocityPluginManager(this);
-@@ -171,13 +174,14 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -178,13 +181,14 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
      String implVersion;
      String implVendor;
      if (pkg != null) {
@@ -140,7 +140,7 @@ index 64c9a69f..2634c381 100644
      }
  
      return new ProxyVersion(implName, implVendor, implVersion);
-@@ -195,6 +199,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -202,6 +206,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
    @EnsuresNonNull({"serverKeyPair", "servers", "pluginManager", "eventManager", "scheduler",
        "console", "cm", "configuration"})
    void start() {
@@ -148,7 +148,7 @@ index 64c9a69f..2634c381 100644
      logger.info("Booting up {} {}...", getVersion().getName(), Settings.IMP.VERSION);
      console.setupStreams();
  
-@@ -203,7 +208,9 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -212,7 +217,9 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
      cm.logChannelInformation();
  
      // Initialize commands first
@@ -159,7 +159,7 @@ index 64c9a69f..2634c381 100644
      commandManager.register("server", new ServerCommand(this));
      commandManager.register("shutdown", new ShutdownCommand(this),"end");
      new GlistCommand(this).register();
-@@ -215,7 +222,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -224,7 +231,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
      }
  
      ipAttemptLimiter = Ratelimiters.createWithMilliseconds(configuration.getLoginRatelimit(),
@@ -168,7 +168,7 @@ index 64c9a69f..2634c381 100644
      loadPlugins();
  
      // Go ahead and fire the proxy initialization event. We block since plugins should have a chance
-@@ -239,6 +246,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -248,6 +255,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
  
      Metrics.VelocityMetrics.startMetrics(this, configuration.getMetrics());
  
@@ -176,7 +176,7 @@ index 64c9a69f..2634c381 100644
      this.elytraProxy = new ElytraProxy(this);
    }
  
-@@ -257,8 +265,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -308,8 +316,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
  
        commandManager.setAnnounceProxyCommands(configuration.isAnnounceProxyCommands());
      } catch (Exception e) {
@@ -186,7 +186,7 @@ index 64c9a69f..2634c381 100644
        LogManager.shutdown();
        System.exit(1);
      }
-@@ -396,7 +403,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -447,7 +454,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
  
      commandManager.setAnnounceProxyCommands(newConfiguration.isAnnounceProxyCommands());
      ipAttemptLimiter = Ratelimiters.createWithMilliseconds(newConfiguration.getLoginRatelimit(),
@@ -195,7 +195,7 @@ index 64c9a69f..2634c381 100644
      this.configuration = newConfiguration;
      eventManager.fireAndForget(new ProxyReloadEvent());
      return true;
-@@ -601,6 +608,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -652,6 +659,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
  
    @Override
    public int getPlayerCount() {
@@ -203,7 +203,7 @@ index 64c9a69f..2634c381 100644
      return (int) getAllPlayers().stream().filter(p ->
          !Settings.IMP.MAIN_SETTINGS.IGNORE_ONLINE_AT.contains(p.getCurrentServer()
          .get().getServerInfo().getName())).count();
-@@ -677,10 +685,6 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -728,10 +736,6 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
      return bossBarManager;
    }
  
@@ -283,28 +283,10 @@ index 6c4ec6fc..01f7ecc1 100644
          LegacyComponentSerializer
              .legacyAmpersand()
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
-index dec28589..8303fd1f 100644
+index 9d07ec56..2a9a92cb 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
-@@ -468,6 +468,7 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
-       }
-     }
- 
-+    // Velocity 2.0 backport && ElytraProxy
-     Component friendlyError;
-     if (connectedServer != null && connectedServer.getServerInfo().equals(server.getServerInfo())) {
-       friendlyError = LegacyComponentSerializer
-@@ -504,7 +505,8 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
-       return;
-     }
- 
--    //VelocityConfiguration.Messages messages = this.server.getConfiguration().getMessages();
-+    // ElytraProxy
-+    // VelocityConfiguration.Messages messages = this.server.getConfiguration().getMessages();
-     Component disconnectReason = GsonComponentSerializer.gson().deserialize(disconnect.getReason());
-     if (connectedServer != null && connectedServer.getServerInfo().equals(server.getServerInfo())) {
-       logger.info("{}: kicked from server {}: {}", this, server.getServerInfo().getName(),
-@@ -623,6 +625,7 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
+@@ -648,6 +648,7 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
                            getProtocolVersion()), ((Impl) status).isSafe());
                        break;
                      case SUCCESS:
@@ -351,10 +333,10 @@ index 3dc5a545..0f398877 100644
            LegacyComponentSerializer
                .legacyAmpersand()
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
-index 29853729..61f6b257 100644
+index 627a4dd9..0bd2fc81 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
-@@ -150,6 +150,7 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+@@ -152,6 +152,7 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
                  GameProfile.class), true);
            } else if (profileResponse.getStatusCode() == 204) {
              // Apparently an offline-mode user logged onto this online-mode proxy.
@@ -362,7 +344,7 @@ index 29853729..61f6b257 100644
              inbound.disconnect(
                  LegacyComponentSerializer
                      .legacyAmpersand()
-@@ -180,6 +181,7 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+@@ -182,6 +183,7 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
    }
  
    private void beginPreLogin() {
@@ -370,7 +352,7 @@ index 29853729..61f6b257 100644
      server.getElytraProxy().getStatistics().addTotalConnectionPerSecond();
      ServerLogin login = this.login;
      if (login == null) {
-@@ -236,6 +238,7 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+@@ -237,6 +239,7 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
          onlineMode);
      final GameProfile finalProfile = profile;
  
@@ -378,7 +360,7 @@ index 29853729..61f6b257 100644
      server.getEventManager().fire(profileRequestEvent).thenAcceptAsync(profileEvent -> {
        if (mcConnection.isClosed()) {
          // The player disconnected while event execution
-@@ -246,6 +249,7 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+@@ -247,6 +250,7 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
        ConnectedPlayer player = new ConnectedPlayer(server, profileEvent.getGameProfile(),
            mcConnection, inbound.getVirtualHost().orElse(null), onlineMode);
        this.connectedPlayer = player;
@@ -386,7 +368,7 @@ index 29853729..61f6b257 100644
        if (!server.canRegisterConnection(player)) {
          player.disconnect0(
              LegacyComponentSerializer
-@@ -267,7 +271,6 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+@@ -268,7 +272,6 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
        }
        */
        logger.info("{} has connected", player);
@@ -394,7 +376,7 @@ index 29853729..61f6b257 100644
        server.getElytraProxy().getStatistics().addConnectionPerSecond();
        if (Settings.IMP.MAIN_SETTINGS.MAINTENANCE.ENABLED
            && !Settings.IMP.MAIN_SETTINGS.MAINTENANCE
-@@ -298,7 +301,6 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+@@ -299,7 +302,6 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
          completeLoginProtocol(player, true);
          initialize(player);
        }
@@ -402,7 +384,7 @@ index 29853729..61f6b257 100644
      }, mcConnection.eventLoop()).exceptionally((ex) -> {
        logger.error("Exception during connection of {}", finalProfile, ex);
        return null;
-@@ -416,6 +418,7 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+@@ -417,6 +419,7 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
            return null;
          });
    }

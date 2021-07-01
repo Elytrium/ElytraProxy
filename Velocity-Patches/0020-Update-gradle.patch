@@ -1,4 +1,4 @@
-From 554818bdc6b63b4de9f39d8ebd2849d89a058ddc Mon Sep 17 00:00:00 2001
+From 5d1848aa105c6544ff9eb9e0e7235f21bc207e8b Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Sat, 19 Jun 2021 09:51:26 +0900
 Subject: [PATCH] Update gradle
@@ -61,10 +61,10 @@ index 71796f88..4e8b1495 100644
 -distributionUrl=https\://services.gradle.org/distributions/gradle-6.6.1-all.zip
 +distributionUrl=https\://services.gradle.org/distributions/gradle-7.1-all.zip
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-index 2634c381..8831b42b 100644
+index d9358c9e..b6c1cb07 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-@@ -177,7 +177,8 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -184,7 +184,8 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
        // ElytraProxy
        implName = MoreObjects.firstNonNull(pkg.getImplementationTitle(), "ElytraProxy");
        implVersion = MoreObjects.firstNonNull(pkg.getImplementationVersion(), "<unknown>");
@@ -74,7 +74,7 @@ index 2634c381..8831b42b 100644
      } else {
        implName = "ElytraProxy";
        implVersion = "<unknown>";
-@@ -402,8 +403,9 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -453,8 +454,9 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
      }
  
      commandManager.setAnnounceProxyCommands(newConfiguration.isAnnounceProxyCommands());

@@ -1,4 +1,4 @@
-From fed88905362ee2c05e7d3599a255185f932a24da Mon Sep 17 00:00:00 2001
+From b97bb50902466d4ccfb1d4f6bbb75cd46022cc5a Mon Sep 17 00:00:00 2001
 From: Petr Ilin <hevav@hevav.dev>
 Date: Mon, 24 May 2021 04:19:59 +0900
 Subject: [PATCH] Init Skins System, Many Config Options, Fix bugs, Code
@@ -19,7 +19,7 @@ index fbdf3cea..2ffb4fd0 100644
  ### Natives stuff ###
  native/mbedtls
 diff --git a/proxy/build.gradle b/proxy/build.gradle
-index a2abafc4..041094ef 100644
+index 71b6bba9..165ca840 100644
 --- a/proxy/build.gradle
 +++ b/proxy/build.gradle
 @@ -10,9 +10,12 @@ apply from: '../gradle/checkstyle.gradle'
@@ -45,7 +45,7 @@ index a2abafc4..041094ef 100644
  
  dependencies {
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
-index 54adce01..b42997e3 100644
+index c734475a..a4b3156a 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
 @@ -25,6 +25,7 @@ import static com.velocitypowered.proxy.util.EncryptionUtils.decryptRsa;
@@ -64,7 +64,7 @@ index 54adce01..b42997e3 100644
  import java.util.Optional;
  import java.util.UUID;
  import java.util.concurrent.CompletableFuture;
-@@ -67,6 +69,9 @@ import org.apache.logging.log4j.Logger;
+@@ -69,6 +71,9 @@ import org.apache.logging.log4j.Logger;
  import org.asynchttpclient.ListenableFuture;
  import org.asynchttpclient.Response;
  import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
@@ -74,7 +74,7 @@ index 54adce01..b42997e3 100644
  
  public class LoginSessionHandler implements MinecraftSessionHandler {
  
-@@ -75,6 +80,7 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+@@ -77,6 +82,7 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
        "https://sessionserver.mojang.com/session/minecraft/hasJoined?username=%s&serverId=%s";
  
    private final VelocityServer server;
@@ -82,7 +82,7 @@ index 54adce01..b42997e3 100644
    private final MinecraftConnection mcConnection;
    private final InitialInboundConnection inbound;
    private @MonotonicNonNull ServerLogin login;
-@@ -86,6 +92,7 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+@@ -88,6 +94,7 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
      this.server = Preconditions.checkNotNull(server, "server");
      this.mcConnection = Preconditions.checkNotNull(mcConnection, "mcConnection");
      this.inbound = Preconditions.checkNotNull(inbound, "inbound");
@@ -90,7 +90,7 @@ index 54adce01..b42997e3 100644
    }
  
    @Override
-@@ -242,18 +249,37 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+@@ -245,18 +252,37 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
          return CompletableFuture.completedFuture(null);
        }
  

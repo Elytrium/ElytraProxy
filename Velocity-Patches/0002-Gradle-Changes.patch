@@ -1,4 +1,4 @@
-From a61baf297979ae833ba84098459de0a0d0624fc9 Mon Sep 17 00:00:00 2001
+From 133af75630314490945f0b5b69192a34dab93378 Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Mon, 10 May 2021 03:53:07 +0900
 Subject: [PATCH] Gradle Changes
@@ -20,7 +20,7 @@ index e4a860ce..91910cd9 100644
      ext {
          // dependency versions
 diff --git a/proxy/build.gradle b/proxy/build.gradle
-index 1e0b3635..c7db12b7 100644
+index fc5be026..3fcae8df 100644
 --- a/proxy/build.gradle
 +++ b/proxy/build.gradle
 @@ -24,7 +24,7 @@ jar {
@@ -75,10 +75,10 @@ index e0e3aa20..f2db8750 100644
        metrics.addCustomChart(
            new SimplePie("online_mode",
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-index 34b7d966..2d7d3d6b 100644
+index d5adf258..054e9802 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-@@ -167,11 +167,11 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -174,11 +174,11 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
      String implVersion;
      String implVendor;
      if (pkg != null) {
@@ -92,7 +92,7 @@ index 34b7d966..2d7d3d6b 100644
        implVersion = "<unknown>";
        implVendor = "Velocity Contributors";
      }
-@@ -199,7 +199,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -208,7 +208,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
      cm.logChannelInformation();
  
      // Initialize commands first

@@ -1,4 +1,4 @@
-From e197dc9e20a66cb21a4c29203247f2a5562a016e Mon Sep 17 00:00:00 2001
+From 059d58e1e14e31d202b8912b686110b81b901925 Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Sat, 5 Jun 2021 17:50:10 +0900
 Subject: [PATCH] Improve HostNames Manager, Code Cleanup, Fix Bugs
@@ -18,10 +18,10 @@ index 7bafaba4..5512c589 100644
      ext {
          // dependency versions
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-index c197d17c..f3cd20b5 100644
+index e6c4398c..aa43731c 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-@@ -211,8 +211,6 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -220,8 +220,6 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
  
      this.doStartupConfigLoad();
  
@@ -30,7 +30,7 @@ index c197d17c..f3cd20b5 100644
      for (Map.Entry<String, String> entry : configuration.getServers().entrySet()) {
        servers.register(new ServerInfo(entry.getKey(), AddressUtil.parseAddress(entry.getValue())));
      }
-@@ -241,6 +239,8 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -250,6 +248,8 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
      }
  
      Metrics.VelocityMetrics.startMetrics(this, configuration.getMetrics());
@@ -38,7 +38,7 @@ index c197d17c..f3cd20b5 100644
 +    this.elytraProxy = new ElytraProxy(this);
    }
  
-   @SuppressFBWarnings("DM_EXIT")
+   private void registerTranslations() {
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftConnection.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftConnection.java
 index 2219b43e..fa51244f 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftConnection.java
@@ -121,7 +121,7 @@ index 2219b43e..fa51244f 100644
            }
          }
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
-index 73d856d5..4ac74d9d 100644
+index d311da1d..b9b892e1 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
 @@ -169,8 +169,6 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {

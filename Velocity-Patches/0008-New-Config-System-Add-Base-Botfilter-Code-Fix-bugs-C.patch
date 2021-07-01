@@ -1,4 +1,4 @@
-From 74e70d4be4975ec5366dd4ac5533727a3d71c732 Mon Sep 17 00:00:00 2001
+From 2d8c12e8a3d7f1923c31d7f502cca768c2ce0a7c Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Sat, 29 May 2021 02:33:34 +0900
 Subject: [PATCH] New Config System, Add Base Botfilter Code, Fix bugs, Code
@@ -219,10 +219,10 @@ index 165ca840..6d775a0a 100644
  
  test {
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-index b15f52a0..b2ae9997 100644
+index d9df0bfa..57a1c928 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-@@ -88,6 +88,8 @@ import java.util.concurrent.TimeoutException;
+@@ -91,6 +91,8 @@ import java.util.concurrent.TimeoutException;
  import java.util.concurrent.atomic.AtomicBoolean;
  import java.util.function.IntFunction;
  import java.util.stream.Collectors;
@@ -230,8 +230,8 @@ index b15f52a0..b2ae9997 100644
 +import lombok.Getter;
  import net.kyori.adventure.audience.Audience;
  import net.kyori.adventure.audience.ForwardingAudience;
- import net.kyori.adventure.text.Component;
-@@ -99,6 +101,7 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
+ import net.kyori.adventure.key.Key;
+@@ -106,6 +108,7 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
  import org.checkerframework.checker.nullness.qual.NonNull;
  import org.checkerframework.checker.nullness.qual.Nullable;
  import ru.elytrium.elytraproxy.ElytraProxy;
@@ -239,7 +239,7 @@ index b15f52a0..b2ae9997 100644
  
  public class VelocityServer implements ProxyServer, ForwardingAudience {
  
-@@ -131,13 +134,14 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -138,13 +141,14 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
    private final VelocityPluginManager pluginManager;
    private final AdventureBossBarManager bossBarManager;
  
@@ -255,7 +255,7 @@ index b15f52a0..b2ae9997 100644
  
    VelocityServer(final ProxyOptions options) {
      pluginManager = new VelocityPluginManager(this);
-@@ -206,11 +210,14 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -215,11 +219,14 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
  
      this.doStartupConfigLoad();
  
@@ -271,7 +271,7 @@ index b15f52a0..b2ae9997 100644
      loadPlugins();
  
      // Go ahead and fire the proxy initialization event. We block since plugins should have a chance
-@@ -240,10 +247,6 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -291,10 +298,6 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
      try {
        Path configPath = Paths.get("velocity.toml");
        configuration = VelocityConfiguration.read(configPath);
@@ -282,7 +282,7 @@ index b15f52a0..b2ae9997 100644
  
        if (!configuration.validate()) {
          logger.error("Your configuration is invalid. Velocity will not start up until the errors "
-@@ -254,7 +257,8 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -305,7 +308,8 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
  
        commandManager.setAnnounceProxyCommands(configuration.isAnnounceProxyCommands());
      } catch (Exception e) {
@@ -292,7 +292,7 @@ index b15f52a0..b2ae9997 100644
        LogManager.shutdown();
        System.exit(1);
      }
-@@ -391,7 +395,8 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -442,7 +446,8 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
      }
  
      commandManager.setAnnounceProxyCommands(newConfiguration.isAnnounceProxyCommands());
@@ -302,7 +302,7 @@ index b15f52a0..b2ae9997 100644
      this.configuration = newConfiguration;
      eventManager.fireAndForget(new ProxyReloadEvent());
      return true;
-@@ -518,7 +523,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -569,7 +574,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
      return !(connectionsByName.containsKey(lowerName)
          || connectionsByUuid.containsKey(connection.getUniqueId()));
    }
@@ -311,7 +311,7 @@ index b15f52a0..b2ae9997 100644
    /**
     * Attempts to register the {@code connection} with the proxy.
     * @param connection the connection to register
-@@ -670,6 +675,10 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -721,6 +726,10 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
      return bossBarManager;
    }
  
@@ -323,10 +323,10 @@ index b15f52a0..b2ae9997 100644
      return version.compareTo(ProtocolVersion.MINECRAFT_1_16) >= 0 ? POST_1_16_PING_SERIALIZER
          : PRE_1_16_PING_SERIALIZER;
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/config/VelocityConfiguration.java b/proxy/src/main/java/com/velocitypowered/proxy/config/VelocityConfiguration.java
-index b1f2908a..39f154cd 100644
+index 29dd341b..9863c145 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/config/VelocityConfiguration.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/config/VelocityConfiguration.java
-@@ -54,6 +54,7 @@ import org.apache.logging.log4j.LogManager;
+@@ -53,6 +53,7 @@ import org.apache.logging.log4j.LogManager;
  import org.apache.logging.log4j.Logger;
  import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
  import org.checkerframework.checker.nullness.qual.Nullable;
@@ -334,7 +334,7 @@ index b1f2908a..39f154cd 100644
  
  public class VelocityConfiguration implements ProxyConfig {
  
-@@ -319,6 +320,12 @@ public class VelocityConfiguration implements ProxyConfig {
+@@ -315,6 +316,12 @@ public class VelocityConfiguration implements ProxyConfig {
      return advanced.getLoginRatelimit();
    }
  
@@ -404,10 +404,10 @@ index e72f42d6..2c6d4375 100644
 +  //BotFilter end
  }
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/HandshakeSessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/HandshakeSessionHandler.java
-index fd91b7b8..3c2ed111 100644
+index d5468daa..12b6f38f 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/HandshakeSessionHandler.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/HandshakeSessionHandler.java
-@@ -123,11 +123,15 @@ public class HandshakeSessionHandler implements MinecraftSessionHandler {
+@@ -125,11 +125,15 @@ public class HandshakeSessionHandler implements MinecraftSessionHandler {
        return;
      }
  
@@ -415,7 +415,7 @@ index fd91b7b8..3c2ed111 100644
 +    /*
      InetAddress address = ((InetSocketAddress) connection.getRemoteAddress()).getAddress();
      if (!server.getIpAttemptLimiter().attempt(address)) {
-       ic.disconnectQuietly(Component.text("You are logging in too fast, try again later."));
+       ic.disconnectQuietly(Component.translatable("velocity.error.logging-in-too-fast"));
        return;
      }
 +    */
@@ -424,7 +424,7 @@ index fd91b7b8..3c2ed111 100644
      connection.setType(getHandshakeConnectionType(handshake));
  
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
-index b42997e3..50ec438a 100644
+index a4b3156a..eff9d2de 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
 @@ -25,7 +25,6 @@ import static com.velocitypowered.proxy.util.EncryptionUtils.decryptRsa;
@@ -443,7 +443,7 @@ index b42997e3..50ec438a 100644
  import java.util.Optional;
  import java.util.UUID;
  import java.util.concurrent.CompletableFuture;
-@@ -69,9 +67,7 @@ import org.apache.logging.log4j.Logger;
+@@ -71,9 +69,7 @@ import org.apache.logging.log4j.Logger;
  import org.asynchttpclient.ListenableFuture;
  import org.asynchttpclient.Response;
  import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
@@ -454,7 +454,7 @@ index b42997e3..50ec438a 100644
  
  public class LoginSessionHandler implements MinecraftSessionHandler {
  
-@@ -80,7 +76,6 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+@@ -82,7 +78,6 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
        "https://sessionserver.mojang.com/session/minecraft/hasJoined?username=%s&serverId=%s";
  
    private final VelocityServer server;
@@ -462,7 +462,7 @@ index b42997e3..50ec438a 100644
    private final MinecraftConnection mcConnection;
    private final InitialInboundConnection inbound;
    private @MonotonicNonNull ServerLogin login;
-@@ -92,7 +87,6 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+@@ -94,7 +89,6 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
      this.server = Preconditions.checkNotNull(server, "server");
      this.mcConnection = Preconditions.checkNotNull(mcConnection, "mcConnection");
      this.inbound = Preconditions.checkNotNull(inbound, "inbound");
@@ -470,7 +470,7 @@ index b42997e3..50ec438a 100644
    }
  
    @Override
-@@ -234,10 +228,10 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+@@ -236,10 +230,10 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
          onlineMode);
      final GameProfile finalProfile = profile;
  
@@ -484,10 +484,10 @@ index b42997e3..50ec438a 100644
        }
  
        // Initiate a regular connection and move over to it.
-@@ -246,28 +240,9 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
-       this.connectedPlayer = player;
+@@ -249,28 +243,9 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
        if (!server.canRegisterConnection(player)) {
-         player.disconnect0(server.getConfiguration().getMessages().getAlreadyConnected(), true);
+         player.disconnect0(Component.translatable("velocity.error.already-connected-proxy",
+             NamedTextColor.RED), true);
 -        return CompletableFuture.completedFuture(null);
 +        return;
        }
@@ -515,7 +515,7 @@ index b42997e3..50ec438a 100644
        SkinSetup setup = elytraProxy
                .getDatabase()
                .getItem(
-@@ -281,39 +256,52 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+@@ -284,39 +259,52 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
          player.setGameProfileProperties(playerProfile);
  
        }
@@ -593,7 +593,7 @@ index b42997e3..50ec438a 100644
        mcConnection.setCompressionThreshold(threshold);
      }
      VelocityConfiguration configuration = server.getConfiguration();
-@@ -324,12 +312,35 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+@@ -327,12 +315,35 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
      ServerLoginSuccess success = new ServerLoginSuccess();
      success.setUsername(player.getUsername());
      success.setUuid(playerUniqueId);
@@ -632,7 +632,7 @@ index b42997e3..50ec438a 100644
          .thenAcceptAsync(event -> {
            if (mcConnection.isClosed()) {
              // The player was disconnected
-@@ -356,6 +367,7 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+@@ -359,6 +370,7 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
                    return null;
                  });
            }

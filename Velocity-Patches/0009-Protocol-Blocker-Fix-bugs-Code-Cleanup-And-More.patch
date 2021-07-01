@@ -1,4 +1,4 @@
-From 0464daa2db7e940cdbbf4bb0b7d7dbd4540d6b35 Mon Sep 17 00:00:00 2001
+From 4be47eddcf42944adc23d91bdb53571a35857f9b Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Wed, 2 Jun 2021 23:35:32 +0900
 Subject: [PATCH] Protocol Blocker, Fix bugs, Code Cleanup And More
@@ -21,7 +21,7 @@ index 4c62bd0d..3b9ce7db 100644
  
      test {
 diff --git a/config/checkstyle/checkstyle.xml b/config/checkstyle/checkstyle.xml
-index 08a2b373..66cc9e59 100644
+index eaf630f2..fe13463f 100644
 --- a/config/checkstyle/checkstyle.xml
 +++ b/config/checkstyle/checkstyle.xml
 @@ -121,6 +121,7 @@
@@ -129,10 +129,10 @@ index 6d775a0a..65169af3 100644
  
  test {
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-index 2880e0c6..fdd67bab 100644
+index 57a1c928..e1f89560 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-@@ -134,7 +134,8 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -141,7 +141,8 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
    private final VelocityPluginManager pluginManager;
    private final AdventureBossBarManager bossBarManager;
  
@@ -143,10 +143,10 @@ index 2880e0c6..fdd67bab 100644
    private final VelocityConsole console;
    private @MonotonicNonNull Ratelimiter ipAttemptLimiter;
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/config/VelocityConfiguration.java b/proxy/src/main/java/com/velocitypowered/proxy/config/VelocityConfiguration.java
-index 39f154cd..cd4d4fcb 100644
+index 9863c145..e9ee6248 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/config/VelocityConfiguration.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/config/VelocityConfiguration.java
-@@ -323,7 +323,7 @@ public class VelocityConfiguration implements ProxyConfig {
+@@ -319,7 +319,7 @@ public class VelocityConfiguration implements ProxyConfig {
    //BotFilter - global rate limiter
    @Override
    public int getLoginRatelimitAttempts() {
@@ -156,10 +156,10 @@ index 39f154cd..cd4d4fcb 100644
  
    @Override
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
-index 50ec438a..67f890ea 100644
+index eff9d2de..a611021b 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
-@@ -258,7 +258,20 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+@@ -261,7 +261,20 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
        }
        */
        logger.info("{} has connected", player);
@@ -181,7 +181,7 @@ index 50ec438a..67f890ea 100644
      }, mcConnection.eventLoop()).exceptionally((ex) -> {
        logger.error("Exception during connection of {}", finalProfile, ex);
        return null;
-@@ -266,25 +279,24 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+@@ -269,25 +282,24 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
    }
  
    private void preLoginCheck(ConnectedPlayer player) {

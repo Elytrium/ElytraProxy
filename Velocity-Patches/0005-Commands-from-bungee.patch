@@ -1,11 +1,11 @@
-From bc9f90276beb1da8189bd07fbe44aa22021530e4 Mon Sep 17 00:00:00 2001
+From deb13d13f21d2a9ceb33a42da15d065e90d12284 Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Sat, 22 May 2021 04:39:59 +0900
 Subject: [PATCH] Commands from bungee
 
 
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-index 2e22397a..c83eb59e 100644
+index a3f365aa..2a7ef6d0 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
 @@ -38,10 +38,10 @@ import com.velocitypowered.api.util.Favicon;
@@ -20,7 +20,7 @@ index 2e22397a..c83eb59e 100644
  import com.velocitypowered.proxy.config.VelocityConfiguration;
  import com.velocitypowered.proxy.connection.client.ConnectedPlayer;
  import com.velocitypowered.proxy.connection.player.VelocityResourcePackInfo;
-@@ -100,6 +100,9 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
+@@ -107,6 +107,9 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
  import org.checkerframework.checker.nullness.qual.NonNull;
  import org.checkerframework.checker.nullness.qual.Nullable;
  import ru.mdxd44.elytraproxy.ElytraProxy;
@@ -30,7 +30,7 @@ index 2e22397a..c83eb59e 100644
  
  public class VelocityServer implements ProxyServer, ForwardingAudience {
  
-@@ -202,6 +205,9 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -211,6 +214,9 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
      // Initialize commands first
      commandManager.register("elytraproxy", new ElytraProxyCommand(this));
      commandManager.register("server", new ServerCommand(this));

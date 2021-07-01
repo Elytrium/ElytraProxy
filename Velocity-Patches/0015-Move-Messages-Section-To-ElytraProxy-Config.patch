@@ -1,4 +1,4 @@
-From aa16c564d44b0e1c6ea06404cfe0835b367aa922 Mon Sep 17 00:00:00 2001
+From 2c4b0c3603904c4d35f485989226b28eecd826bd Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Mon, 7 Jun 2021 04:45:40 +0900
 Subject: [PATCH] Move Messages Section To ElytraProxy Config
@@ -18,7 +18,7 @@ index 5512c589..d27838ea 100644
      ext {
          // dependency versions
 diff --git a/config/checkstyle/checkstyle.xml b/config/checkstyle/checkstyle.xml
-index f614cb53..925306a7 100644
+index 083337a8..76a9665e 100644
 --- a/config/checkstyle/checkstyle.xml
 +++ b/config/checkstyle/checkstyle.xml
 @@ -185,10 +185,12 @@
@@ -51,36 +51,24 @@ index f614cb53..925306a7 100644
        <property name="exceptionVariableName" value="expected"/>
      </module>
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/CommandMessages.java b/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/CommandMessages.java
-new file mode 100644
-index 00000000..deeb16fa
---- /dev/null
+index b4a5a213..deeb16fa 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/CommandMessages.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/CommandMessages.java
-@@ -0,0 +1,42 @@
-+/*
-+ * Copyright (C) 2018 Velocity Contributors
-+ *
-+ * This program is free software: you can redistribute it and/or modify
-+ * it under the terms of the GNU General Public License as published by
-+ * the Free Software Foundation, either version 3 of the License, or
-+ * (at your option) any later version.
-+ *
-+ * This program is distributed in the hope that it will be useful,
-+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
-+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-+ * GNU General Public License for more details.
-+ *
-+ * You should have received a copy of the GNU General Public License
-+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
-+ */
-+
-+package com.velocitypowered.proxy.command.builtin;
-+
-+import net.kyori.adventure.text.Component;
+@@ -18,13 +18,25 @@
+ package com.velocitypowered.proxy.command.builtin;
+ 
+ import net.kyori.adventure.text.Component;
+-import net.kyori.adventure.text.TranslatableComponent;
+-import net.kyori.adventure.text.format.NamedTextColor;
 +import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 +import ru.elytrium.elytraproxy.config.Settings;
-+
-+public class CommandMessages {
-+
+ 
+ public class CommandMessages {
+ 
+-  public static final TranslatableComponent PLAYERS_ONLY = Component.translatable(
+-      "velocity.command.players-only", NamedTextColor.RED);
+-  public static final TranslatableComponent SERVER_DOES_NOT_EXIST = Component.translatable(
+-      "velocity.command.server-does-not-exist", NamedTextColor.RED);
 +  public static final Component PLAYERS_ONLY = LegacyComponentSerializer
 +          .legacyAmpersand()
 +          .deserialize((
@@ -97,29 +85,25 @@ index 00000000..deeb16fa
 +                            .replace("%nl%", "\n")
 +                            .replace("{0}", serverName));
 +  }
-+}
+ }
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/GlistCommand.java b/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/GlistCommand.java
-index fe20ff6b..f192f6fc 100644
+index 1e0c6a3f..b2b9d87b 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/GlistCommand.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/GlistCommand.java
-@@ -37,6 +37,8 @@ import net.kyori.adventure.identity.Identity;
- import net.kyori.adventure.text.Component;
+@@ -38,6 +38,8 @@ import net.kyori.adventure.text.Component;
  import net.kyori.adventure.text.TextComponent;
+ import net.kyori.adventure.text.TranslatableComponent;
  import net.kyori.adventure.text.format.NamedTextColor;
 +import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 +import ru.elytrium.elytraproxy.config.Settings;
  
  public class GlistCommand {
  
-@@ -77,11 +79,12 @@ public class GlistCommand {
+@@ -78,7 +80,12 @@ public class GlistCommand {
      final CommandSource source = context.getSource();
      sendTotalProxyCount(source);
      source.sendMessage(Identity.nil(),
--        Component.text().content("To view all players on servers, use ")
--            .color(NamedTextColor.YELLOW)
--            .append(Component.text("/glist all", NamedTextColor.DARK_AQUA))
--            .append(Component.text(".", NamedTextColor.YELLOW))
--            .build());
+-        Component.translatable("velocity.command.glist-view-all", NamedTextColor.YELLOW));
 +            LegacyComponentSerializer
 +                    .legacyAmpersand()
 +                    .deserialize((
@@ -129,24 +113,25 @@ index fe20ff6b..f192f6fc 100644
      return 1;
    }
  
-@@ -97,7 +100,7 @@ public class GlistCommand {
+@@ -94,7 +101,7 @@ public class GlistCommand {
        Optional<RegisteredServer> registeredServer = server.getServer(serverName);
        if (!registeredServer.isPresent()) {
          source.sendMessage(Identity.nil(),
--            Component.text("Server " + serverName + " doesn't exist.", NamedTextColor.RED));
+-            CommandMessages.SERVER_DOES_NOT_EXIST.args(Component.text(serverName)));
 +            CommandMessages.SERVER_DOES_NOT_EXIST(serverName));
          return -1;
        }
        sendServerPlayers(source, registeredServer.get(), false);
-@@ -106,11 +109,23 @@ public class GlistCommand {
+@@ -103,12 +110,23 @@ public class GlistCommand {
    }
  
    private void sendTotalProxyCount(CommandSource target) {
--    target.sendMessage(Identity.nil(), Component.text()
--        .content("There are ").color(NamedTextColor.YELLOW)
--        .append(Component.text(server.getAllPlayers().size(), NamedTextColor.GREEN))
--        .append(Component.text(" player(s) online.", NamedTextColor.YELLOW))
--        .build());
+-    int online = server.getPlayerCount();
+-    TranslatableComponent msg = online == 1
+-        ? Component.translatable("velocity.command.glist-player-singular")
+-        : Component.translatable("velocity.command.glist-player-plural");
+-    target.sendMessage(msg.color(NamedTextColor.YELLOW)
+-        .args(Component.text(Integer.toString(online), NamedTextColor.GREEN)));
 +    int online = server.getAllPlayers().size();
 +    Component msg = online == 1
 +            ? LegacyComponentSerializer
@@ -167,7 +152,7 @@ index fe20ff6b..f192f6fc 100644
    }
  
    private void sendServerPlayers(CommandSource target, RegisteredServer server, boolean fromAll) {
-@@ -119,11 +134,13 @@ public class GlistCommand {
+@@ -117,11 +135,13 @@ public class GlistCommand {
        return;
      }
  
@@ -187,14 +172,11 @@ index fe20ff6b..f192f6fc 100644
  
      for (int i = 0; i < onServer.size(); i++) {
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/ServerCommand.java b/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/ServerCommand.java
-index c54da99d..b666855f 100644
+index 4b0b1154..b666855f 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/ServerCommand.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/ServerCommand.java
-@@ -34,8 +34,12 @@ import java.util.stream.Stream;
- import net.kyori.adventure.identity.Identity;
- import net.kyori.adventure.text.Component;
- import net.kyori.adventure.text.TextComponent;
-+import net.kyori.adventure.text.TranslatableComponent;
+@@ -37,6 +37,9 @@ import net.kyori.adventure.text.TextComponent;
+ import net.kyori.adventure.text.TranslatableComponent;
  import net.kyori.adventure.text.event.ClickEvent;
  import net.kyori.adventure.text.format.NamedTextColor;
 +import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
@@ -203,32 +185,24 @@ index c54da99d..b666855f 100644
  
  public class ServerCommand implements SimpleCommand {
  
-@@ -52,8 +56,7 @@ public class ServerCommand implements SimpleCommand {
-     final String[] args = invocation.arguments();
- 
-     if (!(source instanceof Player)) {
--      source.sendMessage(Identity.nil(), Component.text("Only players may run this command.",
--          NamedTextColor.RED));
-+      source.sendMessage(Identity.nil(), CommandMessages.PLAYERS_ONLY);
-       return;
-     }
- 
 @@ -63,8 +66,7 @@ public class ServerCommand implements SimpleCommand {
        String serverName = args[0];
        Optional<RegisteredServer> toConnect = server.getServer(serverName);
        if (!toConnect.isPresent()) {
--        player.sendMessage(Identity.nil(),
--            Component.text("Server " + serverName + " doesn't exist.", NamedTextColor.RED));
+-        player.sendMessage(Identity.nil(), CommandMessages.SERVER_DOES_NOT_EXIST
+-            .args(Component.text(serverName)));
 +        player.sendMessage(Identity.nil(), CommandMessages.SERVER_DOES_NOT_EXIST(serverName));
          return;
        }
  
-@@ -77,19 +79,35 @@ public class ServerCommand implements SimpleCommand {
+@@ -77,23 +79,35 @@ public class ServerCommand implements SimpleCommand {
    private void outputServerInformation(Player executor) {
      String currentServer = executor.getCurrentServer().map(ServerConnection::getServerInfo)
          .map(ServerInfo::getName).orElse("<unknown>");
--    executor.sendMessage(Identity.nil(), Component.text(
--        "You are currently connected to " + currentServer + ".", NamedTextColor.YELLOW));
+-    executor.sendMessage(Identity.nil(), Component.translatable(
+-        "velocity.command.server-current-server",
+-        NamedTextColor.YELLOW,
+-        Component.text(currentServer)));
 +    executor.sendMessage(Identity.nil(),
 +            LegacyComponentSerializer
 +                    .legacyAmpersand()
@@ -240,8 +214,8 @@ index c54da99d..b666855f 100644
  
      List<RegisteredServer> servers = BuiltinCommandUtil.sortedServerList(server);
      if (servers.size() > MAX_SERVERS_TO_LIST) {
--      executor.sendMessage(Identity.nil(), Component.text(
--          "Too many servers to list. Tab-complete to show all servers.", NamedTextColor.RED));
+-      executor.sendMessage(Identity.nil(), Component.translatable(
+-          "velocity.command.server-too-many", NamedTextColor.RED));
 +      executor.sendMessage(Identity.nil(),
 +              LegacyComponentSerializer
 +                      .legacyAmpersand()
@@ -253,9 +227,10 @@ index c54da99d..b666855f 100644
      }
  
      // Assemble the list of servers as components
--    TextComponent.Builder serverListBuilder = Component.text().content("Available servers: ")
--        .color(NamedTextColor.YELLOW);
-+    TextComponent.Builder serverListBuilder = Component.text()
+     TextComponent.Builder serverListBuilder = Component.text()
+-        .append(Component.translatable("velocity.command.server-available",
+-            NamedTextColor.YELLOW))
+-        .append(Component.space());
 +            .append(LegacyComponentSerializer
 +                    .legacyAmpersand()
 +                    .deserialize((
@@ -265,14 +240,14 @@ index c54da99d..b666855f 100644
      for (int i = 0; i < servers.size(); i++) {
        RegisteredServer rs = servers.get(i);
        serverListBuilder.append(formatServerComponent(currentServer, rs));
-@@ -105,17 +123,58 @@ public class ServerCommand implements SimpleCommand {
-     ServerInfo serverInfo = server.getServerInfo();
+@@ -110,28 +124,57 @@ public class ServerCommand implements SimpleCommand {
      TextComponent serverTextComponent = Component.text(serverInfo.getName());
  
--    String playersText = server.getPlayersConnected().size() + " player(s) online";
-+    int connectedPlayers = server.getPlayersConnected().size();
+     int connectedPlayers = server.getPlayersConnected().size();
+-    TranslatableComponent playersTextComponent;
 +    Component playersTextComponent;
-+    if (connectedPlayers == 1) {
+     if (connectedPlayers == 1) {
+-      playersTextComponent = Component.translatable("velocity.command.server-tooltip-player-online");
 +      playersTextComponent = LegacyComponentSerializer
 +              .legacyAmpersand()
 +              .deserialize((
@@ -280,7 +255,8 @@ index c54da99d..b666855f 100644
 +                      + Settings.IMP.MESSAGES.VELOCITY.COMMAND.SERVER_TOOLTIP_PLAYER_ONLINE)
 +                              .replace("%nl%", "\n")
 +                              .replace("{0}", String.valueOf(connectedPlayers)));
-+    } else {
+     } else {
+-      playersTextComponent = Component.translatable("velocity.command.server-tooltip-players-online");
 +      playersTextComponent = LegacyComponentSerializer
 +              .legacyAmpersand()
 +              .deserialize((
@@ -288,13 +264,16 @@ index c54da99d..b666855f 100644
 +                      + Settings.IMP.MESSAGES.VELOCITY.COMMAND.SERVER_TOOLTIP_PLAYERS_ONLINE)
 +                              .replace("%nl%", "\n")
 +                              .replace("{0}", String.valueOf(connectedPlayers)));
-+    }
+     }
+-    playersTextComponent = playersTextComponent.args(Component.text(connectedPlayers));
 +
      if (serverInfo.getName().equals(currentPlayerServer)) {
        serverTextComponent = serverTextComponent.color(NamedTextColor.GREEN)
            .hoverEvent(
--              showText(Component.text("Currently connected to this server\n" + playersText))
-+              showText(
+               showText(
+-                  Component.translatable("velocity.command.server-tooltip-current-server")
+-                      .append(Component.newline())
+-                      .append(playersTextComponent))
 +                  LegacyComponentSerializer
 +                      .legacyAmpersand()
 +                      .deserialize((
@@ -311,7 +290,9 @@ index c54da99d..b666855f 100644
        serverTextComponent = serverTextComponent.color(NamedTextColor.GRAY)
            .clickEvent(ClickEvent.runCommand("/server " + serverInfo.getName()))
            .hoverEvent(
--              showText(Component.text("Click to connect to this server\n" + playersText))
+-              showText(Component.translatable("velocity.command.server-tooltip-offer-connect-server")
+-                  .append(Component.newline())
+-                  .append(playersTextComponent))
 +              showText(
 +                LegacyComponentSerializer
 +                  .legacyAmpersand()
@@ -328,85 +309,10 @@ index c54da99d..b666855f 100644
      }
      return serverTextComponent;
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/config/VelocityConfiguration.java b/proxy/src/main/java/com/velocitypowered/proxy/config/VelocityConfiguration.java
-index 307ba6b6..81b9cb0b 100644
+index 034e0b3a..58794cf1 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/config/VelocityConfiguration.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/config/VelocityConfiguration.java
-@@ -47,7 +47,6 @@ import java.util.Locale;
- import java.util.Map;
- import java.util.Optional;
- import java.util.Random;
--import net.kyori.adventure.text.Component;
- import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
- import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
- import org.apache.logging.log4j.LogManager;
-@@ -75,25 +74,31 @@ public class VelocityConfiguration implements ProxyConfig {
-   @Expose private final Advanced advanced;
-   @Expose private final Query query;
-   private final Metrics metrics;
-+  /*
-+  ElytraProxy - Move messages to ElytraProxy Config
-   private final Messages messages;
-+  */
-   private net.kyori.adventure.text.@MonotonicNonNull Component motdAsComponent;
-   private @Nullable Favicon favicon;
- 
-   private VelocityConfiguration(Servers servers, ForcedHosts forcedHosts, Advanced advanced,
--      Query query, Metrics metrics, Messages messages) {
-+      Query query, Metrics metrics/*, Messages messages*/) {
-     this.servers = servers;
-     this.forcedHosts = forcedHosts;
-     this.advanced = advanced;
-     this.query = query;
-     this.metrics = metrics;
-+    /*
-+    ElytraProxy - Move messages to ElytraProxy Config
-     this.messages = messages;
-+    */
-   }
- 
-   private VelocityConfiguration(String bind, String motd, int showMaxPlayers, boolean onlineMode,
-       boolean preventClientProxyConnections, boolean announceForge,
-       PlayerInfoForwarding playerInfoForwardingMode, byte[] forwardingSecret,
-       boolean onlineModeKickExistingPlayers, PingPassthroughMode pingPassthrough, Servers servers,
--      ForcedHosts forcedHosts, Advanced advanced, Query query, Metrics metrics, Messages messages) {
-+      ForcedHosts forcedHosts, Advanced advanced, Query query, Metrics metrics) {
-     this.bind = bind;
-     this.motd = motd;
-     this.showMaxPlayers = showMaxPlayers;
-@@ -109,7 +114,10 @@ public class VelocityConfiguration implements ProxyConfig {
-     this.advanced = advanced;
-     this.query = query;
-     this.metrics = metrics;
-+    /*
-+    ElytraProxy - Move messages to ElytraProxy Config
-     this.messages = messages;
-+    */
-   }
- 
-   /**
-@@ -382,9 +390,13 @@ public class VelocityConfiguration implements ProxyConfig {
-     return advanced.isLogCommandExecutions();
-   }
- 
-+  /*
-+  ElytraProxy Start - Move messages to ElytraProxy Config
-   public Messages getMessages() {
-     return messages;
-   }
-+  ElytraProxy End
-+  */
- 
-   @Override
-   public String toString() {
-@@ -459,14 +471,14 @@ public class VelocityConfiguration implements ProxyConfig {
-     CommentedConfig advancedConfig = config.get("advanced");
-     CommentedConfig queryConfig = config.get("query");
-     CommentedConfig metricsConfig = config.get("metrics");
--    CommentedConfig messagesConfig = config.get("messages");
-+    //CommentedConfig messagesConfig = config.get("messages");
-     PlayerInfoForwarding forwardingMode = config.getEnumOrElse("player-info-forwarding-mode",
-         PlayerInfoForwarding.NONE);
-     PingPassthroughMode pingPassthroughMode = config.getEnumOrElse("ping-passthrough",
+@@ -457,7 +457,7 @@ public class VelocityConfiguration implements ProxyConfig {
          PingPassthroughMode.DISABLED);
  
      String bind = config.getOrElse("bind", "0.0.0.0:25577");
@@ -415,19 +321,7 @@ index 307ba6b6..81b9cb0b 100644
      int maxPlayers = config.getIntOrElse("show-max-players", 500);
      Boolean onlineMode = config.getOrElse("online-mode", true);
      Boolean announceForge = config.getOrElse("announce-forge", true);
-@@ -489,8 +501,9 @@ public class VelocityConfiguration implements ProxyConfig {
-         new ForcedHosts(forcedHostsConfig),
-         new Advanced(advancedConfig),
-         new Query(queryConfig),
--        new Metrics(metricsConfig),
--        new Messages(messagesConfig, defaultConfig.get("messages"))
-+        new Metrics(metricsConfig)/*,
-+        ElytraProxy - Move messages to ElytraProxy Config
-+        new Messages(messagesConfig, defaultConfig.get("messages"))*/
-     );
-   }
- 
-@@ -651,7 +664,7 @@ public class VelocityConfiguration implements ProxyConfig {
+@@ -641,7 +641,7 @@ public class VelocityConfiguration implements ProxyConfig {
  
      private Advanced(CommentedConfig config) {
        if (config != null) {
@@ -436,7 +330,7 @@ index 307ba6b6..81b9cb0b 100644
          this.compressionLevel = config.getIntOrElse("compression-level", -1);
          this.loginRatelimit = config.getIntOrElse("login-ratelimit", 3000);
          this.connectionTimeout = config.getIntOrElse("connection-timeout", 5000);
-@@ -663,7 +676,7 @@ public class VelocityConfiguration implements ProxyConfig {
+@@ -653,7 +653,7 @@ public class VelocityConfiguration implements ProxyConfig {
          }
          this.tcpFastOpen = config.getOrElse("tcp-fast-open", false);
          this.bungeePluginMessageChannel = config.getOrElse("bungee-plugin-message-channel", true);
@@ -445,22 +339,6 @@ index 307ba6b6..81b9cb0b 100644
          this.failoverOnUnexpectedServerDisconnect = config
              .getOrElse("failover-on-unexpected-server-disconnect", true);
          this.announceProxyCommands = config.getOrElse("announce-proxy-commands", true);
-@@ -805,6 +818,8 @@ public class VelocityConfiguration implements ProxyConfig {
-     }
-   }
- 
-+  /*
-+  ElytraProxy Start - Move messages to ElytraProxy Config
-   public static class Messages {
- 
-     private final CommentedConfig toml;
-@@ -873,4 +888,6 @@ public class VelocityConfiguration implements ProxyConfig {
-       return LegacyComponentSerializer.legacyAmpersand().deserialize(str);
-     }
-   }
-+  ElytraProxy End
-+  */
- }
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftConnection.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftConnection.java
 index fa51244f..e9d64d40 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftConnection.java
@@ -482,7 +360,7 @@ index fa51244f..e9d64d40 100644
            InetSocketAddress adr = (InetSocketAddress) ctx.channel().localAddress();
            InetSocketAddress adr1 = (InetSocketAddress) ctx.channel().remoteAddress();
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/backend/LoginSessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/backend/LoginSessionHandler.java
-index 19643031..227ea644 100644
+index 9f408310..227ea644 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/backend/LoginSessionHandler.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/backend/LoginSessionHandler.java
 @@ -46,11 +46,16 @@ import javax.crypto.SecretKey;
@@ -494,8 +372,8 @@ index 19643031..227ea644 100644
  
  public class LoginSessionHandler implements MinecraftSessionHandler {
  
--  private static final TextComponent MODERN_IP_FORWARDING_FAILURE = Component
--      .text("Your server did not send a forwarding request to the proxy. Is it set up correctly?");
+-  private static final Component MODERN_IP_FORWARDING_FAILURE = Component
+-      .translatable("velocity.error.modern-forwarding-failed");
 +  private static final TextComponent MODERN_IP_FORWARDING_FAILURE = LegacyComponentSerializer
 +          .legacyAmpersand()
 +          .deserialize((
@@ -505,7 +383,7 @@ index 19643031..227ea644 100644
    private final VelocityServer server;
    private final VelocityServerConnection serverConn;
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
-index 4ac74d9d..db97ab23 100644
+index b9b892e1..db97ab23 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
 @@ -69,8 +69,6 @@ import java.util.Queue;
@@ -517,7 +395,7 @@ index 4ac74d9d..db97ab23 100644
  import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
  import org.apache.logging.log4j.LogManager;
  import org.apache.logging.log4j.Logger;
-@@ -162,26 +160,39 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+@@ -162,25 +160,39 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
                event.getResult()))
            .whenComplete((ignored, throwable) -> {
              if (Settings.IMP.MAIN_SETTINGS.ENABLE_COMMAND_SPY_IN_CHAT) {
@@ -555,9 +433,9 @@ index 4ac74d9d..db97ab23 100644
            .exceptionally(e -> {
              logger.info("Exception occurred while running command for {}",
                  player.getUsername(), e);
-             player.sendMessage(Identity.nil(),
--                Component.text("An error occurred while running this command.",
--                    NamedTextColor.RED));
+-            player.sendMessage(Component.translatable("velocity.command.generic-error",
+-                NamedTextColor.RED));
++            player.sendMessage(Identity.nil(),
 +                    LegacyComponentSerializer
 +                            .legacyAmpersand()
 +                            .deserialize((
@@ -567,11 +445,12 @@ index 4ac74d9d..db97ab23 100644
              return null;
            });
      } else {
-@@ -340,7 +351,12 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+@@ -339,8 +351,12 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
  
    @Override
    public void exception(Throwable throwable) {
--    player.disconnect(server.getConfiguration().getMessages().getGenericConnectionError());
+-    player.disconnect(Component.translatable("velocity.error.player-connection-error",
+-        NamedTextColor.RED));
 +    player.disconnect(
 +        LegacyComponentSerializer
 +            .legacyAmpersand()
@@ -591,7 +470,7 @@ index 4ac74d9d..db97ab23 100644
            return null;
          });
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
-index ccbf6be3..52e36229 100644
+index 6a097a49..8255eb0f 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
 @@ -48,7 +48,6 @@ import com.velocitypowered.api.proxy.server.RegisteredServer;
@@ -602,7 +481,7 @@ index ccbf6be3..52e36229 100644
  import com.velocitypowered.proxy.connection.MinecraftConnection;
  import com.velocitypowered.proxy.connection.MinecraftConnectionAssociation;
  import com.velocitypowered.proxy.connection.backend.VelocityServerConnection;
-@@ -92,7 +91,6 @@ import net.kyori.adventure.permission.PermissionChecker;
+@@ -93,7 +92,6 @@ import net.kyori.adventure.permission.PermissionChecker;
  import net.kyori.adventure.pointer.Pointers;
  import net.kyori.adventure.text.Component;
  import net.kyori.adventure.text.TranslatableComponent;
@@ -610,7 +489,7 @@ index ccbf6be3..52e36229 100644
  import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
  import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
  import net.kyori.adventure.text.serializer.plain.PlainComponentSerializer;
-@@ -102,12 +100,11 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
+@@ -106,12 +104,11 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
  import org.checkerframework.checker.nullness.qual.NonNull;
  import org.checkerframework.checker.nullness.qual.Nullable;
  import org.jetbrains.annotations.NotNull;
@@ -624,16 +503,12 @@ index ccbf6be3..52e36229 100644
    static final PermissionProvider DEFAULT_PERMISSIONS = s -> PermissionFunction.ALWAYS_UNDEFINED;
  
    private static final Logger logger = LogManager.getLogger(ConnectedPlayer.class);
-@@ -472,18 +469,26 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
-         wrapped = cause;
-       }
-     }
--    String userMessage;
-+
-+    Component friendlyError;
+@@ -500,15 +497,23 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
+ 
+     Component friendlyError;
      if (connectedServer != null && connectedServer.getServerInfo().equals(server.getServerInfo())) {
--      userMessage = "Your connection to " + server.getServerInfo().getName() + " encountered an "
--          + "error.";
+-      friendlyError = Component.translatable("velocity.error.connected-server-error",
+-          Component.text(server.getServerInfo().getName()));
 +      friendlyError = LegacyComponentSerializer
 +              .legacyAmpersand()
 +              .deserialize((
@@ -643,8 +518,8 @@ index ccbf6be3..52e36229 100644
      } else {
        logger.error("{}: unable to connect to server {}", this, server.getServerInfo().getName(),
            wrapped);
--      userMessage = "Unable to connect to " + server.getServerInfo().getName() + ". Try again "
--          + "later.";
+-      friendlyError = Component.translatable("velocity.error.connecting-server-error",
+-          Component.text(server.getServerInfo().getName()));
 +      friendlyError = LegacyComponentSerializer
 +              .legacyAmpersand()
 +              .deserialize((
@@ -652,34 +527,27 @@ index ccbf6be3..52e36229 100644
 +                              .replace("%nl%", "\n")
 +                              .replace("{0}", server.getServerInfo().getName()));
      }
--    handleConnectionException(server, null, Component.text(userMessage,
--        NamedTextColor.RED), safe);
+-    handleConnectionException(server, null, friendlyError.color(NamedTextColor.RED), safe);
 +    handleConnectionException(server, null, friendlyError, safe);
    }
  
    /**
-@@ -499,26 +504,44 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
-       return;
+@@ -525,21 +530,42 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
      }
  
--    VelocityConfiguration.Messages messages = this.server.getConfiguration().getMessages();
-+    //VelocityConfiguration.Messages messages = this.server.getConfiguration().getMessages();
      Component disconnectReason = GsonComponentSerializer.gson().deserialize(disconnect.getReason());
 -    String plainTextReason = PASS_THRU_TRANSLATE.serialize(disconnectReason);
      if (connectedServer != null && connectedServer.getServerInfo().equals(server.getServerInfo())) {
        logger.info("{}: kicked from server {}: {}", this, server.getServerInfo().getName(),
 -          plainTextReason);
--      handleConnectionException(server, disconnectReason, Component.text()
--          .append(messages.getKickPrefix(server.getServerInfo().getName())
--              .colorIfAbsent(NamedTextColor.RED))
--          .color(NamedTextColor.RED)
--          .append(disconnectReason)
--          .build(), safe);
 +              LegacyComponentSerializer
 +                      .legacySection()
 +                      .serialize(disconnectReason));
 +      // TODO: rewrite this shit
-+      handleConnectionException(server, disconnectReason,
+       handleConnectionException(server, disconnectReason,
+-          Component.translatable("velocity.error.moved-to-new-server", NamedTextColor.RED,
+-              Component.text(server.getServerInfo().getName()),
+-              disconnectReason), safe);
 +              LegacyComponentSerializer
 +                      .legacyAmpersand()
 +                      .deserialize((
@@ -694,16 +562,14 @@ index ccbf6be3..52e36229 100644
      } else {
        logger.error("{}: disconnected while connecting to {}: {}", this,
 -          server.getServerInfo().getName(), plainTextReason);
--      handleConnectionException(server, disconnectReason, Component.text()
--          .append(messages.getDisconnectPrefix(server.getServerInfo().getName())
--              .colorIfAbsent(NamedTextColor.RED))
--          .append(disconnectReason)
--          .build(), safe);
 +          server.getServerInfo().getName(),
 +              LegacyComponentSerializer
 +                      .legacySection()
 +                      .serialize(disconnectReason));
-+      handleConnectionException(server, disconnectReason,
+       handleConnectionException(server, disconnectReason,
+-          Component.translatable("velocity.error.cant-connect", NamedTextColor.RED,
+-              Component.text(server.getServerInfo().getName()),
+-              disconnectReason), safe);
 +              LegacyComponentSerializer
 +                      .legacyAmpersand()
 +                      .deserialize((
@@ -718,12 +584,14 @@ index ccbf6be3..52e36229 100644
      }
    }
  
-@@ -602,8 +625,19 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
+@@ -623,10 +649,19 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
                            getProtocolVersion()), ((Impl) status).isSafe());
                        break;
                      case SUCCESS:
--                      sendMessage(Identity.nil(), server.getConfiguration().getMessages()
--                          .getMovedToNewServerPrefix().append(friendlyReason));
+-                      sendMessage(Component.translatable("velocity.error.moved-to-new-server",
+-                          NamedTextColor.RED,
+-                          Component.text(originalEvent.getServer().getServerInfo().getName()),
+-                          friendlyReason));
 +                      sendMessage(Identity.nil(),
 +                            LegacyComponentSerializer
 +                                  .legacyAmpersand()
@@ -741,7 +609,7 @@ index ccbf6be3..52e36229 100644
                      default:
                        // The only remaining value is successful (no need to do anything!)
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/HandshakeSessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/HandshakeSessionHandler.java
-index 3c2ed111..ed8765e1 100644
+index 12b6f38f..ed8765e1 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/HandshakeSessionHandler.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/HandshakeSessionHandler.java
 @@ -43,9 +43,11 @@ import net.kyori.adventure.text.Component;
@@ -756,11 +624,15 @@ index 3c2ed111..ed8765e1 100644
  
  public class HandshakeSessionHandler implements MinecraftSessionHandler {
  
-@@ -72,7 +74,10 @@ public class HandshakeSessionHandler implements MinecraftSessionHandler {
+@@ -71,10 +73,11 @@ public class HandshakeSessionHandler implements MinecraftSessionHandler {
+ 
    @Override
    public boolean handle(LegacyHandshake packet) {
-     connection.closeWith(LegacyDisconnect
--        .from(Component.text("Your client is old, please upgrade!", NamedTextColor.RED)));
+-    connection.closeWith(LegacyDisconnect.from(Component.text(
+-        "Your client is extremely old. Please update to a newer version of Minecraft.",
+-        NamedTextColor.RED)
+-    ));
++    connection.closeWith(LegacyDisconnect
 +        .from(Component.text(
 +                "Your client is extremely old. Please update to a newer version of Minecraft.",
 +                NamedTextColor.RED)
@@ -768,11 +640,11 @@ index 3c2ed111..ed8765e1 100644
      return true;
    }
  
-@@ -127,7 +132,12 @@ public class HandshakeSessionHandler implements MinecraftSessionHandler {
+@@ -129,7 +132,12 @@ public class HandshakeSessionHandler implements MinecraftSessionHandler {
      /*
      InetAddress address = ((InetSocketAddress) connection.getRemoteAddress()).getAddress();
      if (!server.getIpAttemptLimiter().attempt(address)) {
--      ic.disconnectQuietly(Component.text("You are logging in too fast, try again later."));
+-      ic.disconnectQuietly(Component.translatable("velocity.error.logging-in-too-fast"));
 +      ic.disconnectQuietly(
 +              LegacyComponentSerializer
 +                      .legacyAmpersand()
@@ -782,11 +654,12 @@ index 3c2ed111..ed8765e1 100644
        return;
      }
      */
-@@ -139,7 +149,12 @@ public class HandshakeSessionHandler implements MinecraftSessionHandler {
+@@ -141,8 +149,12 @@ public class HandshakeSessionHandler implements MinecraftSessionHandler {
      // and lower, otherwise IP information will never get forwarded.
      if (server.getConfiguration().getPlayerInfoForwardingMode() == PlayerInfoForwarding.MODERN
          && handshake.getProtocolVersion().compareTo(ProtocolVersion.MINECRAFT_1_13) < 0) {
--      ic.disconnectQuietly(Component.text("This server is only compatible with 1.13 and above."));
+-      ic.disconnectQuietly(Component.translatable(
+-          "velocity.error.modern-forwarding-needs-new-client"));
 +      ic.disconnectQuietly(
 +             LegacyComponentSerializer
 +                    .legacyAmpersand()
@@ -797,22 +670,23 @@ index 3c2ed111..ed8765e1 100644
      }
  
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
-index e16c102b..64ce1cfe 100644
+index 2afb43da..f59d1d34 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
-@@ -62,6 +62,7 @@ import java.util.concurrent.CompletableFuture;
- import java.util.concurrent.ExecutionException;
- import java.util.concurrent.ThreadLocalRandom;
+@@ -64,6 +64,7 @@ import java.util.concurrent.ThreadLocalRandom;
  import net.kyori.adventure.text.Component;
+ import net.kyori.adventure.text.format.NamedTextColor;
+ import net.kyori.adventure.translation.GlobalTranslator;
 +import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
  import org.apache.logging.log4j.LogManager;
  import org.apache.logging.log4j.Logger;
  import org.asynchttpclient.ListenableFuture;
-@@ -149,7 +150,12 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+@@ -151,8 +152,12 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
                  GameProfile.class), true);
            } else if (profileResponse.getStatusCode() == 204) {
              // Apparently an offline-mode user logged onto this online-mode proxy.
--            inbound.disconnect(server.getConfiguration().getMessages().getOnlineModeOnly());
+-            inbound.disconnect(Component.translatable("velocity.error.online-mode-only",
+-                NamedTextColor.RED));
 +            inbound.disconnect(
 +                    LegacyComponentSerializer
 +                            .legacyAmpersand()
@@ -822,11 +696,12 @@ index e16c102b..64ce1cfe 100644
            } else {
              // Something else went wrong
              logger.error(
-@@ -239,7 +245,12 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+@@ -241,8 +246,12 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
            mcConnection, inbound.getVirtualHost().orElse(null), onlineMode);
        this.connectedPlayer = player;
        if (!server.canRegisterConnection(player)) {
--        player.disconnect0(server.getConfiguration().getMessages().getAlreadyConnected(), true);
+-        player.disconnect0(Component.translatable("velocity.error.already-connected-proxy",
+-            NamedTextColor.RED), true);
 +        player.disconnect0(
 +                LegacyComponentSerializer
 +                        .legacyAmpersand()
@@ -836,7 +711,7 @@ index e16c102b..64ce1cfe 100644
          return;
        }
        /*
-@@ -261,8 +272,12 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+@@ -264,8 +273,12 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
        // ElytraProxy Start - Init antibot & protocol blocker
        if (Settings.IMP.MAIN_SETTINGS.BANNED_PROTOCOLS
                .contains(mcConnection.getProtocolVersion().getProtocol())) {
@@ -851,7 +726,7 @@ index e16c102b..64ce1cfe 100644
          return;
        }
        if (Settings.IMP.ANTIBOT.ENABLE) {
-@@ -284,13 +299,13 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+@@ -287,13 +300,13 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
      if (Settings.IMP.ANTIBOT.BANNED_NICK_PATTERNS
                .stream().anyMatch(formattedNickname::contains)) {
        player.disconnect0(
@@ -872,12 +747,12 @@ index e16c102b..64ce1cfe 100644
      } else {
        //injectBotFilterOrFinishLogin(player);
  
-@@ -366,8 +381,12 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+@@ -369,8 +382,12 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
              player.disconnect0(reason.get(), true);
            } else {
              if (!server.registerConnection(player)) {
--              player.disconnect0(server.getConfiguration().getMessages()
--                      .getAlreadyConnected(), true);
+-              player.disconnect0(Component.translatable("velocity.error.already-connected-proxy"),
+-                  true);
 +              player.disconnect0(
 +                      LegacyComponentSerializer
 +                              .legacyAmpersand()
@@ -887,12 +762,12 @@ index e16c102b..64ce1cfe 100644
                return;
              }
  
-@@ -396,8 +415,12 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+@@ -399,8 +416,12 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
          .thenRunAsync(() -> {
            Optional<RegisteredServer> toTry = event.getInitialServer();
            if (!toTry.isPresent()) {
--            player.disconnect0(server.getConfiguration().getMessages()
--                    .getNoAvailableServers(), true);
+-            player.disconnect0(Component.translatable("velocity.error.no-available-servers",
+-                NamedTextColor.RED), true);
 +            player.disconnect0(
 +                    LegacyComponentSerializer
 +                            .legacyAmpersand()
@@ -903,27 +778,28 @@ index e16c102b..64ce1cfe 100644
            }
            player.createConnectionRequest(toTry.get()).fireAndForget();
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/util/ConnectionMessages.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/util/ConnectionMessages.java
-index bbb6c2da..f38650b1 100644
+index 5e29672c..f38650b1 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/util/ConnectionMessages.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/util/ConnectionMessages.java
-@@ -17,18 +17,27 @@
+@@ -17,19 +17,27 @@
  
  package com.velocitypowered.proxy.connection.util;
  
 -import net.kyori.adventure.text.Component;
  import net.kyori.adventure.text.TextComponent;
+-import net.kyori.adventure.text.TranslatableComponent;
 -import net.kyori.adventure.text.format.NamedTextColor;
 +import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 +import ru.elytrium.elytraproxy.config.Settings;
  
  public class ConnectionMessages {
  
--  public static final TextComponent ALREADY_CONNECTED = Component
--      .text("You are already connected to this server!", NamedTextColor.RED);
--  public static final TextComponent IN_PROGRESS = Component
--      .text("You are already connecting to a server!", NamedTextColor.RED);
--  public static final TextComponent INTERNAL_SERVER_CONNECTION_ERROR = Component
--      .text("An internal server connection error occurred.", NamedTextColor.RED);
+-  public static final TranslatableComponent ALREADY_CONNECTED = Component
+-      .translatable("velocity.error.already-connected", NamedTextColor.RED);
+-  public static final TranslatableComponent IN_PROGRESS = Component
+-      .translatable("velocity.error.already-connecting", NamedTextColor.RED);
+-  public static final TranslatableComponent INTERNAL_SERVER_CONNECTION_ERROR = Component
+-      .translatable("velocity.error.internal-server-connection-error", NamedTextColor.RED);
 +  public static final TextComponent ALREADY_CONNECTED = LegacyComponentSerializer
 +          .legacyAmpersand()
 +          .deserialize((
@@ -943,10 +819,10 @@ index bbb6c2da..f38650b1 100644
    private ConnectionMessages() {
      throw new AssertionError();
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/console/VelocityConsole.java b/proxy/src/main/java/com/velocitypowered/proxy/console/VelocityConsole.java
-index eafe7310..5f4f3c37 100644
+index fe38209d..f10b009d 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/console/VelocityConsole.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/console/VelocityConsole.java
-@@ -29,6 +29,9 @@ import net.kyori.adventure.identity.Identity;
+@@ -31,6 +31,9 @@ import net.kyori.adventure.identity.Identity;
  import net.kyori.adventure.permission.PermissionChecker;
  import net.kyori.adventure.pointer.Pointers;
  import net.kyori.adventure.text.Component;
@@ -954,9 +830,9 @@ index eafe7310..5f4f3c37 100644
 +import net.kyori.text.TextComponent;
 +import net.kyori.text.format.TextColor;
  import net.kyori.adventure.text.format.NamedTextColor;
- import net.minecrell.terminalconsole.SimpleTerminalConsole;
- import org.apache.logging.log4j.Level;
-@@ -40,6 +43,7 @@ import org.jetbrains.annotations.NotNull;
+ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+ import net.kyori.adventure.translation.GlobalTranslator;
+@@ -44,6 +47,7 @@ import org.jetbrains.annotations.NotNull;
  import org.jline.reader.Candidate;
  import org.jline.reader.LineReader;
  import org.jline.reader.LineReaderBuilder;
@@ -964,11 +840,12 @@ index eafe7310..5f4f3c37 100644
  
  public final class VelocityConsole extends SimpleTerminalConsole implements ConsoleCommandSource {
  
-@@ -118,7 +122,13 @@ public final class VelocityConsole extends SimpleTerminalConsole implements Cons
+@@ -123,8 +127,13 @@ public final class VelocityConsole extends SimpleTerminalConsole implements Cons
    protected void runCommand(String command) {
      try {
        if (!this.server.getCommandManager().executeAsync(this, command).join()) {
--        sendMessage(Component.text("Command not found.", NamedTextColor.RED));
+-        sendMessage(Component.translatable("velocity.command.command-does-not-exist",
+-            NamedTextColor.RED));
 +        sendMessage(
 +                LegacyComponentSerializer
 +                        .legacyAmpersand()
@@ -1584,7 +1461,7 @@ index 9943a16b..00000000
 -    table: antibot
 \ No newline at end of file
 diff --git a/proxy/src/main/resources/default-velocity.toml b/proxy/src/main/resources/default-velocity.toml
-index fbad6626..c85137f5 100644
+index 4a844733..c85137f5 100644
 --- a/proxy/src/main/resources/default-velocity.toml
 +++ b/proxy/src/main/resources/default-velocity.toml
 @@ -6,7 +6,7 @@ bind = "0.0.0.0:25577"
@@ -1614,7 +1491,7 @@ index fbad6626..c85137f5 100644
  
  # By default, Velocity will attempt to gracefully handle situations where the user unexpectedly
  # loses connection to the server without an explicit disconnect message by attempting to fall the
-@@ -138,23 +138,7 @@ enabled = false
+@@ -138,7 +138,7 @@ enabled = false
  port = 25577
  
  # This is the map name that is reported to the query services.
@@ -1622,24 +1499,7 @@ index fbad6626..c85137f5 100644
 +map = "ElytraProxy"
  
  # Whether plugins should be shown in query response by default or not
--show-plugins = false
--
--# Legacy color codes and JSON are accepted in all messages.
--[messages]
--# Prefix when the player gets kicked from a server.
--#   First argument '%s': the server name
--kick-prefix = "&cKicked from %s: "
--
--# Prefix when the player is disconnected from a server.
--#   First argument '%s': the server name
--disconnect-prefix = "&cCan't connect to %s: "
--
--online-mode-only = "&cThis server only accepts connections from online-mode clients.\n\n&7Did you change your username? Sign out of Minecraft, sign back in, and try again."
--no-available-servers = "&cThere are no available servers."
--already-connected = "&cYou are already connected to this proxy!"
--moved-to-new-server-prefix = "&cThe server you were on kicked you: "
--generic-connection-error = "&cAn internal error occurred in your connection."
-+show-plugins = false
+ show-plugins = false
 \ No newline at end of file
 -- 
 2.24.1.windows.2

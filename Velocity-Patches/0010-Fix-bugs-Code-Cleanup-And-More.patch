@@ -1,4 +1,4 @@
-From 1b4343ff2a1e39494c7b80166837a4bb7298b696 Mon Sep 17 00:00:00 2001
+From 5e2937729ed1e4e6ba15593e8f34cb26d834d3b7 Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Thu, 3 Jun 2021 02:23:42 +0900
 Subject: [PATCH] Fix bugs, Code Cleanup And More
@@ -18,7 +18,7 @@ index 3b9ce7db..7bafaba4 100644
      ext {
          // dependency versions
 diff --git a/proxy/build.gradle b/proxy/build.gradle
-index c1cb717f..0955c38b 100644
+index 65169af3..66055e86 100644
 --- a/proxy/build.gradle
 +++ b/proxy/build.gradle
 @@ -51,7 +51,7 @@ shadowJar {
@@ -31,10 +31,10 @@ index c1cb717f..0955c38b 100644
  
  dependencies {
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-index 136483bc..c197d17c 100644
+index e1f89560..e6c4398c 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-@@ -196,7 +196,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -203,7 +203,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
    @EnsuresNonNull({"serverKeyPair", "servers", "pluginManager", "eventManager", "scheduler",
        "console", "cm", "configuration"})
    void start() {
@@ -42,9 +42,9 @@ index 136483bc..c197d17c 100644
 +    logger.info("Booting up {} {}...", getVersion().getName(), Settings.IMP.VERSION);
      console.setupStreams();
  
-     serverKeyPair = EncryptionUtils.createRsaKeyPair(1024);
+     registerTranslations();
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/GlistCommand.java b/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/GlistCommand.java
-index 7ae7d481..fe20ff6b 100644
+index 64e4c871..1e0c6a3f 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/GlistCommand.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/GlistCommand.java
 @@ -28,7 +28,6 @@ import com.mojang.brigadier.tree.ArgumentCommandNode;
@@ -55,7 +55,7 @@ index 7ae7d481..fe20ff6b 100644
  import com.velocitypowered.api.proxy.Player;
  import com.velocitypowered.api.proxy.ProxyServer;
  import com.velocitypowered.api.proxy.server.RegisteredServer;
-@@ -56,7 +55,7 @@ public class GlistCommand {
+@@ -57,7 +56,7 @@ public class GlistCommand {
      LiteralCommandNode<CommandSource> totalNode = LiteralArgumentBuilder
              .<CommandSource>literal("glist")
              .requires(source ->
@@ -65,7 +65,7 @@ index 7ae7d481..fe20ff6b 100644
              .build();
      ArgumentCommandNode<CommandSource, String> serverNode = RequiredArgumentBuilder
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/ServerCommand.java b/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/ServerCommand.java
-index 3f3cd23d..c54da99d 100644
+index 0514c521..4b0b1154 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/ServerCommand.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/ServerCommand.java
 @@ -22,7 +22,6 @@ import static net.kyori.adventure.text.event.HoverEvent.showText;
@@ -76,7 +76,7 @@ index 3f3cd23d..c54da99d 100644
  import com.velocitypowered.api.proxy.Player;
  import com.velocitypowered.api.proxy.ProxyServer;
  import com.velocitypowered.api.proxy.ServerConnection;
-@@ -141,6 +140,6 @@ public class ServerCommand implements SimpleCommand {
+@@ -157,6 +156,6 @@ public class ServerCommand implements SimpleCommand {
  
    @Override
    public boolean hasPermission(final SimpleCommand.Invocation invocation) {
@@ -97,10 +97,10 @@ index 47394384..2d855e7a 100644
    }
  }
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/config/VelocityConfiguration.java b/proxy/src/main/java/com/velocitypowered/proxy/config/VelocityConfiguration.java
-index cd4d4fcb..f76764ab 100644
+index e9ee6248..e70c0103 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/config/VelocityConfiguration.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/config/VelocityConfiguration.java
-@@ -323,7 +323,7 @@ public class VelocityConfiguration implements ProxyConfig {
+@@ -319,7 +319,7 @@ public class VelocityConfiguration implements ProxyConfig {
    //BotFilter - global rate limiter
    @Override
    public int getLoginRatelimitAttempts() {
@@ -110,10 +110,10 @@ index cd4d4fcb..f76764ab 100644
  
    @Override
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
-index 67f890ea..d57b5b2e 100644
+index a611021b..ddece538 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
-@@ -259,7 +259,7 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+@@ -262,7 +262,7 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
        */
        logger.info("{} has connected", player);
        // ElytraProxy Start - Init antibot & protocol blocker

@@ -1,4 +1,4 @@
-From 5b0bf56d61ec46d7d3d3dbb0d3cc7a141bd48397 Mon Sep 17 00:00:00 2001
+From 1acd9556ae7a0acc13b25141499257f444e44bea Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Mon, 21 Jun 2021 07:56:29 +0900
 Subject: [PATCH] Api features
@@ -17,7 +17,7 @@ index c4f10d2c..368004ab 100644
      api "net.kyori:text-serializer-gson:${textVersion}"
      api "net.kyori:text-serializer-legacy:${textVersion}"
 diff --git a/api/src/main/java/com/velocitypowered/api/network/ProtocolVersion.java b/api/src/main/java/com/velocitypowered/api/network/ProtocolVersion.java
-index eb76b5ce..a55cd1a1 100644
+index eb76b5ce..f2855b5e 100644
 --- a/api/src/main/java/com/velocitypowered/api/network/ProtocolVersion.java
 +++ b/api/src/main/java/com/velocitypowered/api/network/ProtocolVersion.java
 @@ -55,7 +55,8 @@ public enum ProtocolVersion {
@@ -26,7 +26,7 @@ index eb76b5ce..a55cd1a1 100644
    MINECRAFT_1_16_4(754, "1.16.4", "1.16.5"),
 -  MINECRAFT_1_17(755, "1.17");
 +  MINECRAFT_1_17(755, "1.17"),
-+  MINECRAFT_1_17_1(-1, 36, "1.17.1"); // final version is 756 // temp
++  MINECRAFT_1_17_1(-1, 38, "1.17.1"); // final version is 756 // temp
  
    private static final int SNAPSHOT_BIT = 30;
  
@@ -87,19 +87,19 @@ index fd818b94..578a56e5 100644
  
      implementation "io.netty:netty-codec:${nettyVersion}"
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-index 8831b42b..67f4ab0d 100644
+index b6c1cb07..318363a0 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
-@@ -94,6 +94,8 @@ import net.elytrium.elytraproxy.config.Settings;
- import net.kyori.adventure.audience.Audience;
- import net.kyori.adventure.audience.ForwardingAudience;
- import net.kyori.adventure.text.Component;
+@@ -101,6 +101,8 @@ import net.kyori.adventure.text.Component;
+ import net.kyori.adventure.translation.GlobalTranslator;
+ import net.kyori.adventure.translation.TranslationRegistry;
+ import net.kyori.adventure.util.UTF8ResourceBundleControl;
 +import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
 +import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
  import org.apache.logging.log4j.LogManager;
  import org.apache.logging.log4j.Logger;
  import org.asynchttpclient.AsyncHttpClient;
-@@ -145,6 +147,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -152,6 +154,7 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
    // ElytraProxy
    @Getter
    private ElytraProxy elytraProxy;
@@ -107,7 +107,7 @@ index 8831b42b..67f4ab0d 100644
  
    VelocityServer(final ProxyOptions options) {
      pluginManager = new VelocityPluginManager(this);
-@@ -498,7 +501,13 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -549,7 +552,13 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
     * @param explicitExit whether the user explicitly shut down the proxy
     */
    public void shutdown(boolean explicitExit) {
@@ -122,7 +122,7 @@ index 8831b42b..67f4ab0d 100644
    }
  
    @Override
-@@ -611,9 +620,11 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -662,9 +671,11 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
    @Override
    public int getPlayerCount() {
      // ElytraProxy: Exclude online at servers in list
@@ -137,7 +137,7 @@ index 8831b42b..67f4ab0d 100644
    }
  
    @Override
-@@ -656,6 +667,18 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -707,6 +718,18 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
      return eventManager;
    }
  
@@ -156,7 +156,7 @@ index 8831b42b..67f4ab0d 100644
    @Override
    public VelocityScheduler getScheduler() {
      return scheduler;
-@@ -696,4 +719,26 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+@@ -747,4 +770,26 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
    public ResourcePackInfo.Builder createResourcePackBuilder(String url) {
      return new VelocityResourcePackInfo.BuilderImpl(url);
    }
@@ -254,10 +254,10 @@ index 01f7ecc1..6104354f 100644
          logger.info(toStringPacket, player);
        }
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
-index 61f6b257..1395daaf 100644
+index 0bd2fc81..942c9911 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
-@@ -319,6 +319,7 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+@@ -320,6 +320,7 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
                    .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
                ), true);
        server.getElytraProxy().getStatistics().addBlockedConnection();
