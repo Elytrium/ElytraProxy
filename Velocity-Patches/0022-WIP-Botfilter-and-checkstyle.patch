@@ -1,11 +1,11 @@
-From 309d766a8e77a14ca176069a619e05f4812a3500 Mon Sep 17 00:00:00 2001
+From 06eb51fcc4acc06c31d040ac23f7d96727f36446 Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Thu, 24 Jun 2021 15:01:38 +0900
 Subject: [PATCH] WIP Botfilter and checkstyle
 
 
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/Velocity.java b/proxy/src/main/java/com/velocitypowered/proxy/Velocity.java
-index 49ad384f..661930f3 100644
+index 49ad384f..330cd8cf 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/Velocity.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/Velocity.java
 @@ -61,6 +61,7 @@ public class Velocity {
@@ -16,7 +16,16 @@ index 49ad384f..661930f3 100644
     * @param args the arguments to the proxy
     */
    public static void main(String... args) {
-@@ -81,7 +82,7 @@ public class Velocity {
+@@ -73,15 +74,14 @@ public class Velocity {
+ 
+     VelocityServer server = new VelocityServer(options);
+     server.start();
+-    Runtime.getRuntime().addShutdownHook(new Thread(() -> server.shutdown(false),
+-        "Shutdown thread"));
++    Runtime.getRuntime().addShutdownHook(new Thread(() -> server.shutdown(false), "Shutdown thread"));
+ 
+     double bootTime = (System.currentTimeMillis() - startTime) / 1000d;
+     logger.info("Done ({}s)!", new DecimalFormat("#.##").format(bootTime));
  
      // ElytraProxy
      logger.warn("PLEASE REPORT ALL BUGS, ERRORS AND JUST NOTES"
@@ -1326,10 +1335,18 @@ index 4820ce68..631883e8 100644
 +  GameProfile addGameProfileTokensIfRequired(GameProfile original, PlayerInfoForwarding forwardingType);
  }
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftConnection.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftConnection.java
-index 03901b49..82ff8426 100644
+index 03901b49..f4b5a3de 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftConnection.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/MinecraftConnection.java
-@@ -89,8 +89,9 @@ public class MinecraftConnection extends ChannelInboundHandlerAdapter {
+@@ -64,7 +64,6 @@ import java.security.GeneralSecurityException;
+ import java.util.concurrent.TimeUnit;
+ import javax.crypto.SecretKey;
+ import javax.crypto.spec.SecretKeySpec;
+-import net.elytrium.elytraproxy.config.Settings;
+ import org.apache.logging.log4j.LogManager;
+ import org.apache.logging.log4j.Logger;
+ import org.checkerframework.checker.nullness.qual.Nullable;
+@@ -89,8 +88,9 @@ public class MinecraftConnection extends ChannelInboundHandlerAdapter {
  
    /**
     * Initializes a new {@link MinecraftConnection} instance.
@@ -1340,66 +1357,68 @@ index 03901b49..82ff8426 100644
     */
    public MinecraftConnection(Channel channel, VelocityServer server) {
      this.channel = channel;
-@@ -146,24 +147,24 @@ public class MinecraftConnection extends ChannelInboundHandlerAdapter {
-           InetSocketAddress adr1 = (InetSocketAddress) ctx.channel().remoteAddress();
-           String notifymsg = "{} tried to connect using {}";
-           if (!Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.IGNORED_IPS.contains(
+@@ -139,60 +139,6 @@ public class MinecraftConnection extends ChannelInboundHandlerAdapter {
+       }
+ 
+       if (msg instanceof MinecraftPacket) {
+-        // ElytraProxy Start
+-        // TODO: FIX
+-        if (Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.ENABLE) {
+-          InetSocketAddress adr = (InetSocketAddress) ctx.channel().localAddress();
+-          InetSocketAddress adr1 = (InetSocketAddress) ctx.channel().remoteAddress();
+-          String notifymsg = "{} tried to connect using {}";
+-          if (!Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.IGNORED_IPS.contains(
 -                  adr1.getAddress().getHostAddress())) {
-+              adr1.getAddress().getHostAddress())) {
-             if (Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.WHITELIST) {
-               if (Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.IPS_CHECK) {
-                 if (!Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.HOSTNAMES.contains(
+-            if (Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.WHITELIST) {
+-              if (Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.IPS_CHECK) {
+-                if (!Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.HOSTNAMES.contains(
 -                        adr.getAddress().getHostAddress())) {
-+                    adr.getAddress().getHostAddress())) {
-                   server.getElytraProxy().getLogger().info(notifymsg,
+-                  server.getElytraProxy().getLogger().info(notifymsg,
 -                          ctx.channel().remoteAddress(),
 -                          adr.getAddress().getHostAddress());
-+                      ctx.channel().remoteAddress(),
-+                      adr.getAddress().getHostAddress());
-                   server.getElytraProxy().getStatistics().addBlockedConnection();
-                   return;
-                 }
-               }
-               if (Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.DOMAINS_CHECK) {
-                 if (!Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.HOSTNAMES.contains(
+-                  server.getElytraProxy().getStatistics().addBlockedConnection();
+-                  return;
+-                }
+-              }
+-              if (Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.DOMAINS_CHECK) {
+-                if (!Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.HOSTNAMES.contains(
 -                        adr.getHostName())) {
-+                    adr.getHostName())) {
-                   server.getElytraProxy().getLogger().info(notifymsg,
+-                  server.getElytraProxy().getLogger().info(notifymsg,
 -                          ctx.channel().remoteAddress(),
 -                          adr.getHostName());
-+                      ctx.channel().remoteAddress(),
-+                      adr.getHostName());
-                   server.getElytraProxy().getStatistics().addBlockedConnection();
-                   return;
-                 }
-@@ -171,20 +172,20 @@ public class MinecraftConnection extends ChannelInboundHandlerAdapter {
-             } else {
-               if (Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.IPS_CHECK) {
-                 if (Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.HOSTNAMES.contains(
+-                  server.getElytraProxy().getStatistics().addBlockedConnection();
+-                  return;
+-                }
+-              }
+-            } else {
+-              if (Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.IPS_CHECK) {
+-                if (Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.HOSTNAMES.contains(
 -                        adr.getAddress().getHostAddress())) {
-+                    adr.getAddress().getHostAddress())) {
-                   server.getElytraProxy().getLogger().info(notifymsg,
+-                  server.getElytraProxy().getLogger().info(notifymsg,
 -                          ctx.channel().remoteAddress(),
 -                          adr.getAddress().getHostAddress());
-+                      ctx.channel().remoteAddress(),
-+                      adr.getAddress().getHostAddress());
-                   server.getElytraProxy().getStatistics().addBlockedConnection();
-                   return;
-                 }
-               }
-               if (Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.DOMAINS_CHECK) {
-                 if (Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.HOSTNAMES.contains(
+-                  server.getElytraProxy().getStatistics().addBlockedConnection();
+-                  return;
+-                }
+-              }
+-              if (Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.DOMAINS_CHECK) {
+-                if (Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.HOSTNAMES.contains(
 -                        adr.getHostName())) {
-+                    adr.getHostName())) {
-                   server.getElytraProxy().getLogger().info(notifymsg,
+-                  server.getElytraProxy().getLogger().info(notifymsg,
 -                          ctx.channel().remoteAddress(),
 -                          adr.getHostName());
-+                      ctx.channel().remoteAddress(),
-+                      adr.getHostName());
-                   server.getElytraProxy().getStatistics().addBlockedConnection();
-                   return;
-                 }
-@@ -272,6 +273,7 @@ public class MinecraftConnection extends ChannelInboundHandlerAdapter {
+-                  server.getElytraProxy().getStatistics().addBlockedConnection();
+-                  return;
+-                }
+-              }
+-            }
+-          }
+-        }
+-        // ElytraProxy End
+         MinecraftPacket pkt = (MinecraftPacket) msg;
+         if (!pkt.handle(sessionHandler)) {
+           sessionHandler.handleGeneric((MinecraftPacket) msg);
+@@ -272,6 +218,7 @@ public class MinecraftConnection extends ChannelInboundHandlerAdapter {
  
    /**
     * Writes and immediately flushes a message to the connection.
@@ -1407,7 +1426,7 @@ index 03901b49..82ff8426 100644
     * @param msg the message to write
     */
    public void write(Object msg) {
-@@ -284,6 +286,7 @@ public class MinecraftConnection extends ChannelInboundHandlerAdapter {
+@@ -284,6 +231,7 @@ public class MinecraftConnection extends ChannelInboundHandlerAdapter {
  
    /**
     * Writes, but does not flush, a message to the connection.
@@ -1415,7 +1434,7 @@ index 03901b49..82ff8426 100644
     * @param msg the message to write
     */
    public void delayedWrite(Object msg) {
-@@ -305,6 +308,7 @@ public class MinecraftConnection extends ChannelInboundHandlerAdapter {
+@@ -305,6 +253,7 @@ public class MinecraftConnection extends ChannelInboundHandlerAdapter {
  
    /**
     * Closes the connection after writing the {@code msg}.
@@ -1423,7 +1442,7 @@ index 03901b49..82ff8426 100644
     * @param msg the message to write
     */
    public void closeWith(Object msg) {
-@@ -335,6 +339,7 @@ public class MinecraftConnection extends ChannelInboundHandlerAdapter {
+@@ -335,6 +284,7 @@ public class MinecraftConnection extends ChannelInboundHandlerAdapter {
  
    /**
     * Immediately closes the connection.
@@ -1431,7 +1450,7 @@ index 03901b49..82ff8426 100644
     * @param markKnown whether the disconnection is known
     */
    public void close(boolean markKnown) {
-@@ -381,6 +386,7 @@ public class MinecraftConnection extends ChannelInboundHandlerAdapter {
+@@ -381,6 +331,7 @@ public class MinecraftConnection extends ChannelInboundHandlerAdapter {
  
    /**
     * Determines whether or not the channel should continue reading data automaticaly.
@@ -1439,7 +1458,7 @@ index 03901b49..82ff8426 100644
     * @param autoReading whether or not we should read data automatically
     */
    public void setAutoReading(boolean autoReading) {
-@@ -399,6 +405,7 @@ public class MinecraftConnection extends ChannelInboundHandlerAdapter {
+@@ -399,6 +350,7 @@ public class MinecraftConnection extends ChannelInboundHandlerAdapter {
  
    /**
     * Changes the state of the Minecraft connection.
@@ -1447,7 +1466,7 @@ index 03901b49..82ff8426 100644
     * @param state the new state
     */
    public void setState(StateRegistry state) {
-@@ -415,6 +422,7 @@ public class MinecraftConnection extends ChannelInboundHandlerAdapter {
+@@ -415,6 +367,7 @@ public class MinecraftConnection extends ChannelInboundHandlerAdapter {
  
    /**
     * Sets the new protocol version for the connection.
@@ -1455,7 +1474,7 @@ index 03901b49..82ff8426 100644
     * @param protocolVersion the protocol version to use
     */
    public void setProtocolVersion(ProtocolVersion protocolVersion) {
-@@ -442,6 +450,7 @@ public class MinecraftConnection extends ChannelInboundHandlerAdapter {
+@@ -442,6 +395,7 @@ public class MinecraftConnection extends ChannelInboundHandlerAdapter {
  
    /**
     * Sets the session handler for this connection.
@@ -1463,7 +1482,7 @@ index 03901b49..82ff8426 100644
     * @param sessionHandler the handler to use
     */
    public void setSessionHandler(MinecraftSessionHandler sessionHandler) {
-@@ -461,6 +470,7 @@ public class MinecraftConnection extends ChannelInboundHandlerAdapter {
+@@ -461,6 +415,7 @@ public class MinecraftConnection extends ChannelInboundHandlerAdapter {
    /**
     * Sets the compression threshold on the connection. You are responsible for sending
     * {@link com.velocitypowered.proxy.protocol.packet.SetCompression} beforehand.
@@ -1471,7 +1490,7 @@ index 03901b49..82ff8426 100644
     * @param threshold the compression threshold to use
     */
    public void setCompressionThreshold(int threshold) {
-@@ -502,6 +512,7 @@ public class MinecraftConnection extends ChannelInboundHandlerAdapter {
+@@ -502,6 +457,7 @@ public class MinecraftConnection extends ChannelInboundHandlerAdapter {
  
    /**
     * Enables encryption on the connection.
@@ -1479,7 +1498,7 @@ index 03901b49..82ff8426 100644
     * @param secret the secret key negotiated between the client and the server
     * @throws GeneralSecurityException if encryption can't be enabled
     */
-@@ -533,6 +544,7 @@ public class MinecraftConnection extends ChannelInboundHandlerAdapter {
+@@ -533,6 +489,7 @@ public class MinecraftConnection extends ChannelInboundHandlerAdapter {
  
    /**
     * Gets the detected {@link ConnectionType}.
@@ -1487,7 +1506,7 @@ index 03901b49..82ff8426 100644
     * @return The {@link ConnectionType}
     */
    public ConnectionType getType() {
-@@ -541,6 +553,7 @@ public class MinecraftConnection extends ChannelInboundHandlerAdapter {
+@@ -541,6 +498,7 @@ public class MinecraftConnection extends ChannelInboundHandlerAdapter {
  
    /**
     * Sets the detected {@link ConnectionType}.
@@ -2415,7 +2434,7 @@ index c094cc90..dc5f2769 100644
 +  // ElytraProxy End
  }
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
-index 942c9911..cfc29ba5 100644
+index 942c9911..81773fef 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
 @@ -44,7 +44,6 @@ import com.velocitypowered.proxy.config.VelocityConfiguration;
@@ -2426,8 +2445,11 @@ index 942c9911..cfc29ba5 100644
  import com.velocitypowered.proxy.protocol.packet.EncryptionRequest;
  import com.velocitypowered.proxy.protocol.packet.EncryptionResponse;
  import com.velocitypowered.proxy.protocol.packet.ServerLogin;
-@@ -63,8 +62,6 @@ import java.util.concurrent.ExecutionException;
+@@ -61,10 +60,9 @@ import java.util.UUID;
+ import java.util.concurrent.CompletableFuture;
+ import java.util.concurrent.ExecutionException;
  import java.util.concurrent.ThreadLocalRandom;
++import net.elytrium.elytraproxy.ElytraProxy;
  import net.elytrium.elytraproxy.config.Settings;
  import net.kyori.adventure.text.Component;
 -import net.kyori.adventure.text.format.NamedTextColor;
@@ -2435,7 +2457,7 @@ index 942c9911..cfc29ba5 100644
  import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
  import org.apache.logging.log4j.LogManager;
  import org.apache.logging.log4j.Logger;
-@@ -85,8 +82,7 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+@@ -85,8 +83,7 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
    private byte[] verify = EMPTY_BYTE_ARRAY;
    private @MonotonicNonNull ConnectedPlayer connectedPlayer;
  
@@ -2445,7 +2467,7 @@ index 942c9911..cfc29ba5 100644
      this.server = Preconditions.checkNotNull(server, "server");
      this.mcConnection = Preconditions.checkNotNull(mcConnection, "mcConnection");
      this.inbound = Preconditions.checkNotNull(inbound, "inbound");
-@@ -152,7 +148,6 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+@@ -152,7 +149,6 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
                  GameProfile.class), true);
            } else if (profileResponse.getStatusCode() == 204) {
              // Apparently an offline-mode user logged onto this online-mode proxy.
@@ -2453,7 +2475,7 @@ index 942c9911..cfc29ba5 100644
              inbound.disconnect(
                  LegacyComponentSerializer
                      .legacyAmpersand()
-@@ -250,7 +245,7 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+@@ -250,7 +246,7 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
        ConnectedPlayer player = new ConnectedPlayer(server, profileEvent.getGameProfile(),
            mcConnection, inbound.getVirtualHost().orElse(null), onlineMode);
        this.connectedPlayer = player;
@@ -2462,7 +2484,7 @@ index 942c9911..cfc29ba5 100644
        if (!server.canRegisterConnection(player)) {
          player.disconnect0(
              LegacyComponentSerializer
-@@ -274,8 +269,7 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+@@ -274,8 +270,7 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
        logger.info("{} has connected", player);
        server.getElytraProxy().getStatistics().addConnectionPerSecond();
        if (Settings.IMP.MAIN_SETTINGS.MAINTENANCE.ENABLED
@@ -2472,7 +2494,7 @@ index 942c9911..cfc29ba5 100644
          player.disconnect0(
              LegacyComponentSerializer
                  .legacyAmpersand()
-@@ -285,8 +279,7 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+@@ -285,8 +280,7 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
                  ), true);
          return;
        }
@@ -2482,7 +2504,27 @@ index 942c9911..cfc29ba5 100644
          player.disconnect0(
              LegacyComponentSerializer
                  .legacyAmpersand()
-@@ -382,38 +375,38 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+@@ -296,6 +290,9 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+                 ), true);
+         return;
+       }
++      if (Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.ENABLE) {
++        server.getElytraProxy().checkHostname(player, null, ElytraProxy.HostnameCheckType.LOGIN);
++      }
+       if (Settings.IMP.ANTIBOT.ENABLE) {
+         preLoginCheck(player);
+       } else {
+@@ -310,8 +307,7 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+ 
+   private void preLoginCheck(ConnectedPlayer player) {
+     String formattedNickname = player.getUsername().toLowerCase();
+-    if (Settings.IMP.ANTIBOT.BANNED_NICK_PATTERNS
+-        .stream().anyMatch(formattedNickname::contains)) {
++    if (Settings.IMP.ANTIBOT.BANNED_NICK_PATTERNS.stream().anyMatch(formattedNickname::contains)) {
+       player.disconnect0(
+           LegacyComponentSerializer
+               .legacyAmpersand()
+@@ -382,38 +378,38 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
              player.setPermissionFunction(function);
            }
            return server.getEventManager().fire(new LoginEvent(player))
@@ -2554,10 +2596,18 @@ index 942c9911..cfc29ba5 100644
          .exceptionally((ex) -> {
            logger.error("Exception while completing login initialisation phase for {}", player, ex);
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/StatusSessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/StatusSessionHandler.java
-index e5ea219d..e63d100c 100644
+index e5ea219d..85e3b7ce 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/StatusSessionHandler.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/StatusSessionHandler.java
-@@ -59,8 +59,7 @@ public class StatusSessionHandler implements MinecraftSessionHandler {
+@@ -44,6 +44,7 @@ import java.util.List;
+ import java.util.Locale;
+ import java.util.Optional;
+ import java.util.concurrent.CompletableFuture;
++import net.elytrium.elytraproxy.ElytraProxy;
+ import net.elytrium.elytraproxy.config.Settings;
+ import org.apache.logging.log4j.LogManager;
+ import org.apache.logging.log4j.Logger;
+@@ -59,8 +60,7 @@ public class StatusSessionHandler implements MinecraftSessionHandler {
    private final InboundConnection inbound;
    private boolean pingReceived = false;
  
@@ -2567,7 +2617,7 @@ index e5ea219d..e63d100c 100644
      this.server = server;
      this.connection = connection;
      this.inbound = inbound;
-@@ -87,12 +86,13 @@ public class StatusSessionHandler implements MinecraftSessionHandler {
+@@ -87,12 +87,13 @@ public class StatusSessionHandler implements MinecraftSessionHandler {
                      .replace('&', '§')
                      .replace("{NL}", "\n")
                      .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)),
@@ -2586,7 +2636,7 @@ index e5ea219d..e63d100c 100644
              ImmutableList.of()),
          Settings.IMP.MAIN_SETTINGS.MAINTENANCE.ENABLED
              ? server.getMaintenanceMotd()
-@@ -182,7 +182,8 @@ public class StatusSessionHandler implements MinecraftSessionHandler {
+@@ -182,7 +183,8 @@ public class StatusSessionHandler implements MinecraftSessionHandler {
        shownVersion = ProtocolVersion.MAINTENANCE;
      } else {
        shownVersion = ProtocolVersion.isSupported(connection.getProtocolVersion())
@@ -2596,12 +2646,15 @@ index e5ea219d..e63d100c 100644
      }
      PingPassthroughMode passthrough = configuration.getPingPassthrough();
  
-@@ -242,7 +243,7 @@ public class StatusSessionHandler implements MinecraftSessionHandler {
+@@ -242,7 +244,10 @@ public class StatusSessionHandler implements MinecraftSessionHandler {
                connection.write(new StatusResponse(json));
                server.getIpAttemptLimiter()
                    //BotFilter - global rate limiter
 -                  .unthrottle(((InetSocketAddress)connection.getRemoteAddress()).getAddress());
 +                  .unthrottle(((InetSocketAddress) connection.getRemoteAddress()).getAddress());
++              if (Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.ENABLE) {
++                server.getElytraProxy().checkHostname(null, inbound, ElytraProxy.HostnameCheckType.PING);
++              }
              },
              connection.eventLoop())
          .exceptionally((ex) -> {
@@ -5095,10 +5148,18 @@ index 94c81d78..0a325cbb 100644
    }
  }
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/ElytraProxy.java b/proxy/src/main/java/net/elytrium/elytraproxy/ElytraProxy.java
-index a2dc13bf..8202baaf 100644
+index a2dc13bf..6fbbf64a 100644
 --- a/proxy/src/main/java/net/elytrium/elytraproxy/ElytraProxy.java
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/ElytraProxy.java
-@@ -35,6 +35,7 @@ import java.net.URLConnection;
+@@ -19,6 +19,7 @@ package net.elytrium.elytraproxy;
+ 
+ import com.velocitypowered.api.command.CommandManager;
+ import com.velocitypowered.api.command.CommandSource;
++import com.velocitypowered.api.proxy.InboundConnection;
+ import com.velocitypowered.proxy.VelocityServer;
+ import com.velocitypowered.proxy.connection.MinecraftConnection;
+ import com.velocitypowered.proxy.connection.client.ConnectedPlayer;
+@@ -35,6 +36,7 @@ import java.net.URLConnection;
  import java.nio.charset.StandardCharsets;
  import lombok.Getter;
  import lombok.ToString;
@@ -5106,7 +5167,7 @@ index a2dc13bf..8202baaf 100644
  import net.elytrium.elytraproxy.botfilter.protocol.cache.netty.MultiplePreparedPacketsEncoder;
  import net.elytrium.elytraproxy.botfilter.protocol.cache.netty.PreparedPacketEncoder;
  import net.elytrium.elytraproxy.botfilter.server.BotFilterSessionHandler;
-@@ -56,6 +57,7 @@ import org.apache.logging.log4j.Logger;
+@@ -56,6 +58,7 @@ import org.apache.logging.log4j.Logger;
  @SuppressFBWarnings({"RV_RETURN_VALUE_IGNORED",
      "OBL_UNSATISFIED_OBLIGATION_EXCEPTION_EDGE"})
  public class ElytraProxy {
@@ -5114,7 +5175,7 @@ index a2dc13bf..8202baaf 100644
    private final Logger logger = LogManager.getLogger("ElytraProxy");
    private Database database;
  
-@@ -68,16 +70,17 @@ public class ElytraProxy {
+@@ -68,16 +71,17 @@ public class ElytraProxy {
    // BotFilter end
  
    public ElytraProxy(VelocityServer velocityServer) {
@@ -5135,7 +5196,7 @@ index a2dc13bf..8202baaf 100644
      checkForUpdates();
      logger.info("ElytraProxy was loaded.");
    }
-@@ -104,6 +107,7 @@ public class ElytraProxy {
+@@ -104,6 +108,7 @@ public class ElytraProxy {
      }
    }
    */
@@ -5143,7 +5204,7 @@ index a2dc13bf..8202baaf 100644
    /**
     * Initializes ElytraProxy commands.
     * Инициализирует команды ElytraProxy.
-@@ -128,6 +132,10 @@ public class ElytraProxy {
+@@ -128,6 +133,10 @@ public class ElytraProxy {
  
    public void setupPipelineAndStartCheck(ConnectedPlayer player, LoginSessionHandler handler) {
      try {
@@ -5154,6 +5215,89 @@ index a2dc13bf..8202baaf 100644
        BotFilterSessionHandler sessionHandler = new BotFilterSessionHandler(player, handler,
            virtualServer);
        bfLogger.info(sessionHandler.getPlayer().getUsername());
+@@ -154,6 +163,72 @@ public class ElytraProxy {
+     }
+   }
+ 
++  public void checkHostname(ConnectedPlayer player, InboundConnection inbound, HostnameCheckType type) {
++    boolean isLogin = (type == HostnameCheckType.LOGIN);
++    if (isLogin) {
++      if (!player.getVirtualHost().isPresent()) {
++        return;
++      }
++      if (!inbound.getVirtualHost().isPresent()) {
++        return;
++      }
++    }
++
++    String playerHostname;
++    String playerAddress;
++    String playerIp;
++    String playerNick = null;
++    String notifymsg = "{} tried to connect using {}";
++    if (isLogin) {
++      playerHostname = (player.getVirtualHost().get()).getHostName();
++      playerAddress = (player.getVirtualHost().get()).getAddress().getHostAddress();
++      playerIp = player.getRemoteAddress().getAddress().getHostAddress();
++      playerNick = player.getUsername();
++    } else {
++      playerHostname = (inbound.getVirtualHost().get()).getHostName();
++      playerAddress = (inbound.getVirtualHost().get()).getAddress().getHostAddress();
++      playerIp = inbound.getRemoteAddress().getAddress().getHostAddress();
++    }
++
++    if (!Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.IGNORED_IPS.contains(playerIp)) {
++      if (Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.WHITELIST) {
++        if (Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.IPS_CHECK) {
++          if (!Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.HOSTNAMES.contains(playerAddress)) {
++            getLogger().info(notifymsg, isLogin ? playerNick : playerIp, playerAddress);
++            getStatistics().addBlockedConnection();
++            getStatistics().addBlockedBots();
++            return;
++          }
++        }
++        if (Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.DOMAINS_CHECK) {
++          if (!Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.HOSTNAMES.contains(playerHostname)) {
++            getLogger().info(notifymsg, isLogin ? playerNick : playerIp, playerHostname);
++            getStatistics().addBlockedConnection();
++            getStatistics().addBlockedBots();
++            return;
++          }
++        }
++      } else {
++        if (Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.IPS_CHECK) {
++          if (Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.HOSTNAMES.contains(playerAddress)) {
++            getLogger().info(notifymsg, isLogin ? playerNick : playerIp, playerAddress);
++            getStatistics().addBlockedConnection();
++            getStatistics().addBlockedBots();
++            return;
++          }
++        }
++        if (Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.DOMAINS_CHECK) {
++          if (Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.HOSTNAMES.contains(playerHostname)) {
++            getLogger().info(notifymsg, isLogin ? playerNick : playerIp, playerHostname);
++            getStatistics().addBlockedConnection();
++            getStatistics().addBlockedBots();
++            return;
++          }
++        }
++      }
++    }
++  }
++
+   public void reload(CommandSource source) {
+     try {
+       new ElytraProxy(velocityServer);
+@@ -197,4 +272,9 @@ public class ElytraProxy {
+       logger.warn("Unable to check for updates.", ex);
+     }
+   }
++
++  public enum HostnameCheckType {
++    LOGIN,
++    PING
++  }
+ }
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/captcha/CaptchaGeneration.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/captcha/CaptchaGeneration.java
 new file mode 100644
 index 00000000..4b89bbad
@@ -7815,7 +7959,7 @@ index 9b5cedfd..5735fe5b 100644
              }
              return null;
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java b/proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java
-index 2751d0bc..44b777a3 100644
+index 2751d0bc..5866d548 100644
 --- a/proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java
 @@ -37,16 +37,13 @@ public class Settings extends Config {
@@ -7879,7 +8023,7 @@ index 2751d0bc..44b777a3 100644
        public static class COMMAND {
          public String GENERIC_ERROR = "{PRFX} &fAn error occurred while running this command.";
          public String COMMAND_DOES_NOT_EXIST = "{PRFX} &fThis command does not exist.";
-@@ -154,14 +155,11 @@ public class Settings extends Config {
+@@ -154,14 +155,10 @@ public class Settings extends Config {
      @Create
      public MAIN_SETTINGS.HOSTNAMES_MANAGER HOSTNAMES_MANAGER;
  
@@ -7892,13 +8036,12 @@ index 2751d0bc..44b777a3 100644
 -    })
      public static class HOSTNAMES_MANAGER {
 +      @Comment({
-+          "Allows you to reject connection to the server for all domains except yours and direct ip",
-+          "Most likely does not work with SRV records"
++          "Allows you to reject connection to the server for all domains except yours and direct ip"
 +      })
        public boolean ENABLE = false;
        @Comment("If whitelist enabled, all hostnames (domains and ips) in list WON'T BE BLOCKED, but other hostnames WILL BE BLOCKED")
        public boolean WHITELIST = true;
-@@ -171,15 +169,19 @@ public class Settings extends Config {
+@@ -171,15 +168,19 @@ public class Settings extends Config {
        @Comment("IP's in this list will be ignored in check.")
        public List<String> IGNORED_IPS = Arrays.asList("127.0.0.1", "your-haproxy-ip");
      }
@@ -7919,7 +8062,7 @@ index 2751d0bc..44b777a3 100644
      }
    }
  
-@@ -190,6 +192,7 @@ public class Settings extends Config {
+@@ -190,6 +191,7 @@ public class Settings extends Config {
      public boolean ENABLE = true;
      public boolean CHECK_CLIENT_SETTINGS = true;
      public boolean CHECK_CLIENT_BRAND = true;
@@ -7927,7 +8070,7 @@ index 2751d0bc..44b777a3 100644
      @Comment({
          "If the player's nickname contains something from this list, hes connection will be rejected",
          "In lowercase"
-@@ -197,6 +200,55 @@ public class Settings extends Config {
+@@ -197,6 +199,55 @@ public class Settings extends Config {
      public List<String> BANNED_NICK_PATTERNS = Arrays.asList(
          "dropbot", "mcspam", "mcdrop", "mcrage", "mcstorm", "extremebot", "cipher", "biboran"
      );
@@ -7983,7 +8126,7 @@ index 2751d0bc..44b777a3 100644
    }
  
    /*
-@@ -214,11 +266,10 @@ public class Settings extends Config {
+@@ -214,11 +265,10 @@ public class Settings extends Config {
  
    @Comment("Database settings")
    public static class DATABASE {
