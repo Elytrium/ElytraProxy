@@ -1,4 +1,4 @@
-From 06eb51fcc4acc06c31d040ac23f7d96727f36446 Mon Sep 17 00:00:00 2001
+From a0ee7c49f8fb215b88c6f0453552d845265d2a51 Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Thu, 24 Jun 2021 15:01:38 +0900
 Subject: [PATCH] WIP Botfilter and checkstyle
@@ -2434,7 +2434,7 @@ index c094cc90..dc5f2769 100644
 +  // ElytraProxy End
  }
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
-index 942c9911..81773fef 100644
+index 942c9911..baa4dee8 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
 @@ -44,7 +44,6 @@ import com.velocitypowered.proxy.config.VelocityConfiguration;
@@ -2508,7 +2508,7 @@ index 942c9911..81773fef 100644
                  ), true);
          return;
        }
-+      if (Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.ENABLE) {
++      if (Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.ENABLE_CHECK_ON_CONNECTION) {
 +        server.getElytraProxy().checkHostname(player, null, ElytraProxy.HostnameCheckType.LOGIN);
 +      }
        if (Settings.IMP.ANTIBOT.ENABLE) {
@@ -2596,7 +2596,7 @@ index 942c9911..81773fef 100644
          .exceptionally((ex) -> {
            logger.error("Exception while completing login initialisation phase for {}", player, ex);
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/StatusSessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/StatusSessionHandler.java
-index e5ea219d..85e3b7ce 100644
+index e5ea219d..27b28f3e 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/StatusSessionHandler.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/StatusSessionHandler.java
 @@ -44,6 +44,7 @@ import java.util.List;
@@ -2646,13 +2646,29 @@ index e5ea219d..85e3b7ce 100644
      }
      PingPassthroughMode passthrough = configuration.getPingPassthrough();
  
-@@ -242,7 +244,10 @@ public class StatusSessionHandler implements MinecraftSessionHandler {
+@@ -206,8 +208,13 @@ public class StatusSessionHandler implements MinecraftSessionHandler {
+     this.pingReceived = true;
+     getInitialPing()
+         .thenCompose(ping -> server.getEventManager().fire(new ProxyPingEvent(inbound, ping)))
+-        .thenAcceptAsync(event -> connection.closeWith(
+-            LegacyDisconnect.fromServerPing(event.getPing(), packet.getVersion())),
++        .thenAcceptAsync(
++            (event) -> {
++              connection.closeWith(LegacyDisconnect.fromServerPing(event.getPing(), packet.getVersion()));
++              if (Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.ENABLE_CHECK_ON_PING) {
++                server.getElytraProxy().checkHostname(null, inbound, ElytraProxy.HostnameCheckType.PING);
++              }
++            },
+             connection.eventLoop())
+         .exceptionally((ex) -> {
+           logger.error("Exception while handling legacy ping {}", packet, ex);
+@@ -242,7 +249,10 @@ public class StatusSessionHandler implements MinecraftSessionHandler {
                connection.write(new StatusResponse(json));
                server.getIpAttemptLimiter()
                    //BotFilter - global rate limiter
 -                  .unthrottle(((InetSocketAddress)connection.getRemoteAddress()).getAddress());
 +                  .unthrottle(((InetSocketAddress) connection.getRemoteAddress()).getAddress());
-+              if (Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.ENABLE) {
++              if (Settings.IMP.MAIN_SETTINGS.HOSTNAMES_MANAGER.ENABLE_CHECK_ON_PING) {
 +                server.getElytraProxy().checkHostname(null, inbound, ElytraProxy.HostnameCheckType.PING);
 +              }
              },
@@ -7959,7 +7975,7 @@ index 9b5cedfd..5735fe5b 100644
              }
              return null;
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java b/proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java
-index 2751d0bc..5866d548 100644
+index 2751d0bc..fe3f41ae 100644
 --- a/proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java
 @@ -37,16 +37,13 @@ public class Settings extends Config {
@@ -8023,7 +8039,7 @@ index 2751d0bc..5866d548 100644
        public static class COMMAND {
          public String GENERIC_ERROR = "{PRFX} &fAn error occurred while running this command.";
          public String COMMAND_DOES_NOT_EXIST = "{PRFX} &fThis command does not exist.";
-@@ -154,14 +155,10 @@ public class Settings extends Config {
+@@ -154,15 +155,12 @@ public class Settings extends Config {
      @Create
      public MAIN_SETTINGS.HOSTNAMES_MANAGER HOSTNAMES_MANAGER;
  
@@ -8035,13 +8051,16 @@ index 2751d0bc..5866d548 100644
 -        "Most likely does not work with SRV records"
 -    })
      public static class HOSTNAMES_MANAGER {
+-      public boolean ENABLE = false;
 +      @Comment({
 +          "Allows you to reject connection to the server for all domains except yours and direct ip"
 +      })
-       public boolean ENABLE = false;
++      public boolean ENABLE_CHECK_ON_PING = false;
++      public boolean ENABLE_CHECK_ON_CONNECTION = false;
        @Comment("If whitelist enabled, all hostnames (domains and ips) in list WON'T BE BLOCKED, but other hostnames WILL BE BLOCKED")
        public boolean WHITELIST = true;
-@@ -171,15 +168,19 @@ public class Settings extends Config {
+       public boolean DOMAINS_CHECK = false;
+@@ -171,15 +169,19 @@ public class Settings extends Config {
        @Comment("IP's in this list will be ignored in check.")
        public List<String> IGNORED_IPS = Arrays.asList("127.0.0.1", "your-haproxy-ip");
      }
@@ -8062,7 +8081,7 @@ index 2751d0bc..5866d548 100644
      }
    }
  
-@@ -190,6 +191,7 @@ public class Settings extends Config {
+@@ -190,6 +192,7 @@ public class Settings extends Config {
      public boolean ENABLE = true;
      public boolean CHECK_CLIENT_SETTINGS = true;
      public boolean CHECK_CLIENT_BRAND = true;
@@ -8070,7 +8089,7 @@ index 2751d0bc..5866d548 100644
      @Comment({
          "If the player's nickname contains something from this list, hes connection will be rejected",
          "In lowercase"
-@@ -197,6 +199,55 @@ public class Settings extends Config {
+@@ -197,6 +200,55 @@ public class Settings extends Config {
      public List<String> BANNED_NICK_PATTERNS = Arrays.asList(
          "dropbot", "mcspam", "mcdrop", "mcrage", "mcstorm", "extremebot", "cipher", "biboran"
      );
@@ -8126,7 +8145,7 @@ index 2751d0bc..5866d548 100644
    }
  
    /*
-@@ -214,11 +265,10 @@ public class Settings extends Config {
+@@ -214,11 +266,10 @@ public class Settings extends Config {
  
    @Comment("Database settings")
    public static class DATABASE {
