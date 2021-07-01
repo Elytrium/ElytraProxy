@@ -1,4 +1,4 @@
-From aea280c52d6c233b3d2d125130785fbe5ff9f341 Mon Sep 17 00:00:00 2001
+From 309d766a8e77a14ca176069a619e05f4812a3500 Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Thu, 24 Jun 2021 15:01:38 +0900
 Subject: [PATCH] WIP Botfilter and checkstyle
@@ -7998,7 +7998,7 @@ index 2751d0bc..44b777a3 100644
      public String PASSWORD = "password";
      public String DATABASE = "elytraproxy";
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/config/helpers/Configuration.java b/proxy/src/main/java/net/elytrium/elytraproxy/config/helpers/Configuration.java
-index 00e952da..9ff95ec2 100644
+index 00e952da..dff43f2b 100644
 --- a/proxy/src/main/java/net/elytrium/elytraproxy/config/helpers/Configuration.java
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/config/helpers/Configuration.java
 @@ -63,8 +63,8 @@ public final class Configuration {
@@ -8012,25 +8012,7 @@ index 00e952da..9ff95ec2 100644
        } else {
          this.self.put(key, entry.getValue());
        }
-@@ -110,22 +110,21 @@ public final class Configuration {
-     return (val != null) ? (T) val : def;
-   }
- 
--  public Object get(String path) {
--    return get(path, getDefault(path));
--  }
--
-   public boolean contains(String path) {
-     return get(path, null) != null;
-   }
- 
-+  public Object get(String path) {
-+    return get(path, getDefault(path));
-+  }
-+
-   public Object getDefault(String path) {
-     return (defaults == null) ? null : defaults.get(path);
-   }
+@@ -124,8 +124,7 @@ public final class Configuration {
  
    public void set(String path, Object value) {
      if (value instanceof Map) {
