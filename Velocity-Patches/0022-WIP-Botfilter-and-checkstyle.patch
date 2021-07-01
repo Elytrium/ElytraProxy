@@ -1,4 +1,4 @@
-From 02af79cd7f3a355403e2ea1c9cf4c1b9cde881f5 Mon Sep 17 00:00:00 2001
+From aea280c52d6c233b3d2d125130785fbe5ff9f341 Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Thu, 24 Jun 2021 15:01:38 +0900
 Subject: [PATCH] WIP Botfilter and checkstyle
@@ -3044,10 +3044,10 @@ index 0ff0dc89..d3b99647 100644
        .legacyAmpersand()
        .deserialize(Settings.IMP.MESSAGES.VELOCITY.ERROR.INTERNAL_SERVER_CONNECTION_ERROR
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/util/ConnectionRequestResults.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/util/ConnectionRequestResults.java
-index 9c8dbd5c..ff17b2ee 100644
+index 9c8dbd5c..be09a7f6 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/util/ConnectionRequestResults.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/util/ConnectionRequestResults.java
-@@ -38,6 +38,7 @@ public class ConnectionRequestResults {
+@@ -38,20 +38,20 @@ public class ConnectionRequestResults {
  
    /**
     * Returns a plain result (one with a status but no reason).
@@ -3055,7 +3055,13 @@ index 9c8dbd5c..ff17b2ee 100644
     * @param status the status to use
     * @param server the server to use
     * @return the result
-@@ -50,8 +51,9 @@ public class ConnectionRequestResults {
+    */
+-  public static Impl plainResult(
+-      ConnectionRequestBuilder.Status status,
+-      RegisteredServer server) {
++  public static Impl plainResult(ConnectionRequestBuilder.Status status, RegisteredServer server) {
+     return new Impl(status, null, server, true);
+   }
  
    /**
     * Returns a disconnect result with a reason.
@@ -3066,7 +3072,7 @@ index 9c8dbd5c..ff17b2ee 100644
     * @return the result
     */
    public static Impl forDisconnect(Component component, RegisteredServer server) {
-@@ -75,8 +77,7 @@ public class ConnectionRequestResults {
+@@ -75,8 +75,7 @@ public class ConnectionRequestResults {
      private final RegisteredServer attemptedConnection;
      private final boolean safe;
  
@@ -3076,7 +3082,7 @@ index 9c8dbd5c..ff17b2ee 100644
        this.status = status;
        this.component = component;
        this.attemptedConnection = attemptedConnection;
-@@ -100,6 +101,7 @@ public class ConnectionRequestResults {
+@@ -100,6 +99,7 @@ public class ConnectionRequestResults {
  
      /**
       * Returns whether or not it is safe to attempt a reconnect.
@@ -7992,21 +7998,240 @@ index 2751d0bc..44b777a3 100644
      public String PASSWORD = "password";
      public String DATABASE = "elytraproxy";
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/config/helpers/Configuration.java b/proxy/src/main/java/net/elytrium/elytraproxy/config/helpers/Configuration.java
-index 00e952da..b9696710 100644
+index 00e952da..9ff95ec2 100644
 --- a/proxy/src/main/java/net/elytrium/elytraproxy/config/helpers/Configuration.java
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/config/helpers/Configuration.java
-@@ -144,8 +144,9 @@ public final class Configuration {
+@@ -63,8 +63,8 @@ public final class Configuration {
+       String key = (entry.getKey() == null) ? "null" : entry.getKey().toString();
+ 
+       if (entry.getValue() instanceof Map) {
+-        this.self.put(key, new Configuration((Map) entry.getValue(),
+-            (defaults == null) ? null : defaults.getSection(key)));
++        this.self
++            .put(key, new Configuration((Map) entry.getValue(), (defaults == null) ? null : defaults.getSection(key)));
+       } else {
+         this.self.put(key, entry.getValue());
+       }
+@@ -110,22 +110,21 @@ public final class Configuration {
+     return (val != null) ? (T) val : def;
+   }
+ 
+-  public Object get(String path) {
+-    return get(path, getDefault(path));
+-  }
+-
+   public boolean contains(String path) {
+     return get(path, null) != null;
+   }
+ 
++  public Object get(String path) {
++    return get(path, getDefault(path));
++  }
++
+   public Object getDefault(String path) {
+     return (defaults == null) ? null : defaults.get(path);
+   }
+ 
+   public void set(String path, Object value) {
+     if (value instanceof Map) {
+-      value = new Configuration((Map) value,
+-          (defaults == null) ? null : defaults.getSection(path));
++      value = new Configuration((Map) value, (defaults == null) ? null : defaults.getSection(path));
+     }
+ 
+     Configuration section = getSectionFor(path);
+@@ -143,9 +142,9 @@ public final class Configuration {
+   /*------------------------------------------------------------------------*/
    public Configuration getSection(String path) {
      Object def = getDefault(path);
-     return (Configuration) get(path,
+-    return (Configuration) get(path,
 -        (def instanceof Configuration) ? def : new Configuration((
 -            defaults == null) ? null : defaults.getSection(path)));
-+        (def instanceof Configuration)
-+            ? def
-+            : new Configuration((defaults == null) ? null : defaults.getSection(path)));
++    return (Configuration) get(path, (def instanceof Configuration)
++        ? def
++        : new Configuration((defaults == null) ? null : defaults.getSection(path)));
    }
  
    /**
+@@ -338,6 +337,7 @@ public final class Configuration {
+         result.add((Character) object);
+       }
+     }
++
+     return result;
+   }
+ 
+diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/config/helpers/ConfigurationProvider.java b/proxy/src/main/java/net/elytrium/elytraproxy/config/helpers/ConfigurationProvider.java
+index f822dec9..c0a42787 100644
+--- a/proxy/src/main/java/net/elytrium/elytraproxy/config/helpers/ConfigurationProvider.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/config/helpers/ConfigurationProvider.java
+@@ -43,8 +43,7 @@ import java.util.Map;
+ 
+ public abstract class ConfigurationProvider {
+ 
+-  private static final Map<Class<? extends ConfigurationProvider>,
+-      ConfigurationProvider> providers = new HashMap<>();
++  private static final Map<Class<? extends ConfigurationProvider>, ConfigurationProvider> providers = new HashMap<>();
+ 
+   static {
+     try {
+@@ -52,6 +51,12 @@ public abstract class ConfigurationProvider {
+     } catch (NoClassDefFoundError ex) {
+       // Ignore, no SnakeYAML
+     }
++
++    try {
++      providers.put(JsonConfiguration.class, new JsonConfiguration());
++    } catch (NoClassDefFoundError ex) {
++      // Ignore, no Gson
++    }
+   }
+ 
+   public static ConfigurationProvider getProvider(Class<? extends ConfigurationProvider> provider) {
+@@ -78,4 +83,4 @@ public abstract class ConfigurationProvider {
+   public abstract Configuration load(String string);
+ 
+   public abstract Configuration load(String string, Configuration defaults);
+-}
++}
+\ No newline at end of file
+diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/config/helpers/JsonConfiguration.java b/proxy/src/main/java/net/elytrium/elytraproxy/config/helpers/JsonConfiguration.java
+new file mode 100644
+index 00000000..90d42c71
+--- /dev/null
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/config/helpers/JsonConfiguration.java
+@@ -0,0 +1,131 @@
++/*
++ * This file is part of BungeeCord, licensed under the BSD License (BSD).
++ *
++ * Copyright (c) 2012 md_5
++ *
++ * All rights reserved.
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions are met:
++ *
++ *     * Redistributions of source code must retain the above copyright notice,
++ *       this list of conditions and the following disclaimer.
++ *     * Redistributions in binary form must reproduce the above copyright notice,
++ *       this list of conditions and the following disclaimer in the documentation
++ *       and/or other materials provided with the distribution.
++ *     * The name of the author may not be used to endorse or promote products derived
++ *       from this software without specific prior written permission.
++ *     * You may not use the software for commercial software hosting services without
++ *       written permission from the author.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
++ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
++ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
++ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
++ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
++ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
++ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
++ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
++ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
++ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
++ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++ */
++
++package net.elytrium.elytraproxy.config.helpers;
++
++import com.google.common.base.Charsets;
++import com.google.gson.Gson;
++import com.google.gson.GsonBuilder;
++import com.google.gson.JsonElement;
++import com.google.gson.JsonSerializationContext;
++import com.google.gson.JsonSerializer;
++import java.io.File;
++import java.io.FileInputStream;
++import java.io.FileOutputStream;
++import java.io.IOException;
++import java.io.InputStream;
++import java.io.InputStreamReader;
++import java.io.OutputStreamWriter;
++import java.io.Reader;
++import java.io.Writer;
++import java.lang.reflect.Type;
++import java.util.LinkedHashMap;
++import java.util.Map;
++import lombok.AccessLevel;
++import lombok.NoArgsConstructor;
++
++@NoArgsConstructor(access = AccessLevel.PACKAGE)
++public class JsonConfiguration extends ConfigurationProvider {
++
++  private final Gson json = new GsonBuilder().serializeNulls().setPrettyPrinting()
++      .registerTypeAdapter(Configuration.class, new JsonSerializer<Configuration>() {
++        @Override
++        public JsonElement serialize(Configuration src, Type typeOfSrc, JsonSerializationContext context) {
++          return context.serialize(((Configuration) src).self);
++        }
++      }).create();
++
++  @Override
++  public void save(Configuration config, File file) throws IOException {
++    try (Writer writer = new OutputStreamWriter(new FileOutputStream(file), Charsets.UTF_8)) {
++      save(config, writer);
++    }
++  }
++
++  @Override
++  public void save(Configuration config, Writer writer) {
++    json.toJson(config.self, writer);
++  }
++
++  @Override
++  public Configuration load(File file) throws IOException {
++    return load(file, null);
++  }
++
++  @Override
++  public Configuration load(File file, Configuration defaults) throws IOException {
++    try (FileInputStream is = new FileInputStream(file)) {
++      return load(is, defaults);
++    }
++  }
++
++  @Override
++  public Configuration load(Reader reader) {
++    return load(reader, null);
++  }
++
++  @Override
++  @SuppressWarnings("unchecked")
++  public Configuration load(Reader reader, Configuration defaults) {
++    Map<String, Object> map = json.fromJson(reader, LinkedHashMap.class);
++    if (map == null) {
++      map = new LinkedHashMap<>();
++    }
++    return new Configuration(map, defaults);
++  }
++
++  @Override
++  public Configuration load(InputStream is) {
++    return load(is, null);
++  }
++
++  @Override
++  public Configuration load(InputStream is, Configuration defaults) {
++    return load(new InputStreamReader(is, Charsets.UTF_8), defaults);
++  }
++
++  @Override
++  public Configuration load(String string) {
++    return load(string, null);
++  }
++
++  @Override
++  @SuppressWarnings("unchecked")
++  public Configuration load(String string, Configuration defaults) {
++    Map<String, Object> map = json.fromJson(string, LinkedHashMap.class);
++    if (map == null) {
++      map = new LinkedHashMap<>();
++    }
++    return new Configuration(map, defaults);
++  }
++}
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/database/Database.java b/proxy/src/main/java/net/elytrium/elytraproxy/database/Database.java
 index 09325f56..d5934464 100644
 --- a/proxy/src/main/java/net/elytrium/elytraproxy/database/Database.java
