@@ -1,22 +1,9 @@
-From 5e2937729ed1e4e6ba15593e8f34cb26d834d3b7 Mon Sep 17 00:00:00 2001
+From eb0664623855b0b3eaca138e1f1ebf87df83148a Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Thu, 3 Jun 2021 02:23:42 +0900
 Subject: [PATCH] Fix bugs, Code Cleanup And More
 
 
-diff --git a/build.gradle b/build.gradle
-index 3b9ce7db..7bafaba4 100644
---- a/build.gradle
-+++ b/build.gradle
-@@ -18,7 +18,7 @@ allprojects {
-     compileJava.options.encoding = 'UTF-8' // ElytraProxy - Fix UTF-8 for build on Windows
- 
-     group 'com.velocitypowered'
--    version 'ely.su'
-+    version 'beta'
- 
-     ext {
-         // dependency versions
 diff --git a/proxy/build.gradle b/proxy/build.gradle
 index 65169af3..66055e86 100644
 --- a/proxy/build.gradle

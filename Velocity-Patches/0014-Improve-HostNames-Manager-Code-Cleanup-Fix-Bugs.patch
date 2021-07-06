@@ -1,22 +1,9 @@
-From 059d58e1e14e31d202b8912b686110b81b901925 Mon Sep 17 00:00:00 2001
+From 29c0259a0ece3f6bffdfeb5165da4cd3aa48aa84 Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Sat, 5 Jun 2021 17:50:10 +0900
 Subject: [PATCH] Improve HostNames Manager, Code Cleanup, Fix Bugs
 
 
-diff --git a/build.gradle b/build.gradle
-index 7bafaba4..5512c589 100644
---- a/build.gradle
-+++ b/build.gradle
-@@ -18,7 +18,7 @@ allprojects {
-     compileJava.options.encoding = 'UTF-8' // ElytraProxy - Fix UTF-8 for build on Windows
- 
-     group 'com.velocitypowered'
--    version 'beta'
-+    version '0.1.0'
- 
-     ext {
-         // dependency versions
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
 index e6c4398c..aa43731c 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java

@@ -1,4 +1,4 @@
-From 9199e742d38f3e33d52df9b3e76c9dfe2049d7c3 Mon Sep 17 00:00:00 2001
+From dbf21578c0bd96491ca95b5da6809c52aaa12577 Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Sat, 19 Jun 2021 09:39:46 +0900
 Subject: [PATCH] More comments
@@ -85,10 +85,10 @@ index c80b471a..8ac26cda 100644
    private final boolean help;
    private final @Nullable Integer port;
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/Velocity.java b/proxy/src/main/java/com/velocitypowered/proxy/Velocity.java
-index 5a41892c..49ad384f 100644
+index fc36650b..9d31a75e 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/Velocity.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/Velocity.java
-@@ -78,8 +78,10 @@ public class Velocity {
+@@ -67,8 +67,10 @@ public class Velocity {
  
      double bootTime = (System.currentTimeMillis() - startTime) / 1000d;
      logger.info("Done ({}s)!", new DecimalFormat("#.##").format(bootTime));

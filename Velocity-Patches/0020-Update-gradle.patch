@@ -1,14 +1,14 @@
-From 5d1848aa105c6544ff9eb9e0e7235f21bc207e8b Mon Sep 17 00:00:00 2001
+From 4ac5af8d5dbceaf4dc6c5e4a9729ce86bbb9efbd Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Sat, 19 Jun 2021 09:51:26 +0900
 Subject: [PATCH] Update gradle
 
 
 diff --git a/build.gradle b/build.gradle
-index d27838ea..dd353bd7 100644
+index a322f1c2..ad8d0d75 100644
 --- a/build.gradle
 +++ b/build.gradle
-@@ -3,22 +3,22 @@ buildscript {
+@@ -3,19 +3,19 @@ buildscript {
          jcenter()
      }
      dependencies {
@@ -27,19 +27,15 @@ index d27838ea..dd353bd7 100644
  
  allprojects {
      apply plugin: "com.github.spotbugs"
--    compileJava.options.encoding = 'UTF-8' // ElytraProxy - Fix UTF-8 for build on Windows
-+    compileJava.options.encoding = 'UTF-8' // ElytraProxy: Fix UTF-8 for build on Windows
+-    // ElytraProxy - Fix UTF-8 for build on Windows
++    // ElytraProxy: Fix UTF-8 for build on Windows
+     compileJava.options.encoding = 'UTF-8'
  
      group 'com.velocitypowered'
--    version '0.1.1'
-+    version '0.1.2-DEV'
- 
-     ext {
-         // dependency versions
-@@ -69,11 +69,11 @@ allprojects {
-             junitXml.enabled = true
+@@ -71,11 +71,11 @@ allprojects {
          }
      }
+ 
 -    // Start ElytraProxy - Fix UTF-8 for build on Windows
 +    // ElytraProxy Start: Fix UTF-8 for build on Windows
      tasks.withType(JavaCompile) {
@@ -47,9 +43,9 @@ index d27838ea..dd353bd7 100644
      }
 -    // End ElytraProxy
 +    // ElytraProxy End
+ 
      tasks.withType(com.github.spotbugs.snom.SpotBugsTask) {
          reports {
-             html {
 diff --git a/gradle/wrapper/gradle-wrapper.properties b/gradle/wrapper/gradle-wrapper.properties
 index 71796f88..4e8b1495 100644
 --- a/gradle/wrapper/gradle-wrapper.properties

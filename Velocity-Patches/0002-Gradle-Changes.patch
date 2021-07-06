@@ -1,24 +1,9 @@
-From 133af75630314490945f0b5b69192a34dab93378 Mon Sep 17 00:00:00 2001
+From daa2ed3c80ceb61c3ea528816e6620291a603362 Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Mon, 10 May 2021 03:53:07 +0900
 Subject: [PATCH] Gradle Changes
 
 
-diff --git a/build.gradle b/build.gradle
-index e4a860ce..91910cd9 100644
---- a/build.gradle
-+++ b/build.gradle
-@@ -16,8 +16,8 @@ plugins {
- allprojects {
-     apply plugin: "com.github.spotbugs"
- 
--    group 'com.velocitypowered'
--    version '3.0.0-SNAPSHOT'
-+    group 'ru.mdxd44'
-+    version 'ely.su'
- 
-     ext {
-         // dependency versions
 diff --git a/proxy/build.gradle b/proxy/build.gradle
 index fc5be026..3fcae8df 100644
 --- a/proxy/build.gradle

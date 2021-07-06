@@ -1,22 +1,9 @@
-From 2c4b0c3603904c4d35f485989226b28eecd826bd Mon Sep 17 00:00:00 2001
+From f625a9b983f0f9519f357783e9d88a96e7d98e1f Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Mon, 7 Jun 2021 04:45:40 +0900
 Subject: [PATCH] Move Messages Section To ElytraProxy Config
 
 
-diff --git a/build.gradle b/build.gradle
-index 5512c589..d27838ea 100644
---- a/build.gradle
-+++ b/build.gradle
-@@ -18,7 +18,7 @@ allprojects {
-     compileJava.options.encoding = 'UTF-8' // ElytraProxy - Fix UTF-8 for build on Windows
- 
-     group 'com.velocitypowered'
--    version '0.1.0'
-+    version '0.1.1'
- 
-     ext {
-         // dependency versions
 diff --git a/config/checkstyle/checkstyle.xml b/config/checkstyle/checkstyle.xml
 index 083337a8..76a9665e 100644
 --- a/config/checkstyle/checkstyle.xml

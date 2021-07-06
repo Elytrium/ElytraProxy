@@ -1,14 +1,14 @@
-From d6d2bc5311d49e2c2aacb1d4bc9ba0dd838294d5 Mon Sep 17 00:00:00 2001
+From 67339d7a864a320b2db0cf039464b2b00cf81e11 Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Sat, 5 Jun 2021 07:07:10 +0900
 Subject: [PATCH] Update Checker
 
 
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/Velocity.java b/proxy/src/main/java/com/velocitypowered/proxy/Velocity.java
-index 2362a4df..5a41892c 100644
+index 25b3a7c4..fc36650b 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/Velocity.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/Velocity.java
-@@ -78,6 +78,8 @@ public class Velocity {
+@@ -67,6 +67,8 @@ public class Velocity {
  
      double bootTime = (System.currentTimeMillis() - startTime) / 1000d;
      logger.info("Done ({}s)!", new DecimalFormat("#.##").format(bootTime));

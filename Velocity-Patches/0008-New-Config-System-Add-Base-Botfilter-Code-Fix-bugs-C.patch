@@ -1,4 +1,4 @@
-From 2d8c12e8a3d7f1923c31d7f502cca768c2ce0a7c Mon Sep 17 00:00:00 2001
+From 62168e0b8b1e5ad6b468b5d994a979c711cc5e33 Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Sat, 29 May 2021 02:33:34 +0900
 Subject: [PATCH] New Config System, Add Base Botfilter Code, Fix bugs, Code
@@ -63,10 +63,10 @@ index 00000000..bd06f8c7
 +THE SOFTWARE.
 \ No newline at end of file
 diff --git a/api/src/main/java/com/velocitypowered/api/network/ProtocolVersion.java b/api/src/main/java/com/velocitypowered/api/network/ProtocolVersion.java
-index 0bbdc45b..e8f2ef6b 100644
+index bdddd586..683ab9f1 100644
 --- a/api/src/main/java/com/velocitypowered/api/network/ProtocolVersion.java
 +++ b/api/src/main/java/com/velocitypowered/api/network/ProtocolVersion.java
-@@ -230,6 +230,29 @@ public enum ProtocolVersion {
+@@ -231,6 +231,29 @@ public enum ProtocolVersion {
      return this == LEGACY;
    }
  
@@ -115,10 +115,10 @@ index 360d2ba5..262e21bd 100644
     * Get the proxy favicon shown in the tablist.
     *
 diff --git a/build.gradle b/build.gradle
-index 3b9ce7db..4c62bd0d 100644
+index a322f1c2..54628b5e 100644
 --- a/build.gradle
 +++ b/build.gradle
-@@ -62,6 +62,11 @@ allprojects {
+@@ -63,6 +63,11 @@ allprojects {
          maven {
              url "https://nexus.velocitypowered.com/repository/maven-public/"
          }

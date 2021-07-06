@@ -1,4 +1,4 @@
-From 32cafb8261508630c788969a756f6a779b173a43 Mon Sep 17 00:00:00 2001
+From 3fb6b282e9401fcd6c34cfc27b902c354d0ace1b Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Tue, 11 May 2021 17:51:21 +0900
 Subject: [PATCH] Init AntiBot
@@ -706,30 +706,28 @@ index 00000000..f288702d
 +Public License instead of this License.  But first, please read
 +<https://www.gnu.org/licenses/why-not-lgpl.html>.
 diff --git a/build.gradle b/build.gradle
-index 91910cd9..3b9ce7db 100644
+index 7343b2e7..a322f1c2 100644
 --- a/build.gradle
 +++ b/build.gradle
-@@ -15,8 +15,9 @@ plugins {
+@@ -15,6 +15,8 @@ plugins {
  
  allprojects {
      apply plugin: "com.github.spotbugs"
-+    compileJava.options.encoding = 'UTF-8' // ElytraProxy - Fix UTF-8 for build on Windows
++    // ElytraProxy - Fix UTF-8 for build on Windows
++    compileJava.options.encoding = 'UTF-8'
  
--    group 'ru.mdxd44'
-+    group 'com.velocitypowered'
-     version 'ely.su'
- 
-     ext {
-@@ -68,7 +69,11 @@ allprojects {
-             junitXml.enabled = true
+     group 'com.velocitypowered'
+     version '3.0.1-SNAPSHOT'
+@@ -69,6 +71,12 @@ allprojects {
          }
      }
--
+ 
 +    // Start ElytraProxy - Fix UTF-8 for build on Windows
 +    tasks.withType(JavaCompile) {
 +        options.encoding = 'UTF-8'
 +    }
 +    // End ElytraProxy
++
      tasks.withType(com.github.spotbugs.snom.SpotBugsTask) {
          reports {
              html {

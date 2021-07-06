@@ -1,14 +1,14 @@
-From 4be47eddcf42944adc23d91bdb53571a35857f9b Mon Sep 17 00:00:00 2001
+From a503e0070abaa546179a269959ad8943b7e164a3 Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Wed, 2 Jun 2021 23:35:32 +0900
 Subject: [PATCH] Protocol Blocker, Fix bugs, Code Cleanup And More
 
 
 diff --git a/build.gradle b/build.gradle
-index 4c62bd0d..3b9ce7db 100644
+index 54628b5e..a322f1c2 100644
 --- a/build.gradle
 +++ b/build.gradle
-@@ -62,11 +62,6 @@ allprojects {
+@@ -63,11 +63,6 @@ allprojects {
          maven {
              url "https://nexus.velocitypowered.com/repository/maven-public/"
          }
