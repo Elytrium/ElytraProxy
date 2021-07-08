@@ -1,4 +1,4 @@
-From c319aaa99aeb4641d606ebed0f2e85f7dcc6ba66 Mon Sep 17 00:00:00 2001
+From f836b555fb2b4c16091155397a02cd10201358fa Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Fri, 18 Jun 2021 06:16:26 +0900
 Subject: [PATCH] Prefix placeholder
@@ -489,7 +489,7 @@ index f69cf6b7..3a61616b 100644
    }
  
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
-index 9ec312a5..d7af4816 100644
+index 78e5bc63..88a80dde 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
 @@ -499,20 +499,20 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
@@ -581,7 +581,7 @@ index 9ec312a5..d7af4816 100644
                ), safe);
      }
    }
-@@ -660,18 +652,14 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
+@@ -664,18 +656,14 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
                        sendMessage(Identity.nil(),
                            LegacyComponentSerializer
                                .legacyAmpersand()

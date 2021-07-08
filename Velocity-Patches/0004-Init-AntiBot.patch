@@ -1,4 +1,4 @@
-From 3fb6b282e9401fcd6c34cfc27b902c354d0ace1b Mon Sep 17 00:00:00 2001
+From a46989167314485db21083215a2f7b913154fc4d Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Tue, 11 May 2021 17:51:21 +0900
 Subject: [PATCH] Init AntiBot
@@ -993,7 +993,7 @@ index 00000000..8abdba10
 +}
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/VelocityCommand.java b/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/VelocityCommand.java
 deleted file mode 100644
-index 2bc197d2..00000000
+index 29d25c61..00000000
 --- a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/VelocityCommand.java
 +++ /dev/null
 @@ -1,338 +0,0 @@
@@ -1224,8 +1224,8 @@ index 2bc197d2..00000000
 -      JsonArray connectOrder = new JsonArray();
 -      List<String> attemptedConnectionOrder = ImmutableList.copyOf(
 -              server.getConfiguration().getAttemptConnectionOrder());
--      for (int i = 0; i < attemptedConnectionOrder.size(); i++) {
--        connectOrder.add(attemptedConnectionOrder.get(i));
+-      for (String s : attemptedConnectionOrder) {
+-        connectOrder.add(s);
 -      }
 -
 -      JsonObject proxyConfig = InformationUtils.collectProxyConfig(server.getConfiguration());

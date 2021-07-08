@@ -1,4 +1,4 @@
-From f625a9b983f0f9519f357783e9d88a96e7d98e1f Mon Sep 17 00:00:00 2001
+From 26ba6ff7616cb523926250f00fbe60dcf43a5392 Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Mon, 7 Jun 2021 04:45:40 +0900
 Subject: [PATCH] Move Messages Section To ElytraProxy Config
@@ -457,7 +457,7 @@ index b9b892e1..db97ab23 100644
            return null;
          });
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
-index 6a097a49..8255eb0f 100644
+index 10d05c8b..68ac3abb 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
 @@ -48,7 +48,6 @@ import com.velocitypowered.api.proxy.server.RegisteredServer;
@@ -571,14 +571,18 @@ index 6a097a49..8255eb0f 100644
      }
    }
  
-@@ -623,10 +649,19 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
+@@ -627,14 +653,19 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
                            getProtocolVersion()), ((Impl) status).isSafe());
                        break;
                      case SUCCESS:
--                      sendMessage(Component.translatable("velocity.error.moved-to-new-server",
--                          NamedTextColor.RED,
--                          Component.text(originalEvent.getServer().getServerInfo().getName()),
--                          friendlyReason));
+-                      Component requestedMessage = res.getMessageComponent();
+-                      if (requestedMessage == null) {
+-                        requestedMessage = Component.translatable("velocity.error.moved-to-new-server",
+-                            NamedTextColor.RED,
+-                            Component.text(originalEvent.getServer().getServerInfo().getName()),
+-                            friendlyReason);
+-                      }
+-                      sendMessage(requestedMessage);
 +                      sendMessage(Identity.nil(),
 +                            LegacyComponentSerializer
 +                                  .legacyAmpersand()

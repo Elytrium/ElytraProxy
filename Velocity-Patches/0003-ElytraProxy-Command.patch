@@ -1,11 +1,11 @@
-From a9bd9e2c38c2af7d85200129e65bba2a27b41dd5 Mon Sep 17 00:00:00 2001
+From 0592f8cccbeb9f29561ef45dce9c8c1e847466bb Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Mon, 10 May 2021 04:02:14 +0900
 Subject: [PATCH] ElytraProxy Command
 
 
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/VelocityCommand.java b/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/VelocityCommand.java
-index d7cc2d74..2bc197d2 100644
+index d808a078..29d25c61 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/VelocityCommand.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/VelocityCommand.java
 @@ -87,8 +87,6 @@ public class VelocityCommand implements SimpleCommand {
@@ -26,7 +26,7 @@ index d7cc2d74..2bc197d2 100644
      source.sendMessage(Identity.nil(), Component.text(commandText, NamedTextColor.RED));
    }
  
-@@ -198,141 +196,7 @@ public class VelocityCommand implements SimpleCommand {
+@@ -198,143 +196,7 @@ public class VelocityCommand implements SimpleCommand {
  
      @Override
      public boolean hasPermission(final CommandSource source, final String @NonNull [] args) {
@@ -113,18 +113,20 @@ index d7cc2d74..2bc197d2 100644
 -        return;
 -      }
 -
--      TranslatableComponent.Builder output = Component.translatable()
--          .key("velocity.command.plugins-list")
--          .color(NamedTextColor.YELLOW);
+-      TextComponent.Builder listBuilder = Component.text();
 -      for (int i = 0; i < pluginCount; i++) {
 -        PluginContainer plugin = plugins.get(i);
--        output.append(componentForPlugin(plugin.getDescription()));
+-        listBuilder.append(componentForPlugin(plugin.getDescription()));
 -        if (i + 1 < pluginCount) {
--          output.append(Component.text(", "));
+-          listBuilder.append(Component.text(", "));
 -        }
 -      }
 -
--      source.sendMessage(Identity.nil(), output.build());
+-      TranslatableComponent.Builder output = Component.translatable()
+-          .key("velocity.command.plugins-list")
+-          .color(NamedTextColor.YELLOW)
+-          .args(listBuilder.build());
+-      source.sendMessage(Identity.nil(), output);
 -    }
 -
 -    private TextComponent componentForPlugin(PluginDescription description) {
@@ -169,7 +171,7 @@ index d7cc2d74..2bc197d2 100644
      }
    }
  
-@@ -348,7 +212,7 @@ public class VelocityCommand implements SimpleCommand {
+@@ -350,7 +212,7 @@ public class VelocityCommand implements SimpleCommand {
      @Override
      public void execute(CommandSource source, String @NonNull [] args) {
        if (args.length != 0) {
@@ -178,7 +180,7 @@ index d7cc2d74..2bc197d2 100644
          return;
        }
  
-@@ -468,7 +332,7 @@ public class VelocityCommand implements SimpleCommand {
+@@ -470,7 +332,7 @@ public class VelocityCommand implements SimpleCommand {
  
      @Override
      public boolean hasPermission(final CommandSource source, final String @NonNull [] args) {

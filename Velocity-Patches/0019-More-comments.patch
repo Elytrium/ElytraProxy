@@ -1,4 +1,4 @@
-From dbf21578c0bd96491ca95b5da6809c52aaa12577 Mon Sep 17 00:00:00 2001
+From 15a559c23bd1ca3d1b572c6d00a1c517dd473e15 Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Sat, 19 Jun 2021 09:39:46 +0900
 Subject: [PATCH] More comments
@@ -283,10 +283,10 @@ index 6c4ec6fc..01f7ecc1 100644
          LegacyComponentSerializer
              .legacyAmpersand()
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
-index 9d07ec56..2a9a92cb 100644
+index 3f980661..c40d7c3c 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
-@@ -648,6 +648,7 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
+@@ -652,6 +652,7 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
                            getProtocolVersion()), ((Impl) status).isSafe());
                        break;
                      case SUCCESS:

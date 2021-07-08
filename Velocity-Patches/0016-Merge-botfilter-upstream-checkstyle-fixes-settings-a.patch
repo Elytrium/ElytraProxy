@@ -1,4 +1,4 @@
-From a20bcf71cc165a6a4482c78445eb888086c86563 Mon Sep 17 00:00:00 2001
+From 5d16213609b4620b7d082d1bb538da6d3d3f0538 Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Thu, 17 Jun 2021 04:09:51 +0900
 Subject: [PATCH] Merge botfilter upstream, checkstyle fixes, settings and
@@ -634,7 +634,7 @@ index db97ab23..f69cf6b7 100644
  
    @Override
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
-index 8255eb0f..9ec312a5 100644
+index 68ac3abb..78e5bc63 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
 @@ -498,20 +498,22 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
@@ -744,7 +744,7 @@ index 8255eb0f..9ec312a5 100644
      }
    }
  
-@@ -650,18 +658,21 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
+@@ -654,18 +662,21 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
                        break;
                      case SUCCESS:
                        sendMessage(Identity.nil(),
