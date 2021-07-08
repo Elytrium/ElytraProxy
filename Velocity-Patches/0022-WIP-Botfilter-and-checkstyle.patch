@@ -1,4 +1,4 @@
-From f86f14a5507f8bb8c38f121755d1e7bc6cb061c0 Mon Sep 17 00:00:00 2001
+From af88961884f7f09718f61e8caa7101a4bc78a30d Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Thu, 24 Jun 2021 15:01:38 +0900
 Subject: [PATCH] WIP Botfilter and checkstyle
@@ -2309,7 +2309,7 @@ index 37b994ba..0c0c0871 100644
      this.inflater = new Inflater();
    }
 diff --git a/proxy/build.gradle b/proxy/build.gradle
-index 578a56e5..b525fe1d 100644
+index 578a56e5..84e3180e 100644
 --- a/proxy/build.gradle
 +++ b/proxy/build.gradle
 @@ -10,6 +10,7 @@ apply from: '../gradle/checkstyle.gradle'
@@ -2340,7 +2340,7 @@ index 578a56e5..b525fe1d 100644
          attributes 'Multi-Release': 'true'
      }
  }
-@@ -52,26 +54,29 @@ shadowJar {
+@@ -52,26 +54,30 @@ shadowJar {
  
  tasks.withType(Checkstyle) {
      exclude('**/com/velocitypowered/proxy/protocol/packet/*.java')
@@ -2358,20 +2358,22 @@ index 578a56e5..b525fe1d 100644
  
      testCompileOnly 'org.projectlombok:lombok:1.18.20'
      testAnnotationProcessor 'org.projectlombok:lombok:1.18.20'
--
++    // BotFilter Backport End
+ 
 -    // Note: we depend on the API twice, first the main sourceset, and then the annotation processor.
 -    implementation project(':elytraproxy-api')
 -    implementation project(':elytraproxy-api').sourceSets.ap.output
 -    implementation project(':elytraproxy-native')
-+    // BotFilter Backport End
- 
-     // ElytraProxy
+-
+-    // ElytraProxy
++    // ElytraProxy Start
      implementation "org.mariadb.jdbc:mariadb-java-client:2.7.3"
  
 +    // Note: we depend on the API twice, first the main sourceset, and then the annotation processor.
 +    implementation project(/*':velocity-api'*/':elytraproxy-api')
 +    implementation project(/*':velocity-api'*/':elytraproxy-api').sourceSets.ap.output
 +    implementation project(/*':velocity-native'*/':elytraproxy-native')
++    // ElytraProxy End
 +
      implementation "io.netty:netty-codec:${nettyVersion}"
      implementation "io.netty:netty-codec-haproxy:${nettyVersion}"
@@ -2736,10 +2738,10 @@ index 318363a0..b910fca4 100644
 +  // ElytraProxy End
  }
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/CommandMessages.java b/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/CommandMessages.java
-index 59102c9b..e8d189e8 100644
+index 59102c9b..9d4dfded 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/CommandMessages.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/CommandMessages.java
-@@ -23,13 +23,21 @@ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+@@ -23,6 +23,11 @@ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
  
  public class CommandMessages {
  
@@ -2751,10 +2753,10 @@ index 59102c9b..e8d189e8 100644
    public static final Component PLAYERS_ONLY = LegacyComponentSerializer
        .legacyAmpersand()
        .deserialize(Settings.IMP.MESSAGES.VELOCITY.COMMAND.PLAYERS_ONLY
-           .replace("{NL}", "\n")
+@@ -30,6 +35,10 @@ public class CommandMessages {
            .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
        );
--
+ 
 +  /*
 +  public static final TranslatableComponent SERVER_DOES_NOT_EXIST = Component.translatable(
 +      "velocity.command.server-does-not-exist", NamedTextColor.RED);
@@ -2762,7 +2764,7 @@ index 59102c9b..e8d189e8 100644
    public static Component SERVER_DOES_NOT_EXIST(String serverName) {
      return LegacyComponentSerializer
          .legacyAmpersand()
-@@ -38,5 +46,6 @@ public class CommandMessages {
+@@ -38,5 +47,6 @@ public class CommandMessages {
              .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
              .replace("{0}", serverName)
          );
@@ -2887,7 +2889,7 @@ index f9251320..6f19aaee 100644
      for (int i = 0; i < onServer.size(); i++) {
        Player player = onServer.get(i);
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/ServerCommand.java b/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/ServerCommand.java
-index fa55a506..296fe4bd 100644
+index fa55a506..5372a634 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/ServerCommand.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/command/builtin/ServerCommand.java
 @@ -64,7 +64,10 @@ public class ServerCommand implements SimpleCommand {
@@ -2945,7 +2947,7 @@ index fa55a506..296fe4bd 100644
      for (int i = 0; i < servers.size(); i++) {
        RegisteredServer rs = servers.get(i);
        serverListBuilder.append(formatServerComponent(currentServer, rs));
-@@ -123,9 +134,10 @@ public class ServerCommand implements SimpleCommand {
+@@ -123,22 +134,25 @@ public class ServerCommand implements SimpleCommand {
      TextComponent serverTextComponent = Component.text(serverInfo.getName());
  
      int connectedPlayers = server.getPlayersConnected().size();
@@ -2954,20 +2956,37 @@ index fa55a506..296fe4bd 100644
 +    /*TranslatableComponent*/Component playersTextComponent;
      if (connectedPlayers == 1) {
 -      playersTextComponent = LegacyComponentSerializer
-+      playersTextComponent = /*Component.translatable("velocity.command.server-tooltip-player-online");*/LegacyComponentSerializer
-           .legacyAmpersand()
-           .deserialize(Settings.IMP.MESSAGES.VELOCITY.COMMAND.SERVER_TOOLTIP_PLAYER_ONLINE
-               .replace("{NL}", "\n")
-@@ -133,7 +145,7 @@ public class ServerCommand implements SimpleCommand {
-               .replace("{0}", String.valueOf(connectedPlayers))
+-          .legacyAmpersand()
+-          .deserialize(Settings.IMP.MESSAGES.VELOCITY.COMMAND.SERVER_TOOLTIP_PLAYER_ONLINE
+-              .replace("{NL}", "\n")
+-              .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
+-              .replace("{0}", String.valueOf(connectedPlayers))
++      playersTextComponent = /*Component.translatable("velocity.command.server-tooltip-player-online");*/
++          LegacyComponentSerializer
++              .legacyAmpersand()
++              .deserialize(Settings.IMP.MESSAGES.VELOCITY.COMMAND.SERVER_TOOLTIP_PLAYER_ONLINE
++                  .replace("{NL}", "\n")
++                  .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
++                  .replace("{0}", String.valueOf(connectedPlayers))
            );
      } else {
 -      playersTextComponent = LegacyComponentSerializer
-+      playersTextComponent = /*Component.translatable("velocity.command.server-tooltip-players-online");*/LegacyComponentSerializer
-           .legacyAmpersand()
-           .deserialize(Settings.IMP.MESSAGES.VELOCITY.COMMAND.SERVER_TOOLTIP_PLAYERS_ONLINE
-               .replace("{NL}", "\n")
-@@ -146,32 +158,32 @@ public class ServerCommand implements SimpleCommand {
+-          .legacyAmpersand()
+-          .deserialize(Settings.IMP.MESSAGES.VELOCITY.COMMAND.SERVER_TOOLTIP_PLAYERS_ONLINE
+-              .replace("{NL}", "\n")
+-              .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
+-              .replace("{0}", String.valueOf(connectedPlayers))
++      playersTextComponent = /*Component.translatable("velocity.command.server-tooltip-players-online");*/
++          LegacyComponentSerializer
++              .legacyAmpersand()
++              .deserialize(Settings.IMP.MESSAGES.VELOCITY.COMMAND.SERVER_TOOLTIP_PLAYERS_ONLINE
++                  .replace("{NL}", "\n")
++                  .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
++                  .replace("{0}", String.valueOf(connectedPlayers))
+           );
+     }
+ 
+@@ -146,32 +160,32 @@ public class ServerCommand implements SimpleCommand {
        serverTextComponent = serverTextComponent.color(NamedTextColor.GREEN)
            .hoverEvent(
                showText(
@@ -3011,7 +3030,7 @@ index fa55a506..296fe4bd 100644
      return serverTextComponent;
    }
  
-@@ -194,6 +206,7 @@ public class ServerCommand implements SimpleCommand {
+@@ -194,6 +208,7 @@ public class ServerCommand implements SimpleCommand {
  
    @Override
    public boolean hasPermission(final SimpleCommand.Invocation invocation) {
