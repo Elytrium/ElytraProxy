@@ -1,4 +1,4 @@
-From af88961884f7f09718f61e8caa7101a4bc78a30d Mon Sep 17 00:00:00 2001
+From 0edb8661cddf9895f9cd78881fbfd72cc4275592 Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Thu, 24 Jun 2021 15:01:38 +0900
 Subject: [PATCH] WIP Botfilter and checkstyle
@@ -3522,7 +3522,7 @@ index 3fb42348..2315c7a2 100644
        // for us. Otherwise, we have nothing to do.
        return LegacyForgeHandshakeBackendPhase.NOT_STARTED.handle(serverConn, player, message);
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/backend/BackendPlaySessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/backend/BackendPlaySessionHandler.java
-index fa8dddaf..9b544b6c 100644
+index 240c655f..5fa81ab9 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/backend/BackendPlaySessionHandler.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/backend/BackendPlaySessionHandler.java
 @@ -21,8 +21,6 @@ import static com.velocitypowered.proxy.connection.backend.BungeeCordMessageResp
@@ -3712,7 +3712,7 @@ index 934dae0a..7c414790 100644
    private ClientConnectionPhases() {
      throw new AssertionError();
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
-index 6104354f..a4a888ea 100644
+index 67b46aca..de50ad2c 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
 @@ -68,7 +68,6 @@ import java.util.UUID;
@@ -3737,15 +3737,7 @@ index 6104354f..a4a888ea 100644
    private final List<UUID> serverBossBars = new ArrayList<>();
    private final Queue<PluginMessage> loginPluginMessages = new ArrayDeque<>();
    private final VelocityServer server;
-@@ -96,6 +96,7 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
- 
-   /**
-    * Constructs a client play session handler.
-+   *
-    * @param server the Velocity server instance
-    * @param player the player
-    */
-@@ -198,8 +199,7 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+@@ -198,8 +198,7 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
            player.disconnect(
                LegacyComponentSerializer
                    .legacyAmpersand()
@@ -3755,7 +3747,7 @@ index 6104354f..a4a888ea 100644
                        .replace("{NL}", "\n")
                        .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
                    ));
-@@ -212,8 +212,7 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+@@ -212,8 +211,7 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
            player.disconnect(
                LegacyComponentSerializer
                    .legacyAmpersand()
@@ -3765,7 +3757,7 @@ index 6104354f..a4a888ea 100644
                        .replace("{NL}", "\n")
                        .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
                    ));
-@@ -280,9 +279,8 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+@@ -280,9 +278,8 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
              }
            })
            .exceptionally(e -> {
@@ -3777,45 +3769,6 @@ index 6104354f..a4a888ea 100644
                  LegacyComponentSerializer
                      .legacyAmpersand()
                      .deserialize(Settings.IMP.MESSAGES.VELOCITY.COMMAND.GENERIC_ERROR
-@@ -459,7 +457,6 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
- 
-   @Override
-   public void exception(Throwable throwable) {
--    // ElytraProxy
-     player.disconnect(
-         LegacyComponentSerializer
-             .legacyAmpersand()
-@@ -490,7 +487,8 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
-   /**
-    * Handles the {@code JoinGame} packet. This function is responsible for handling the client-side
-    * switching servers in Velocity.
--   * @param joinGame the join game packet
-+   *
-+   * @param joinGame    the join game packet
-    * @param destination the new server we are connecting to
-    */
-   public void handleBackendJoinGame(JoinGame joinGame, VelocityServerConnection destination) {
-@@ -540,8 +538,8 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
-     // Clear any title from the previous server.
-     if (player.getProtocolVersion().compareTo(MINECRAFT_1_8) >= 0) {
-       player.getConnection()
--              .delayedWrite(GenericTitlePacket.constructTitlePacket(
--                      GenericTitlePacket.ActionType.RESET, player.getProtocolVersion()));
-+          .delayedWrite(GenericTitlePacket.constructTitlePacket(
-+              GenericTitlePacket.ActionType.RESET, player.getProtocolVersion()));
-     }
- 
-     // Flush everything
-@@ -727,8 +725,7 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
-         });
-   }
- 
--  private CompletableFuture<Void> processCommandExecuteResult(String originalCommand,
--      CommandResult result) {
-+  private CompletableFuture<Void> processCommandExecuteResult(String originalCommand, CommandResult result) {
-     if (result == CommandResult.denied()) {
-       return CompletableFuture.completedFuture(null);
-     }
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
 index c40d7c3c..de96eac7 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java

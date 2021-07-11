@@ -1,4 +1,4 @@
-From 26ba6ff7616cb523926250f00fbe60dcf43a5392 Mon Sep 17 00:00:00 2001
+From 66b37b548fa8648cbba843508a225998ba6cbebb Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Mon, 7 Jun 2021 04:45:40 +0900
 Subject: [PATCH] Move Messages Section To ElytraProxy Config
@@ -370,7 +370,7 @@ index 9f408310..227ea644 100644
    private final VelocityServer server;
    private final VelocityServerConnection serverConn;
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
-index b9b892e1..db97ab23 100644
+index c07ac639..0ebf62e5 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
 @@ -69,8 +69,6 @@ import java.util.Queue;
@@ -447,7 +447,7 @@ index b9b892e1..db97ab23 100644
    }
  
    @Override
-@@ -595,7 +611,7 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+@@ -597,7 +613,7 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
          }, player.getConnection().eventLoop())
          .exceptionally((ex) -> {
            logger.error(
