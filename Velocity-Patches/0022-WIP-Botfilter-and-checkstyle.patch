@@ -1,4 +1,4 @@
-From daed5917900d747896a7128e9e8ae2bee2af68ed Mon Sep 17 00:00:00 2001
+From bd617e85259691e50051735b469c1dd56ed9a00f Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Thu, 24 Jun 2021 15:01:38 +0900
 Subject: [PATCH] WIP Botfilter and checkstyle
@@ -8128,7 +8128,7 @@ index f4fa8d89..96a33b4c 100644
      this.blockLight = blockLight;
      this.skyLight = skyLight;
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/BotFilterSessionHandler.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/BotFilterSessionHandler.java
-index 97223ada..eb400ce2 100644
+index 97223ada..4da31811 100644
 --- a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/BotFilterSessionHandler.java
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/BotFilterSessionHandler.java
 @@ -19,18 +19,39 @@
@@ -8164,7 +8164,7 @@ index 97223ada..eb400ce2 100644
 +  private int aticks = 0;
 +  private long joinTime = System.currentTimeMillis();
 +  private int attempts = Settings.IMP.ANTIBOT.CAPTCHA_ATTEMPTS;
-+  private CheckState state = CheckState.ONLY_CAPTCHA/*CAPTCHA_ON_POSITION_FAILED*/;
++  private CheckState state = CheckState./*ONLY_CAPTCHA*/CAPTCHA_ON_POSITION_FAILED;
 +
 +  public BotFilterSessionHandler(ConnectedPlayer player, LoginSessionHandler originalHandler, VirtualServer virtualServer) {
 +    super(player.getProtocolVersion());
