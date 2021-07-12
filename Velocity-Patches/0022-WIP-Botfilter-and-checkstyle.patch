@@ -1,4 +1,4 @@
-From bd617e85259691e50051735b469c1dd56ed9a00f Mon Sep 17 00:00:00 2001
+From 5897fb062352bd92685b76a079cdcc2222b4f073 Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Thu, 24 Jun 2021 15:01:38 +0900
 Subject: [PATCH] WIP Botfilter and checkstyle
@@ -7584,10 +7584,10 @@ index 708be90c..a1184a5d 100644
  public class BlockStorage19 implements BlockStorage {
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/packet/MapDataPacket.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/packet/MapDataPacket.java
 new file mode 100644
-index 00000000..fe176882
+index 00000000..a8a5fc28
 --- /dev/null
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/packet/MapDataPacket.java
-@@ -0,0 +1,74 @@
+@@ -0,0 +1,75 @@
 +/*
 + * This file is part of Velocity-BotFilter, licensed under the AGPLv3 License (AGPLv3).
 + *
@@ -7631,6 +7631,7 @@ index 00000000..fe176882
 +
 +  @Override
 +  public void encode(ByteBuf buf, ProtocolUtils.Direction direction, ProtocolVersion version) {
++    System.out.println("Processing map data packet");
 +    ProtocolUtils.writeVarInt(buf, this.mapId);
 +    buf.writeByte(this.scale);
 +    if (version.isAfterOrEq(ProtocolVersion.MINECRAFT_1_9)
@@ -7841,10 +7842,10 @@ index 00000000..319546d7
 +}
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/packet/SetExp.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/packet/SetExp.java
 new file mode 100644
-index 00000000..58970602
+index 00000000..cc004a2d
 --- /dev/null
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/packet/SetExp.java
-@@ -0,0 +1,59 @@
+@@ -0,0 +1,60 @@
 +/*
 + * This file is part of Velocity-BotFilter, licensed under the AGPLv3 License (AGPLv3).
 + *
@@ -7888,6 +7889,7 @@ index 00000000..58970602
 +
 +  @Override
 +  public void encode(ByteBuf buf, ProtocolUtils.Direction direction, ProtocolVersion protocolVersion) {
++    System.out.println("Processing set exp packet");
 +    if (protocolVersion.isAfterOrEq(ProtocolVersion.MINECRAFT_1_8)) {
 +      buf.writeFloat(this.expBar);
 +      ProtocolUtils.writeVarInt(buf, this.level);
@@ -8060,6 +8062,18 @@ index 00000000..79b8ea83
 +    return handler.handle(this);
 +  }
 +}
+diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/packet/UpdateViewPosition.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/packet/UpdateViewPosition.java
+index 4e17995a..c97e6185 100644
+--- a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/packet/UpdateViewPosition.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/packet/UpdateViewPosition.java
+@@ -42,6 +42,7 @@ public class UpdateViewPosition implements MinecraftPacket {
+ 
+   @Override
+   public void encode(ByteBuf buf, Direction direction, ProtocolVersion protocolVersion) {
++    System.out.println("Processing upd view pos packet");
+     ProtocolUtils.writeVarInt(buf, chunkX);
+     ProtocolUtils.writeVarInt(buf, chunkZ);
+   }
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/packet/world/ChunkData.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/packet/world/ChunkData.java
 index 3b4b1af0..806f8d7c 100644
 --- a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/packet/world/ChunkData.java
@@ -8128,7 +8142,7 @@ index f4fa8d89..96a33b4c 100644
      this.blockLight = blockLight;
      this.skyLight = skyLight;
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/BotFilterSessionHandler.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/BotFilterSessionHandler.java
-index 97223ada..4da31811 100644
+index 97223ada..eb400ce2 100644
 --- a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/BotFilterSessionHandler.java
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/BotFilterSessionHandler.java
 @@ -19,18 +19,39 @@
@@ -8164,7 +8178,7 @@ index 97223ada..4da31811 100644
 +  private int aticks = 0;
 +  private long joinTime = System.currentTimeMillis();
 +  private int attempts = Settings.IMP.ANTIBOT.CAPTCHA_ATTEMPTS;
-+  private CheckState state = CheckState./*ONLY_CAPTCHA*/CAPTCHA_ON_POSITION_FAILED;
++  private CheckState state = CheckState.ONLY_CAPTCHA/*CAPTCHA_ON_POSITION_FAILED*/;
 +
 +  public BotFilterSessionHandler(ConnectedPlayer player, LoginSessionHandler originalHandler, VirtualServer virtualServer) {
 +    super(player.getProtocolVersion());
@@ -8419,7 +8433,7 @@ index 00000000..58655740
 +  }
 +}
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/ServerPackets.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/ServerPackets.java
-index 6919e5e1..28b47eb9 100644
+index 6919e5e1..ac056b4d 100644
 --- a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/ServerPackets.java
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/ServerPackets.java
 @@ -22,7 +22,9 @@ package net.elytrium.elytraproxy.botfilter.server;
@@ -8560,7 +8574,7 @@ index 6919e5e1..28b47eb9 100644
 +      setExp.setLevel(setExp.getLevel() + 1);
 +      PreparedPacket<SetExp> expPacket = new PreparedPacket<>();
 +      expPacket.prepare(setExp);
-+      packets.add(expPacket);
++      packets.add(processCompression(expPacket));
 +    }
 +    return packets;
 +  }
