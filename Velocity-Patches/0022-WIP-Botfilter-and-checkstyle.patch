@@ -1,4 +1,4 @@
-From 111cc27d54088ba48ab182cc952797e8771f2e2e Mon Sep 17 00:00:00 2001
+From c7e31776e98bf084ed023d7db88480dea8da319f Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Thu, 24 Jun 2021 15:01:38 +0900
 Subject: [PATCH] WIP Botfilter and checkstyle
@@ -3464,7 +3464,7 @@ index 62be4a34..9d692eb4 100644
     */
    public boolean sendPluginMessage(ChannelIdentifier identifier, ByteBuf data) {
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
-index 67b46aca..257577c3 100644
+index 67b46aca..db7ae02c 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
 @@ -27,11 +27,13 @@ import com.velocitypowered.api.event.command.CommandExecuteEvent.CommandResult;
@@ -3481,14 +3481,10 @@ index 67b46aca..257577c3 100644
  import com.velocitypowered.proxy.VelocityServer;
  import com.velocitypowered.proxy.connection.ConnectionTypes;
  import com.velocitypowered.proxy.connection.MinecraftConnection;
-@@ -66,12 +68,15 @@ import java.util.Optional;
- import java.util.Queue;
- import java.util.UUID;
- import java.util.concurrent.CompletableFuture;
-+import net.kyori.adventure.identity.Identity;
+@@ -69,9 +71,12 @@ import java.util.concurrent.CompletableFuture;
  import net.elytrium.elytraproxy.commands.ElytraProxyCommand;
  import net.elytrium.elytraproxy.config.Settings;
--import net.kyori.adventure.identity.Identity;
+ import net.kyori.adventure.identity.Identity;
 +import net.kyori.adventure.text.Component;
 +import net.kyori.adventure.text.format.NamedTextColor;
  import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
@@ -3629,7 +3625,7 @@ index 67b46aca..257577c3 100644
            return null;
          });
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
-index c40d7c3c..ef351883 100644
+index c40d7c3c..c479c957 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
 @@ -48,6 +48,7 @@ import com.velocitypowered.api.proxy.server.RegisteredServer;
@@ -3976,7 +3972,7 @@ index c40d7c3c..ef351883 100644
 +                                    .replace("{0}", originalEvent.getServer().getServerInfo().getName())
 +                                    .replace("{1}", LegacyComponentSerializer.legacySection().serialize(friendlyReason))
 +                                );
-+                            // ElytraProxy End
++                        // ElytraProxy End
 +                      }
 +                      sendMessage(requestedMessage);
                        break;
@@ -4156,7 +4152,7 @@ index c094cc90..00624abc 100644
 +  // ElytraProxy End
  }
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
-index 942c9911..652512bb 100644
+index 942c9911..e150a591 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
 @@ -56,16 +56,18 @@ import java.security.GeneralSecurityException;
@@ -4332,11 +4328,13 @@ index 942c9911..652512bb 100644
        return;
      }
 -    // injectBotFilterOrFinishLogin(player);
-+    //injectBotFilterOrFinishLogin(player);
++    injectBotFilterOrFinishLogin(player);
  
      // temp
-     completeLoginProtocol(player, true);
-     initialize(player);
+-    completeLoginProtocol(player, true);
+-    initialize(player);
++    //completeLoginProtocol(player, true);
++    //initialize(player);
    }
  
 +  // BotFilter BackPort Start
