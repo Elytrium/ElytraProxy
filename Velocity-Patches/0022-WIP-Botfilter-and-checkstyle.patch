@@ -1,4 +1,4 @@
-From c7e31776e98bf084ed023d7db88480dea8da319f Mon Sep 17 00:00:00 2001
+From daed5917900d747896a7128e9e8ae2bee2af68ed Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Thu, 24 Jun 2021 15:01:38 +0900
 Subject: [PATCH] WIP Botfilter and checkstyle
@@ -5211,10 +5211,10 @@ index 0a59858a..38361f27 100644
    @Override
    public @NonNull Tristate getPermissionValue(@NonNull String permission) {
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/event/VelocityEventManager.java b/proxy/src/main/java/com/velocitypowered/proxy/event/VelocityEventManager.java
-index 212acd16..edd7c0ca 100644
+index ac337aa5..ed870027 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/event/VelocityEventManager.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/event/VelocityEventManager.java
-@@ -247,8 +247,7 @@ public class VelocityEventManager implements EventManager {
+@@ -249,8 +249,7 @@ public class VelocityEventManager implements EventManager {
      }
    }
  
@@ -5224,7 +5224,7 @@ index 212acd16..edd7c0ca 100644
      for (final Method method : targetClass.getDeclaredMethods()) {
        final Subscribe subscribe = method.getAnnotation(Subscribe.class);
        if (subscribe == null) {
-@@ -366,7 +365,7 @@ public class VelocityEventManager implements EventManager {
+@@ -368,7 +367,7 @@ public class VelocityEventManager implements EventManager {
     * Registers the listener for a given plugin.
     *
     * @param pluginContainer registering plugin
@@ -5233,7 +5233,7 @@ index 212acd16..edd7c0ca 100644
     */
    public void registerInternally(final PluginContainer pluginContainer, final Object listener) {
      final Class<?> targetClass = listener.getClass();
-@@ -460,8 +459,7 @@ public class VelocityEventManager implements EventManager {
+@@ -462,8 +461,7 @@ public class VelocityEventManager implements EventManager {
      return future;
    }
  
