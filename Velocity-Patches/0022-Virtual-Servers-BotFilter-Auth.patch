@@ -1,4 +1,4 @@
-From e403cd54fc81a2034753832b4651e376f7272f51 Mon Sep 17 00:00:00 2001
+From 6fc179b79d3e7eb6cc01f8af5b41a642698b0113 Mon Sep 17 00:00:00 2001
 From: Petr Ilin <hevav@hevav.dev>
 Date: Thu, 24 Jun 2021 15:01:38 +0900
 Subject: [PATCH] Virtual Servers, BotFilter, Auth
@@ -10306,7 +10306,7 @@ index d1cbb572..f01a0c0e 100644
            source.sendMessage(component);
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/commands/ChangePasswordCommand.java b/proxy/src/main/java/net/elytrium/elytraproxy/commands/ChangePasswordCommand.java
 new file mode 100644
-index 00000000..f0caeae1
+index 00000000..8cf2cdab
 --- /dev/null
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/commands/ChangePasswordCommand.java
 @@ -0,0 +1,58 @@
@@ -10355,7 +10355,7 @@ index 00000000..f0caeae1
 +      source.sendMessage(
 +          LegacyComponentSerializer
 +              .legacyAmpersand()
-+              .deserialize(Settings.IMP.AUTH.STRINGS.UNREGISTER_USAGE));
++              .deserialize(Settings.IMP.AUTH.STRINGS.CHANGE_PASSWORD_USAGE));
 +    } else {
 +      database.updateMap(Settings.IMP.AUTH.TABLE,
 +          ImmutableMap.of("nickname", ((Player) source).getUsername()),
