@@ -1,4 +1,4 @@
-From daa2ed3c80ceb61c3ea528816e6620291a603362 Mon Sep 17 00:00:00 2001
+From 0db440abd9419c778cd603eebb35abf3b3d5bc4b Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Mon, 10 May 2021 03:53:07 +0900
 Subject: [PATCH] Gradle Changes
@@ -30,35 +30,6 @@ index fc5be026..3fcae8df 100644
  
      implementation "io.netty:netty-codec:${nettyVersion}"
      implementation "io.netty:netty-codec-haproxy:${nettyVersion}"
-diff --git a/proxy/src/main/java/com/velocitypowered/proxy/Metrics.java b/proxy/src/main/java/com/velocitypowered/proxy/Metrics.java
-index e0e3aa20..f2db8750 100644
---- a/proxy/src/main/java/com/velocitypowered/proxy/Metrics.java
-+++ b/proxy/src/main/java/com/velocitypowered/proxy/Metrics.java
-@@ -92,9 +92,9 @@ public class Metrics {
- 
-   private void appendPlatformData(JsonObjectBuilder builder) {
-     builder.appendField("osName", "ely.su");
--    builder.appendField("osArch", "чекай мать");
-+    builder.appendField("osArch", "ely.su");
-     builder.appendField("osVersion", "ely.su");
--    builder.appendField("coreCount", 64);
-+    builder.appendField("coreCount", "ely.su");
-   }
- 
-   static class VelocityMetrics {
-@@ -105,10 +105,10 @@ public class Metrics {
-       Metrics metrics = new Metrics(logger, 4752, metricsConfig.isEnabled());
- 
-       metrics.addCustomChart(
--          new SingleLineChart("players", () -> 999999999)
-+          new SingleLineChart("players", server::getPlayerCount)
-       );
-       metrics.addCustomChart(
--          new SingleLineChart("managed_servers", () -> 999999999)
-+          new SingleLineChart("managed_servers", () -> server.getAllServers().size())
-       );
-       metrics.addCustomChart(
-           new SimplePie("online_mode",
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
 index d5adf258..054e9802 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
@@ -107,5 +78,5 @@ index d0f3098b..5c877b20 100644
 +findProject(':native')?.name = 'elytraproxy-native'
 \ No newline at end of file
 -- 
-2.24.1.windows.2
+2.32.0
 

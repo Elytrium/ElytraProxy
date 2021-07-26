@@ -1,0 +1,39 @@
+From 1633767d0e89011e1544bec9bb2e305f260b3c0a Mon Sep 17 00:00:00 2001
+From: mdxd44 <mdxd44@ely.su>
+Date: Sun, 9 May 2021 08:48:45 +0900
+Subject: [PATCH] Metrics
+
+Signed-off-by: Petr Ilin <hevav@hevav.dev>
+
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/Metrics.java b/proxy/src/main/java/com/velocitypowered/proxy/Metrics.java
+index 64addd7a..29339b8b 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/Metrics.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/Metrics.java
+@@ -18,7 +18,6 @@
+ package com.velocitypowered.proxy;
+ 
+ import com.velocitypowered.proxy.config.VelocityConfiguration;
+-
+ import java.io.File;
+ import java.io.IOException;
+ import java.nio.file.Paths;
+@@ -26,7 +25,6 @@ import java.util.HashMap;
+ import java.util.Map;
+ import java.util.regex.Matcher;
+ import java.util.regex.Pattern;
+-
+ import org.apache.logging.log4j.LogManager;
+ import org.apache.logging.log4j.Logger;
+ import org.bstats.MetricsBase;
+@@ -102,7 +100,7 @@ public class Metrics {
+     private static final Logger logger = LogManager.getLogger(Metrics.class);
+ 
+     static void startMetrics(VelocityServer server, VelocityConfiguration.Metrics metricsConfig) {
+-      Metrics metrics = new Metrics(logger, 4752, metricsConfig.isEnabled());
++      Metrics metrics = new Metrics(logger, 12233, metricsConfig.isEnabled());
+ 
+       metrics.addCustomChart(
+           new SingleLineChart("players", server::getPlayerCount)
+-- 
+2.32.0
+

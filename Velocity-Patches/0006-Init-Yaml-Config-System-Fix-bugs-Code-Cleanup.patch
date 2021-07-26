@@ -1,4 +1,4 @@
-From 6e29106f3e999d7b4371701c2b2be58c8fed0ae8 Mon Sep 17 00:00:00 2001
+From cf20c97e5d9e9b96e32aa056cd1e1bd9d42fa66f Mon Sep 17 00:00:00 2001
 From: Petr Ilin <hevav@hevav.dev>
 Date: Sat, 22 May 2021 14:37:12 +0900
 Subject: [PATCH] Init Yaml Config System, Fix bugs, Code Cleanup
@@ -17,56 +17,6 @@ index ba9955de..71b6bba9 100644
          header = project.rootProject.file('HEADER_ELYTRAPROXY.txt')
      }
      header = project.rootProject.file('HEADER.txt')
-diff --git a/proxy/src/main/java/com/velocitypowered/proxy/Metrics.java b/proxy/src/main/java/com/velocitypowered/proxy/Metrics.java
-index f2db8750..4e2c25cf 100644
---- a/proxy/src/main/java/com/velocitypowered/proxy/Metrics.java
-+++ b/proxy/src/main/java/com/velocitypowered/proxy/Metrics.java
-@@ -24,8 +24,6 @@ import java.io.IOException;
- import java.nio.file.Paths;
- import java.util.HashMap;
- import java.util.Map;
--import java.util.regex.Matcher;
--import java.util.regex.Pattern;
- 
- import org.apache.logging.log4j.LogManager;
- import org.apache.logging.log4j.Logger;
-@@ -91,10 +89,10 @@ public class Metrics {
-   }
- 
-   private void appendPlatformData(JsonObjectBuilder builder) {
--    builder.appendField("osName", "ely.su");
--    builder.appendField("osArch", "ely.su");
--    builder.appendField("osVersion", "ely.su");
--    builder.appendField("coreCount", "ely.su");
-+    builder.appendField("osName", "ElytraProxy Fork");
-+    builder.appendField("osArch", "ElytraProxy Fork");
-+    builder.appendField("osVersion", "ElytraProxy Fork");
-+    builder.appendField("coreCount", "ElytraProxy Fork");
-   }
- 
-   static class VelocityMetrics {
-@@ -112,17 +110,17 @@ public class Metrics {
-       );
-       metrics.addCustomChart(
-           new SimplePie("online_mode",
--              () -> "ely.su")
-+              () -> "ElytraProxy Fork")
-       );
-       metrics.addCustomChart(new SimplePie("velocity_version",
--          () -> "ely.su"));
-+          () -> "ElytraProxy Fork"));
- 
-       metrics.addCustomChart(new DrilldownPie("java_version", () -> {
-         Map<String, Map<String, Integer>> map = new HashMap<>();
--        String javaVersion = "ely.su";
-+        String javaVersion = "ElytraProxy Fork";
-         Map<String, Integer> entry = new HashMap<>();
-         entry.put(javaVersion, 1);
--        String release = "ely.su";
-+        String release = "ElytraProxy Fork";
-         map.put(release, entry);
- 
-         return map;
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
 index 2a7ef6d0..d9df0bfa 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
@@ -803,5 +753,5 @@ index 00000000..6175a700
 +}
 +
 -- 
-2.24.1.windows.2
+2.32.0
 
