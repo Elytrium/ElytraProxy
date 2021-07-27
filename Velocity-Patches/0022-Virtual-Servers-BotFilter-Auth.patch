@@ -1,4 +1,4 @@
-From 7d1762d7ad434a72c552616a2020f44ec38c9452 Mon Sep 17 00:00:00 2001
+From 154577ee627e3169b719dc4f840a317cca29b557 Mon Sep 17 00:00:00 2001
 From: Petr Ilin <hevav@hevav.dev>
 Date: Thu, 24 Jun 2021 15:01:38 +0900
 Subject: [PATCH] Virtual Servers, BotFilter, Auth
@@ -109,7 +109,7 @@ index 37b994ba..0c0c0871 100644
      this.inflater = new Inflater();
    }
 diff --git a/proxy/build.gradle b/proxy/build.gradle
-index 578a56e5..4540796e 100644
+index 578a56e5..3916c990 100644
 --- a/proxy/build.gradle
 +++ b/proxy/build.gradle
 @@ -10,12 +10,19 @@ apply from: '../gradle/checkstyle.gradle'
@@ -152,7 +152,7 @@ index 578a56e5..4540796e 100644
          attributes 'Multi-Release': 'true'
      }
  }
-@@ -52,25 +60,31 @@ shadowJar {
+@@ -52,25 +60,32 @@ shadowJar {
  
  tasks.withType(Checkstyle) {
      exclude('**/com/velocitypowered/proxy/protocol/packet/*.java')
@@ -182,6 +182,7 @@ index 578a56e5..4540796e 100644
 +    // ElytraProxy Start
      implementation "org.mariadb.jdbc:mariadb-java-client:2.7.3"
 +    implementation 'at.favre.lib:bcrypt:0.9.0'
++    implementation 'dev.samstevens.totp:totp:1.7.1'
 +
 +    // Note: we depend on the API twice, first the main sourceset, and then the annotation processor.
 +    implementation project(/*':velocity-api'*/':elytraproxy-api')
@@ -1196,7 +1197,7 @@ index 62be4a34..9d692eb4 100644
     */
    public boolean sendPluginMessage(ChannelIdentifier identifier, ByteBuf data) {
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
-index 67b46aca..f2fc8dae 100644
+index 67b46aca..7d32d8b0 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
 @@ -68,7 +68,6 @@ import java.util.UUID;
@@ -1329,18 +1330,39 @@ index 67b46aca..f2fc8dae 100644
      VelocityServerConnection serverConnection = player.getConnectedServer();
      if (serverConnection == null) {
        return true;
-@@ -261,8 +164,6 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
-                       LegacyComponentSerializer
-                           .legacyAmpersand()
-                           .deserialize(Settings.IMP.MESSAGES.ELYTRAPROXY.COMMAND_SPY_FORMAT
+@@ -254,41 +157,37 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+               event.getResult()))
+           .whenComplete((ignored, throwable) -> {
+             // ElytraProxy Start
+-            for (ConnectedPlayer player1 : ElytraProxyCommand.getPlayersWithSpy()) {
+-              if (player1.hasPermission("elytraproxy.command.commandspy")) {
+-                if (!player1.getUsername().equals(player.getUsername())) {
+-                  player1.sendMessage(
+-                      LegacyComponentSerializer
+-                          .legacyAmpersand()
+-                          .deserialize(Settings.IMP.MESSAGES.ELYTRAPROXY.COMMAND_SPY_FORMAT
 -                              .replace("{NL}", "\n")
 -                              .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
-                               .replace("{0}", player.getUsername())
-                               .replace("{1}", "/" + originalCommand)
-                           ));
-@@ -270,25 +171,22 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
-               }
-             }
+-                              .replace("{0}", player.getUsername())
+-                              .replace("{1}", "/" + originalCommand)
+-                          ));
+-                }
+-              }
+-            }
++            ElytraProxyCommand.getPlayersWithSpy().stream()
++                .map(server::getPlayer).forEach(player -> player.ifPresent(p -> {
++                  if (p.hasPermission("elytraproxy.command.commandspy")) {
++                    if (!p.getUsername().equals(p.getUsername())) {
++                      p.sendMessage(
++                          LegacyComponentSerializer
++                              .legacyAmpersand()
++                              .deserialize(Settings.IMP.MESSAGES.ELYTRAPROXY.COMMAND_SPY_FORMAT
++                                  .replace("{0}", p.getUsername())
++                                  .replace("{1}", "/" + originalCommand)
++                              ));
++                    }
++                  }
++                }));
              if (server.getConfiguration().isLogCommandExecutions()) {
 -              logger.info(Settings.IMP.MESSAGES.ELYTRAPROXY.CONSOLE_LOG_COMMAND_EXECUTIONS_FORMAT
 -                  .replace("{NL}", "\n")
@@ -1372,7 +1394,7 @@ index 67b46aca..f2fc8dae 100644
              // ElytraProxy End
              return null;
            });
-@@ -354,11 +252,6 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+@@ -354,11 +253,6 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
          player.setClientBrand(PluginMessageUtil.readBrandMessage(packet.content()));
          backendConn.write(PluginMessageUtil
              .rewriteMinecraftBrand(packet, server.getVersion(), player.getProtocolVersion()));
@@ -1384,7 +1406,7 @@ index 67b46aca..f2fc8dae 100644
        } else if (BungeeCordMessageResponder.isBungeeCordMessage(packet)) {
          return true;
        } else {
-@@ -444,12 +337,6 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+@@ -444,12 +338,6 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
      if (smc != null && !smc.isClosed() && serverConnection.getPhase().consideredComplete()) {
        smc.write(buf.retain());
      }
@@ -1397,7 +1419,7 @@ index 67b46aca..f2fc8dae 100644
    }
  
    @Override
-@@ -460,13 +347,11 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+@@ -460,13 +348,11 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
    @Override
    public void exception(Throwable throwable) {
      // ElytraProxy
@@ -1414,7 +1436,7 @@ index 67b46aca..f2fc8dae 100644
    }
  
    @Override
-@@ -723,7 +608,7 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+@@ -723,7 +609,7 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
          }, player.getConnection().eventLoop())
          .exceptionally((ex) -> {
            logger.error(
@@ -3308,10 +3330,10 @@ index 3dc8ea13..697dd589 100644
        packet.setOverlay(OVERLAY_TO_PROTOCOL.get(bar.overlay()));
        packet.setPercent(bar.progress());
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/ElytraProxy.java b/proxy/src/main/java/net/elytrium/elytraproxy/ElytraProxy.java
-index a2dc13bf..d3b12ecf 100644
+index a2dc13bf..249ecd0f 100644
 --- a/proxy/src/main/java/net/elytrium/elytraproxy/ElytraProxy.java
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/ElytraProxy.java
-@@ -19,91 +19,110 @@ package net.elytrium.elytraproxy;
+@@ -19,91 +19,111 @@ package net.elytrium.elytraproxy;
  
  import com.velocitypowered.api.command.CommandManager;
  import com.velocitypowered.api.command.CommandSource;
@@ -3353,6 +3375,7 @@ index a2dc13bf..d3b12ecf 100644
  import net.elytrium.elytraproxy.commands.ElytraProxyCommand;
  import net.elytrium.elytraproxy.commands.FindCommand;
  import net.elytrium.elytraproxy.commands.SendCommand;
++import net.elytrium.elytraproxy.commands.TotpCommand;
 +import net.elytrium.elytraproxy.commands.UnregisterCommand;
  import net.elytrium.elytraproxy.config.Settings;
  import net.elytrium.elytraproxy.database.Database;
@@ -3456,7 +3479,7 @@ index a2dc13bf..d3b12ecf 100644
    /**
     * Initializes ElytraProxy commands.
     * Инициализирует команды ElytraProxy.
-@@ -115,42 +134,189 @@ public class ElytraProxy {
+@@ -115,42 +135,184 @@ public class ElytraProxy {
      manager.unregister("alert");
      manager.unregister("find");
      manager.unregister("send");
@@ -3471,6 +3494,7 @@ index a2dc13bf..d3b12ecf 100644
 +    if (Settings.IMP.AUTH.ENABLE) {
 +      manager.register("unregister", new UnregisterCommand(database));
 +      manager.register("changepass", new ChangePasswordCommand(database));
++      manager.register("2fa", new TotpCommand(database));
 +    }
    }
  
@@ -3484,12 +3508,8 @@ index a2dc13bf..d3b12ecf 100644
 +    if (!Settings.IMP.ANTIBOT.ENABLE) {
 +      return false;
 +    }
-+    if (Settings.IMP.ANTIBOT.CACHE_SUCCEED_USERS) {
-+      if (cachedBotChecks.containsKey(nickname)) {
-+        return !ip.equals(cachedBotChecks.get(nickname));
-+      } else {
-+        return true;
-+      }
++    if (cachedBotChecks.containsKey(nickname)) {
++      return !ip.equals(cachedBotChecks.get(nickname));
 +    } else {
 +      return true;
 +    }
@@ -3509,11 +3529,9 @@ index a2dc13bf..d3b12ecf 100644
 +  }
 +
 +  public void cacheSucceedUser(ConnectedPlayer player) {
-+    if (Settings.IMP.ANTIBOT.CACHE_SUCCEED_USERS) {
-+      cachedBotChecks.remove(player.getUsername());
-+      InetSocketAddress adr = (InetSocketAddress) player.getConnection().getRemoteAddress();
-+      cachedBotChecks.put(player.getUsername(), adr.getAddress());
-+    }
++    cachedBotChecks.remove(player.getUsername());
++    InetSocketAddress adr = (InetSocketAddress) player.getConnection().getRemoteAddress();
++    cachedBotChecks.put(player.getUsername(), adr.getAddress());
 +  }
 +
 +  public void cacheAuthUser(ConnectedPlayer player) {
@@ -3567,8 +3585,7 @@ index a2dc13bf..d3b12ecf 100644
 +
 +    if (!Settings.IMP.AUTH.ONLINE_MODE_NEED_AUTH) {
 +      ListenableFuture<Response> isPremiumResponse = isPremiumRequest(nickname).execute();
- 
--      virtualServer.spawnPlayer(sessionHandler);
++
 +      isPremiumResponse.addListener(() -> {
 +        try {
 +          if (isPremiumResponse.get().getStatusCode() == 200) {
@@ -3583,7 +3600,8 @@ index a2dc13bf..d3b12ecf 100644
 +      }, player.getConnection().eventLoop());
 +    }
 +  }
-+
+ 
+-      virtualServer.spawnPlayer(sessionHandler);
 +  public BoundRequestBuilder isPremiumRequest(String nickname) {
 +    return velocityServer.getAsyncHttpClient()
 +        .prepareGet("https://api.mojang.com/users/profiles/minecraft/" + nickname);
@@ -3667,7 +3685,7 @@ index a2dc13bf..d3b12ecf 100644
      }
    }
  
-@@ -160,19 +326,13 @@ public class ElytraProxy {
+@@ -160,19 +322,13 @@ public class ElytraProxy {
        source.sendMessage(Identity.nil(),
            LegacyComponentSerializer
                .legacyAmpersand()
@@ -3689,7 +3707,7 @@ index a2dc13bf..d3b12ecf 100644
      }
    }
  
-@@ -197,4 +357,9 @@ public class ElytraProxy {
+@@ -197,4 +353,9 @@ public class ElytraProxy {
        logger.warn("Unable to check for updates.", ex);
      }
    }
@@ -3701,10 +3719,10 @@ index a2dc13bf..d3b12ecf 100644
  }
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/auth/handler/AuthSessionHandler.java b/proxy/src/main/java/net/elytrium/elytraproxy/auth/handler/AuthSessionHandler.java
 new file mode 100644
-index 00000000..59276e02
+index 00000000..474b20bc
 --- /dev/null
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/auth/handler/AuthSessionHandler.java
-@@ -0,0 +1,194 @@
+@@ -0,0 +1,250 @@
 +/*
 + * Copyright (C) 2021 Elytrium
 + *
@@ -3731,11 +3749,18 @@ index 00000000..59276e02
 +import com.velocitypowered.proxy.connection.MinecraftSessionHandler;
 +import com.velocitypowered.proxy.connection.client.ConnectedPlayer;
 +import com.velocitypowered.proxy.protocol.packet.Chat;
++import dev.samstevens.totp.code.CodeGenerator;
++import dev.samstevens.totp.code.CodeVerifier;
++import dev.samstevens.totp.code.DefaultCodeGenerator;
++import dev.samstevens.totp.code.DefaultCodeVerifier;
++import dev.samstevens.totp.time.SystemTimeProvider;
++import dev.samstevens.totp.time.TimeProvider;
 +import java.net.InetSocketAddress;
 +import java.nio.charset.StandardCharsets;
 +import java.util.List;
 +import java.util.Map;
 +import java.util.concurrent.atomic.AtomicInteger;
++import lombok.Getter;
 +import net.elytrium.elytraproxy.auth.model.RegisteredPlayer;
 +import net.elytrium.elytraproxy.config.Settings;
 +import net.elytrium.elytraproxy.database.Database;
@@ -3744,21 +3769,27 @@ index 00000000..59276e02
 +import net.elytrium.elytraproxy.virtual.server.VirtualSessionHandler;
 +
 +public class AuthSessionHandler extends VirtualSessionHandler {
++  private static final TimeProvider timeProvider = new SystemTimeProvider();
++  private static final CodeGenerator codeGenerator = new DefaultCodeGenerator();
++  @Getter
++  private static final CodeVerifier verifier = new DefaultCodeVerifier(codeGenerator, timeProvider);
 +  private final Database database;
 +  private final RegisteredPlayer playerInfo;
 +  private final ServerPackets packets;
 +  private final MinecraftConnection connection;
 +  private final String ip;
++  private boolean totp = false;
 +
 +  private int attempts = Settings.IMP.AUTH.LOGIN_ATTEMPTS;
 +
 +  public AuthSessionHandler(
-+      ConnectedPlayer player, MinecraftSessionHandler originalHandler, VirtualServer virtualServer, String nickname) {
++      ConnectedPlayer player, MinecraftSessionHandler originalHandler,
++      VirtualServer virtualServer, String lowercaseNickname) {
 +    super(player, originalHandler, virtualServer);
 +    this.database = virtualServer.getElytraProxy().getDatabase();
 +    this.packets = virtualServer.getPackets();
 +    this.connection = player.getConnection();
-+    this.playerInfo = fetchInfo(nickname);
++    this.playerInfo = fetchInfo(lowercaseNickname);
 +    this.ip = ((InetSocketAddress) connection.getRemoteAddress()).getAddress().getHostAddress();
 +  }
 +
@@ -3771,7 +3802,7 @@ index 00000000..59276e02
 +        case "/reg":
 +        case "/register":
 +        case "/r":
-+          if (args.length >= 3 && args[1].equals(args[2])) {
++          if (args.length >= 3 && !totp && playerInfo == null && args[1].equals(args[2])) {
 +            register(args[1]);
 +            finish();
 +          } else {
@@ -3781,14 +3812,28 @@ index 00000000..59276e02
 +        case "/log":
 +        case "/login":
 +        case "/l":
-+          if (args.length >= 2) {
++          if (args.length >= 2 && !totp && playerInfo != null) {
 +            if (checkPassword(args[1])) {
-+              finish();
++              finishOrTotp();
 +            } else if (attempts-- != 0) {
 +              connection.write(packets.getWrongPasswordChat());
 +            } else {
 +              connection.closeWith(packets.getWrongPassword());
 +            }
++          } else {
++            sendMessage();
++          }
++          break;
++        case "/totp":
++        case "/2fa":
++          if (args.length >= 2 && totp) {
++            if (verifier.isValidCode(playerInfo.totpToken, args[1])) {
++              finish();
++            } else {
++              sendMessage();
++            }
++          } else {
++            sendMessage();
 +          }
 +          break;
 +        default:
@@ -3810,22 +3855,28 @@ index 00000000..59276e02
 +    connection.write(packets.getNoAbilities());
 +    if (playerInfo == null) {
 +      checkIp();
++    } else {
++      checkCase();
 +    }
 +    sendMessage();
 +    connection.flush();
 +  }
 +
-+  private RegisteredPlayer fetchInfo(String nickname) {
++  public static RegisteredPlayer fetchInfo(Database database, String nickname) {
 +    return database.getItem(
 +        Settings.IMP.AUTH.TABLE,
-+        ImmutableMap.of("nickname", nickname),
++        ImmutableMap.of("lowercaseNickname", nickname),
 +        RegisteredPlayer.class);
++  }
++
++  private RegisteredPlayer fetchInfo(String nickname) {
++    return fetchInfo(database, nickname);
 +  }
 +
 +  private boolean checkPassword(String password) {
 +    return BCrypt.verifyer().verify(
 +        password.getBytes(StandardCharsets.UTF_8),
-+        playerInfo.getHash().getBytes(StandardCharsets.UTF_8)
++        playerInfo.hash.getBytes(StandardCharsets.UTF_8)
 +    ).verified;
 +  }
 +
@@ -3841,8 +3892,8 @@ index 00000000..59276e02
 +    Map<String, Object> clearIpMap = ImmutableMap.of("ip", "");
 +
 +    alreadyRegistered.stream()
-+        .filter(e -> e.getRegdate() < checkDate)
-+        .map(e -> ImmutableMap.of("nickname", (Object) e.getNickname()))
++        .filter(e -> e.regdate < checkDate)
++        .map(e -> ImmutableMap.of("lowercaseNickname", (Object) e.lowercaseNickname))
 +        .forEach(e -> {
 +          database.updateMap(
 +              Settings.IMP.AUTH.TABLE, e, clearIpMap
@@ -3855,13 +3906,21 @@ index 00000000..59276e02
 +    }
 +  }
 +
++  private void checkCase() {
++    if (!player.getUsername().equals(playerInfo.nickname)) {
++      connection.closeWith(packets.getWrongNicknameCase());
++    }
++  }
++
 +  private void register(String password) {
 +    String hash = genHash(password);
 +
 +    RegisteredPlayer registeredPlayer = new RegisteredPlayer(
-+        nickname,
++        player.getUsername(),
++        lowercaseNickname,
 +        hash,
 +        ip,
++        "",
 +        System.currentTimeMillis()
 +    );
 +
@@ -3873,9 +3932,22 @@ index 00000000..59276e02
 +    );
 +  }
 +
++  private void finishOrTotp() {
++    if (playerInfo.totpToken.isEmpty()) {
++      finish();
++    } else {
++      totp = true;
++      sendMessage();
++    }
++  }
++
 +  private void finish() {
 +    disconnected();
-+    connection.closeWith(packets.getSuccessfulAuth());
++    if (playerInfo == null) {
++      connection.closeWith(packets.getSuccessfulRegister());
++    } else {
++      connection.closeWith(packets.getSuccessfulLogin());
++    }
 +    // TODO: Fix connection to real server
 +    // VirtualServer -> Real Server causes infinite "Loading terrain"
 +    // I think it's because Velocity doesn't send Respawn packet on "first" join
@@ -3885,7 +3957,9 @@ index 00000000..59276e02
 +  }
 +
 +  private void sendMessage() {
-+    if (playerInfo == null) {
++    if (totp) {
++      connection.write(packets.getTotpChat());
++    } else if (playerInfo == null) {
 +      connection.write(packets.getRegisterChat());
 +    } else {
 +      connection.write(packets.getLoginChat());
@@ -3901,10 +3975,10 @@ index 00000000..59276e02
 +}
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/auth/model/RegisteredPlayer.java b/proxy/src/main/java/net/elytrium/elytraproxy/auth/model/RegisteredPlayer.java
 new file mode 100644
-index 00000000..3283c320
+index 00000000..94fff09d
 --- /dev/null
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/auth/model/RegisteredPlayer.java
-@@ -0,0 +1,46 @@
+@@ -0,0 +1,48 @@
 +/*
 + * Copyright (C) 2021 Elytrium
 + *
@@ -3924,30 +3998,32 @@ index 00000000..3283c320
 +
 +package net.elytrium.elytraproxy.auth.model;
 +
-+import com.google.common.collect.ImmutableMap;
 +import java.util.Map;
 +import lombok.AllArgsConstructor;
 +import lombok.Getter;
 +import lombok.NoArgsConstructor;
 +import net.elytrium.elytraproxy.database.DatabaseItem;
 +
-+@Getter
 +@NoArgsConstructor
 +@AllArgsConstructor
 +public class RegisteredPlayer {
 +  public String nickname;
++  public String lowercaseNickname;
 +  public String hash;
 +  public String ip;
++  public String totpToken;
 +  public Long regdate;
 +
-+  private static final Map<String, String> tableInfo = ImmutableMap.of(
++  private static final Map<String, String> tableInfo = Map.of(
 +      "nickname", "VARCHAR(16)",
++      "lowercaseNickname", "VARCHAR(16)",
 +      "hash", "VARCHAR(128)",
 +      "ip", "VARCHAR(15)",
++      "totpToken", "VARCHAR(32)",
 +      "regdate", "BIGINT UNSIGNED"
 +  );
 +
-+  private static final String primaryKey = "nickname";
++  private static final String primaryKey = "lowercaseNickname";
 +
 +  @Getter private static final DatabaseItem databaseItem = new DatabaseItem(tableInfo, primaryKey);
 +}
@@ -6907,10 +6983,10 @@ index d1cbb572..f01a0c0e 100644
            source.sendMessage(component);
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/commands/ChangePasswordCommand.java b/proxy/src/main/java/net/elytrium/elytraproxy/commands/ChangePasswordCommand.java
 new file mode 100644
-index 00000000..8cf2cdab
+index 00000000..0eca4179
 --- /dev/null
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/commands/ChangePasswordCommand.java
-@@ -0,0 +1,58 @@
+@@ -0,0 +1,57 @@
 +/*
 + * Copyright (C) 2021 Elytrium
 + *
@@ -6961,19 +7037,35 @@ index 00000000..8cf2cdab
 +      database.updateMap(Settings.IMP.AUTH.TABLE,
 +          ImmutableMap.of("nickname", ((Player) source).getUsername()),
 +          ImmutableMap.of("hash", AuthSessionHandler.genHash(args[0])));
++      source.sendMessage(
++          LegacyComponentSerializer
++              .legacyAmpersand()
++              .deserialize(Settings.IMP.AUTH.STRINGS.CHANGE_PASSWORD_SUCCESSFUL));
 +    }
-+  }
-+
-+  @Override
-+  public boolean hasPermission(final Invocation invocation) {
-+    return invocation.source().hasPermission("elytraproxy.auth.unregister");
 +  }
 +}
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/commands/ElytraProxyCommand.java b/proxy/src/main/java/net/elytrium/elytraproxy/commands/ElytraProxyCommand.java
-index 4a622823..bf1b46e3 100644
+index 4a622823..f730dd96 100644
 --- a/proxy/src/main/java/net/elytrium/elytraproxy/commands/ElytraProxyCommand.java
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/commands/ElytraProxyCommand.java
-@@ -75,22 +75,16 @@ public class ElytraProxyCommand implements SimpleCommand {
+@@ -32,6 +32,7 @@ import java.util.Locale;
+ import java.util.Map;
+ import java.util.Timer;
+ import java.util.TimerTask;
++import java.util.UUID;
+ import lombok.Getter;
+ import net.elytrium.elytraproxy.ElytraProxy;
+ import net.elytrium.elytraproxy.config.Settings;
+@@ -46,7 +47,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
+ public class ElytraProxyCommand implements SimpleCommand {
+ 
+   @Getter
+-  private static final List<ConnectedPlayer> playersWithSpy = new ArrayList<>();
++  private static final List<UUID> playersWithSpy = new ArrayList<>();
+ 
+   private interface SubCommand {
+ 
+@@ -75,22 +76,16 @@ public class ElytraProxyCommand implements SimpleCommand {
    }
  
    private void usage(CommandSource source) {
@@ -7000,7 +7092,7 @@ index 4a622823..bf1b46e3 100644
      }
    }
  
-@@ -128,8 +122,7 @@ public class ElytraProxyCommand implements SimpleCommand {
+@@ -128,8 +123,7 @@ public class ElytraProxyCommand implements SimpleCommand {
  
      if (currentArgs.length == 1) {
        return commands.entrySet().stream()
@@ -7010,7 +7102,7 @@ index 4a622823..bf1b46e3 100644
            .filter(e -> e.getValue().hasPermission(source, new String[0]))
            .map(Map.Entry::getKey)
            .collect(ImmutableList.toImmutableList());
-@@ -176,31 +169,22 @@ public class ElytraProxyCommand implements SimpleCommand {
+@@ -176,31 +170,22 @@ public class ElytraProxyCommand implements SimpleCommand {
      public void execute(CommandSource source, String @NonNull [] args) {
        try {
          if (server.reloadConfiguration()) {
@@ -7048,21 +7140,51 @@ index 4a622823..bf1b46e3 100644
        }
  
        elytraProxy.reload(source);
-@@ -231,12 +215,11 @@ public class ElytraProxyCommand implements SimpleCommand {
-                   LegacyComponentSerializer
-                       .legacyAmpersand()
-                       .deserialize(Settings.IMP.MESSAGES.ELYTRAPROXY.STATS_FORMAT
+@@ -214,7 +199,7 @@ public class ElytraProxyCommand implements SimpleCommand {
+ 
+   private static class Stats implements SubCommand {
+ 
+-    private final List<ConnectedPlayer> playersWithStats = new ArrayList<>();
++    private final List<UUID> playersWithStats = new ArrayList<>();
+ 
+     private Stats(VelocityServer server) {
+ 
+@@ -226,19 +211,16 @@ public class ElytraProxyCommand implements SimpleCommand {
+               return;
+             }
+             Statistics statistics = server.getElytraProxy().getStatistics();
+-            for (ConnectedPlayer player : playersWithStats) {
+-              player.sendActionBar(
+-                  LegacyComponentSerializer
+-                      .legacyAmpersand()
+-                      .deserialize(Settings.IMP.MESSAGES.ELYTRAPROXY.STATS_FORMAT
 -                          .replace("{NL}", "\n")
 -                          .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
-                           .replace("{0}", String.valueOf(statistics.getBlockedConnections()))
-                           .replace("{1}", String.valueOf(statistics.getConnectionsPerSecond()))
-                           .replace("{2}", String.valueOf(statistics.getPingsPerSecond()))
-                           .replace("{3}", String.valueOf(statistics.getTotalConnectionsPerSecond()))
-+                          .replace("{4}", String.valueOf(player.getPing()))
-                       ));
-             }
+-                          .replace("{0}", String.valueOf(statistics.getBlockedConnections()))
+-                          .replace("{1}", String.valueOf(statistics.getConnectionsPerSecond()))
+-                          .replace("{2}", String.valueOf(statistics.getPingsPerSecond()))
+-                          .replace("{3}", String.valueOf(statistics.getTotalConnectionsPerSecond()))
+-                      ));
+-            }
++            playersWithStats.stream().map(server::getPlayer).forEach(player -> player.ifPresent(p -> p.sendActionBar(
++                LegacyComponentSerializer
++                    .legacyAmpersand()
++                    .deserialize(Settings.IMP.MESSAGES.ELYTRAPROXY.STATS_FORMAT
++                        .replace("{0}", String.valueOf(statistics.getBlockedConnections()))
++                        .replace("{1}", String.valueOf(statistics.getConnectionsPerSecond()))
++                        .replace("{2}", String.valueOf(statistics.getPingsPerSecond()))
++                        .replace("{3}", String.valueOf(statistics.getTotalConnectionsPerSecond()))
++                        .replace("{4}", String.valueOf(p.getPing()))
++                    ))));
            } catch (Exception e) {
-@@ -257,19 +240,13 @@ public class ElytraProxyCommand implements SimpleCommand {
+             e.printStackTrace();
+           }
+@@ -253,24 +235,18 @@ public class ElytraProxyCommand implements SimpleCommand {
+         return;
+       }
+       ConnectedPlayer player = (ConnectedPlayer) source;
+-      if (playersWithStats.contains(player)) {
++      if (playersWithStats.contains(player.getUniqueId())) {
          source.sendMessage(
              LegacyComponentSerializer
                  .legacyAmpersand()
@@ -7070,8 +7192,9 @@ index 4a622823..bf1b46e3 100644
 -                    .replace("{NL}", "\n")
 -                    .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
 -                ));
+-        playersWithStats.remove(player);
 +                .deserialize(Settings.IMP.MESSAGES.ELYTRAPROXY.STATS_DISABLED));
-         playersWithStats.remove(player);
++        playersWithStats.remove(player.getUniqueId());
        } else {
          source.sendMessage(
              LegacyComponentSerializer
@@ -7080,11 +7203,13 @@ index 4a622823..bf1b46e3 100644
 -                    .replace("{NL}", "\n")
 -                    .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
 -                ));
+-        playersWithStats.add(player);
 +                .deserialize(Settings.IMP.MESSAGES.ELYTRAPROXY.STATS_ENABLED));
-         playersWithStats.add(player);
++        playersWithStats.add(player.getUniqueId());
        }
      }
-@@ -282,10 +259,6 @@ public class ElytraProxyCommand implements SimpleCommand {
+ 
+@@ -282,10 +258,6 @@ public class ElytraProxyCommand implements SimpleCommand {
  
    private static class CommandSpy implements SubCommand {
  
@@ -7095,7 +7220,12 @@ index 4a622823..bf1b46e3 100644
      @Override
      public void execute(CommandSource source, String @NonNull [] args) {
        if (!(source instanceof Player)) {
-@@ -297,19 +270,13 @@ public class ElytraProxyCommand implements SimpleCommand {
+@@ -293,24 +265,18 @@ public class ElytraProxyCommand implements SimpleCommand {
+         return;
+       }
+       ConnectedPlayer player = (ConnectedPlayer) source;
+-      if (playersWithSpy.contains(player)) {
++      if (playersWithSpy.contains(player.getUniqueId())) {
          source.sendMessage(
              LegacyComponentSerializer
                  .legacyAmpersand()
@@ -7103,8 +7233,9 @@ index 4a622823..bf1b46e3 100644
 -                    .replace("{NL}", "\n")
 -                    .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
 -                ));
+-        playersWithSpy.remove(player);
 +                .deserialize(Settings.IMP.MESSAGES.ELYTRAPROXY.COMMAND_SPY_DISABLED));
-         playersWithSpy.remove(player);
++        playersWithSpy.remove(player.getUniqueId());
        } else {
          source.sendMessage(
              LegacyComponentSerializer
@@ -7113,10 +7244,12 @@ index 4a622823..bf1b46e3 100644
 -                    .replace("{NL}", "\n")
 -                    .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
 -                ));
+-        playersWithSpy.add(player);
 +                .deserialize(Settings.IMP.MESSAGES.ELYTRAPROXY.COMMAND_SPY_ENABLED));
-         playersWithSpy.add(player);
++        playersWithSpy.add(player.getUniqueId());
        }
      }
+ 
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/commands/FindCommand.java b/proxy/src/main/java/net/elytrium/elytraproxy/commands/FindCommand.java
 index 0230c0d7..9d9acf7c 100644
 --- a/proxy/src/main/java/net/elytrium/elytraproxy/commands/FindCommand.java
@@ -7324,12 +7457,12 @@ index b4480320..4103669d 100644
                        .replace("{0}", args[0])
                    ));
          }
-diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/commands/UnregisterCommand.java b/proxy/src/main/java/net/elytrium/elytraproxy/commands/UnregisterCommand.java
+diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/commands/TotpCommand.java b/proxy/src/main/java/net/elytrium/elytraproxy/commands/TotpCommand.java
 new file mode 100644
-index 00000000..0a831172
+index 00000000..0824e96b
 --- /dev/null
-+++ b/proxy/src/main/java/net/elytrium/elytraproxy/commands/UnregisterCommand.java
-@@ -0,0 +1,54 @@
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/commands/TotpCommand.java
+@@ -0,0 +1,156 @@
 +/*
 + * Copyright (C) 2021 Elytrium
 + *
@@ -7352,6 +7485,169 @@ index 00000000..0a831172
 +import com.google.common.collect.ImmutableMap;
 +import com.velocitypowered.api.command.CommandSource;
 +import com.velocitypowered.api.command.SimpleCommand;
++import com.velocitypowered.api.proxy.Player;
++import dev.samstevens.totp.qr.QrData;
++import dev.samstevens.totp.recovery.RecoveryCodeGenerator;
++import dev.samstevens.totp.secret.DefaultSecretGenerator;
++import dev.samstevens.totp.secret.SecretGenerator;
++import java.net.URLEncoder;
++import java.nio.charset.StandardCharsets;
++import java.util.Locale;
++import lombok.SneakyThrows;
++import net.elytrium.elytraproxy.auth.handler.AuthSessionHandler;
++import net.elytrium.elytraproxy.auth.model.RegisteredPlayer;
++import net.elytrium.elytraproxy.config.Settings;
++import net.elytrium.elytraproxy.database.Database;
++import net.kyori.adventure.text.event.ClickEvent;
++import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
++
++public class TotpCommand implements SimpleCommand {
++
++  private final SecretGenerator secretGenerator = new DefaultSecretGenerator();
++  private final Database database;
++
++  public TotpCommand(Database database) {
++    this.database = database;
++  }
++
++  @SneakyThrows
++  @Override
++  public void execute(final Invocation invocation) {
++    final CommandSource source = invocation.source();
++    final String[] args = invocation.arguments();
++
++    if (args.length == 0 || !(source instanceof Player)) {
++      sendUsage(source);
++    } else {
++      String username = ((Player) source).getUsername();
++
++      switch (args[0]) {
++        case "enable":
++          RegisteredPlayer playerInfo =
++              AuthSessionHandler.fetchInfo(database, username.toLowerCase(Locale.ROOT));
++
++          if (playerInfo == null) {
++            source.sendMessage(LegacyComponentSerializer
++                .legacyAmpersand()
++                .deserialize(Settings.IMP.AUTH.STRINGS.TOTP_NON_REGISTERED));
++            return;
++          }
++
++          if (!playerInfo.totpToken.isBlank()) {
++            source.sendMessage(LegacyComponentSerializer
++                .legacyAmpersand()
++                .deserialize(Settings.IMP.AUTH.STRINGS.TOTP_ALREADY_ENABLED));
++            return;
++          }
++
++          String secret = secretGenerator.generate();
++
++          database.updateMap(Settings.IMP.AUTH.TABLE,
++              ImmutableMap.of("nickname", username),
++              ImmutableMap.of("totpToken", secret));
++
++          source.sendMessage(LegacyComponentSerializer
++              .legacyAmpersand()
++              .deserialize(Settings.IMP.AUTH.STRINGS.TOTP_SUCCESSFUL));
++
++          QrData data = new QrData.Builder()
++              .label(username)
++              .secret(secret)
++              .issuer(Settings.IMP.AUTH.TOTP_ISSUER)
++              .build();
++
++          String qrUrl = Settings.IMP.AUTH.QR_GENERATOR_URL
++              .replace("{data}", URLEncoder.encode(data.getUri(), StandardCharsets.UTF_8));
++
++          source.sendMessage(LegacyComponentSerializer
++              .legacyAmpersand()
++              .deserialize(Settings.IMP.AUTH.STRINGS.TOTP_QR)
++              .clickEvent(ClickEvent.openUrl(qrUrl)));
++
++          source.sendMessage(LegacyComponentSerializer
++              .legacyAmpersand()
++              .deserialize(Settings.IMP.AUTH.STRINGS.TOTP_TOKEN + secret)
++              .clickEvent(ClickEvent.suggestCommand(secret)));
++
++          RecoveryCodeGenerator recoveryCodes = new RecoveryCodeGenerator();
++          String[] codes = recoveryCodes.generateCodes(16);
++          source.sendMessage(LegacyComponentSerializer
++              .legacyAmpersand()
++              .deserialize(Settings.IMP.AUTH.STRINGS.TOTP_RECOVERY
++                  + String.join(", ", codes)));
++          break;
++        case "disable":
++          if (args.length != 2) {
++            sendUsage(source);
++            return;
++          }
++
++          playerInfo =
++              AuthSessionHandler.fetchInfo(database, username.toLowerCase(Locale.ROOT));
++
++          if (playerInfo == null) {
++            source.sendMessage(LegacyComponentSerializer
++                .legacyAmpersand()
++                .deserialize(Settings.IMP.AUTH.STRINGS.TOTP_NON_REGISTERED));
++            return;
++          }
++
++          if (AuthSessionHandler.getVerifier().isValidCode(playerInfo.totpToken, args[1])) {
++            database.updateMap(Settings.IMP.AUTH.TABLE,
++                ImmutableMap.of("nickname", username),
++                ImmutableMap.of("totpToken", ""));
++            source.sendMessage(LegacyComponentSerializer
++                .legacyAmpersand()
++                .deserialize(Settings.IMP.AUTH.STRINGS.TOTP_DISABLED));
++          } else {
++            source.sendMessage(LegacyComponentSerializer
++                .legacyAmpersand()
++                .deserialize(Settings.IMP.AUTH.STRINGS.TOTP_WRONG));
++          }
++          break;
++        default:
++          sendUsage(source);
++          break;
++      }
++    }
++  }
++
++  private void sendUsage(CommandSource source) {
++    source.sendMessage(
++        LegacyComponentSerializer
++            .legacyAmpersand()
++            .deserialize(Settings.IMP.AUTH.STRINGS.TOTP_USAGE));
++  }
++}
+diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/commands/UnregisterCommand.java b/proxy/src/main/java/net/elytrium/elytraproxy/commands/UnregisterCommand.java
+new file mode 100644
+index 00000000..75066f58
+--- /dev/null
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/commands/UnregisterCommand.java
+@@ -0,0 +1,61 @@
++/*
++ * Copyright (C) 2021 Elytrium
++ *
++ * This program is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU Affero General Public License as published by
++ * the Free Software Foundation, either version 3 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU Affero General Public License for more details.
++ *
++ * You should have received a copy of the GNU Affero General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ */
++
++package net.elytrium.elytraproxy.commands;
++
++import com.google.common.collect.ImmutableMap;
++import com.velocitypowered.api.command.CommandSource;
++import com.velocitypowered.api.command.SimpleCommand;
++import java.util.Locale;
 +import net.elytrium.elytraproxy.config.Settings;
 +import net.elytrium.elytraproxy.database.Database;
 +import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
@@ -7375,7 +7671,13 @@ index 00000000..0a831172
 +              .legacyAmpersand()
 +              .deserialize(Settings.IMP.AUTH.STRINGS.UNREGISTER_USAGE));
 +    } else {
-+      database.deleteMap(Settings.IMP.AUTH.TABLE, ImmutableMap.of("nickname", args[0]));
++      database.deleteMap(
++          Settings.IMP.AUTH.TABLE,
++          ImmutableMap.of("lowercaseNickname", args[0].toLowerCase(Locale.ROOT)));
++      source.sendMessage(
++          LegacyComponentSerializer
++              .legacyAmpersand()
++              .deserialize(Settings.IMP.AUTH.STRINGS.UNREGISTER_SUCCESSFUL));
 +    }
 +  }
 +
@@ -7459,7 +7761,7 @@ index 9b5cedfd..871941bb 100644
              }
              return null;
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java b/proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java
-index 2751d0bc..05a6d422 100644
+index 2751d0bc..413322cd 100644
 --- a/proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java
 @@ -27,7 +27,7 @@ public class Settings extends Config {
@@ -7479,7 +7781,8 @@ index 2751d0bc..05a6d422 100644
 -    public MESSAGES.VELOCITY VELOCITY;
 -
      public static class ELYTRAPROXY {
-       public String PREFIX = "&5&l[ElytraProxy]";
+-      public String PREFIX = "&5&l[ElytraProxy]";
++      public String PREFIX = "&5&l[ElytraProxy]&f";
        public String ALERT_PREFIX = "&8[&4Alert&8]&f ";
        public String IF_CONSOLE = "CONSOLE";
        public String ALERT_MESSAGE_NEEDED = "{PRFX} &fYou must supply a message.";
@@ -7593,11 +7896,10 @@ index 2751d0bc..05a6d422 100644
      }
    }
  
-@@ -190,6 +190,16 @@ public class Settings extends Config {
+@@ -190,6 +190,15 @@ public class Settings extends Config {
      public boolean ENABLE = true;
      public boolean CHECK_CLIENT_SETTINGS = true;
      public boolean CHECK_CLIENT_BRAND = true;
-+    public boolean CACHE_SUCCEED_USERS = true;
 +    public int CAPTCHA_ATTEMPTS = 2;
 +    public int NON_VALID_POSITION_XZ_ATTEMPTS = 10;
 +    public int NON_VALID_POSITION_Y_ATTEMPTS = 10;
@@ -7610,7 +7912,7 @@ index 2751d0bc..05a6d422 100644
      @Comment({
          "If the player's nickname contains something from this list, hes connection will be rejected",
          "In lowercase"
-@@ -197,16 +207,113 @@ public class Settings extends Config {
+@@ -197,16 +206,132 @@ public class Settings extends Config {
      public List<String> BANNED_NICK_PATTERNS = Arrays.asList(
          "dropbot", "mcspam", "mcdrop", "mcrage", "mcstorm", "extremebot", "cipher", "biboran"
      );
@@ -7692,7 +7994,12 @@ index 2751d0bc..05a6d422 100644
 -    public boolean ONLINE_MODE_REQUIRES_LOGIN = false;
 +    public boolean ONLINE_MODE_NEED_AUTH = false;
 +    public boolean CACHE_AUTH_USERS = true;
++    @Comment({
++        "QR Generator URL, set {data} placeholder"
++    })
++    public String QR_GENERATOR_URL = "https://api.qrserver.com/v1/create-qr-code/?data={data}&size=200x200&ecc=M&margin=30";
      public String TABLE = "auth";
++    public String TOTP_ISSUER = "ElytraProxy Auth";
 +    public int BCRYPT_COST = 10;
 +    public int LOGIN_ATTEMPTS = 3;
 +    public int IP_LIMIT_REGISTRATIONS = 3;
@@ -7705,14 +8012,28 @@ index 2751d0bc..05a6d422 100644
 +
 +    public static class STRINGS {
 +      public String LOGIN = "{PRFX} Please, login using &a/l password";
++      public String TOTP = "{PRFX} Please, enter your 2FA key using &a/2fa key";
 +      public String PASSWORD_WRONG = "{PRFX} Password is wrong";
++      public String WRONG_NICKNAME_CASE = "{PRFX} The case of your nickname is wrong. Nickname is CaSe SeNsItIvE.";
 +      public String REGISTER = "{PRFX} Please, register using &a/reg password password";
 +      public String NICKNAME_PREMIUM = "{PRFX} Your nickname is set on premium account. Please, change your nickname";
 +      public String NICKNAME_INVALID = "{PRFX} Your nickname includes forbidden characters. Please, change your nickname";
 +      public String IP_LIMIT = "{PRFX} Your IP has reached max registered accounts. If this is an error, restart your router, or wait about 6 hours";
-+      public String SUCCESSFUL = "{PRFX} Registration completed successfully. Please rejoin";
++      public String REGISTER_SUCCESSFUL = "{PRFX} Registration completed successfully. Please rejoin";
++      public String LOGIN_SUCCESSFUL = "{PRFX} Login completed successfully. Please rejoin";
 +      public String UNREGISTER_USAGE = "{PRFX} Usage: /unregister <nickname>";
++      public String UNREGISTER_SUCCESSFUL = "{PRFX} Successfully unregistered player";
 +      public String CHANGE_PASSWORD_USAGE = "{PRFX} Usage: /changepass <old password> <new password>";
++      public String CHANGE_PASSWORD_SUCCESSFUL = "{PRFX} Successfully changed password";
++      public String TOTP_USAGE = "{PRFX} Usage: &a/2fa enable &for &a/2fa disable <totp key>";
++      public String TOTP_WRONG = "{PRFX} Wrong totp key";
++      public String TOTP_SUCCESSFUL = "{PRFX} Successfully enabled 2FA";
++      public String TOTP_ALREADY_ENABLED = "{PRFX} 2FA is already enabled. Disable it using /2fa disable <totp key>";
++      public String TOTP_NON_REGISTERED = "{PRFX} You are not registered on this proxy.";
++      public String TOTP_DISABLED = "{PRFX} Successfully disabled 2FA";
++      public String TOTP_QR = "{PRFX} Click to open 2FA QR code in browser. ";
++      public String TOTP_TOKEN = "{PRFX} Your TOTP token (Click to copy): ";
++      public String TOTP_RECOVERY = "{PRFX} Your recovey codes: ";
 +    }
 +
 +    @Create
@@ -7726,7 +8047,7 @@ index 2751d0bc..05a6d422 100644
    }
  
    @Create
-@@ -214,16 +321,14 @@ public class Settings extends Config {
+@@ -214,16 +339,14 @@ public class Settings extends Config {
  
    @Comment("Database settings")
    public static class DATABASE {
@@ -9438,10 +9759,10 @@ index 596c987c..896a5bdb 100644
  import java.util.Arrays;
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/virtual/server/ServerPackets.java b/proxy/src/main/java/net/elytrium/elytraproxy/virtual/server/ServerPackets.java
 new file mode 100644
-index 00000000..a58d230b
+index 00000000..e77b4ff0
 --- /dev/null
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/virtual/server/ServerPackets.java
-@@ -0,0 +1,263 @@
+@@ -0,0 +1,269 @@
 +/*
 + * This file is part of Velocity-BotFilter, licensed under the AGPLv3 License (AGPLv3).
 + *
@@ -9515,14 +9836,17 @@ index 00000000..a58d230b
 +  private Chat checkingChat;
 +  private Chat checkingCaptchaChat;
 +  private Chat loginChat;
++  private Chat totpChat;
 +  private Chat registerChat;
 +  private Chat wrongPasswordChat;
 +  private Disconnect nicknamePremium;
 +  private Disconnect nicknameInvalid;
 +  private Disconnect ipLimit;
 +  private Disconnect wrongPassword;
++  private Disconnect wrongNicknameCase;
 +  private Disconnect successfulBotFilter;
-+  private Disconnect successfulAuth;
++  private Disconnect successfulRegister;
++  private Disconnect successfulLogin;
 +  private PlayerPositionAndLook captchaPosAndLook;
 +  private PlayerPositionAndLook authPosAndLook;
 +  private UpdateViewPosition captchaView;
@@ -9598,13 +9922,16 @@ index 00000000..a58d230b
 +    checkingChat = createChatPacket(Settings.IMP.ANTIBOT.STRINGS.CHECKING);
 +    checkingCaptchaChat = createChatPacket(Settings.IMP.ANTIBOT.STRINGS.CHECKING_CAPTCHA);
 +    loginChat = createChatPacket(Settings.IMP.AUTH.STRINGS.LOGIN);
++    totpChat = createChatPacket(Settings.IMP.AUTH.STRINGS.TOTP);
 +    registerChat = createChatPacket(Settings.IMP.AUTH.STRINGS.REGISTER);
 +    wrongPasswordChat = createChatPacket(Settings.IMP.AUTH.STRINGS.PASSWORD_WRONG);
 +    wrongPassword = createDisconnectPacket(Settings.IMP.AUTH.STRINGS.PASSWORD_WRONG);
++    wrongNicknameCase = createDisconnectPacket(Settings.IMP.AUTH.STRINGS.WRONG_NICKNAME_CASE);
 +    nicknamePremium = createDisconnectPacket(Settings.IMP.AUTH.STRINGS.NICKNAME_PREMIUM);
 +    nicknameInvalid = createDisconnectPacket(Settings.IMP.AUTH.STRINGS.NICKNAME_INVALID);
 +    successfulBotFilter = createDisconnectPacket(Settings.IMP.ANTIBOT.STRINGS.SUCCESSFUL);
-+    successfulAuth = createDisconnectPacket(Settings.IMP.AUTH.STRINGS.SUCCESSFUL);
++    successfulRegister = createDisconnectPacket(Settings.IMP.AUTH.STRINGS.REGISTER_SUCCESSFUL);
++    successfulLogin = createDisconnectPacket(Settings.IMP.AUTH.STRINGS.LOGIN_SUCCESSFUL);
 +    ipLimit = createDisconnectPacket(Settings.IMP.AUTH.STRINGS.IP_LIMIT);
 +    brandBuf = createBrandBuf(hardcodedBrandString);
 +  }
@@ -9797,7 +10124,7 @@ index d9b75a41..5dc6ce52 100644
  }
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/virtual/server/VirtualSessionHandler.java b/proxy/src/main/java/net/elytrium/elytraproxy/virtual/server/VirtualSessionHandler.java
 new file mode 100644
-index 00000000..8bbe8cc1
+index 00000000..4e92b2d5
 --- /dev/null
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/virtual/server/VirtualSessionHandler.java
 @@ -0,0 +1,61 @@
@@ -9834,14 +10161,14 @@ index 00000000..8bbe8cc1
 +  public final ConnectedPlayer player;
 +  public final MinecraftSessionHandler originalHandler;
 +  public final VirtualServer virtualServer;
-+  public final String nickname;
++  public final String lowercaseNickname;
 +
 +  public VirtualSessionHandler(
 +      ConnectedPlayer player, MinecraftSessionHandler originalHandler, VirtualServer virtualServer) {
 +    this.player = player;
 +    this.originalHandler = originalHandler;
 +    this.virtualServer = virtualServer;
-+    this.nickname = player.getUsername().toLowerCase(Locale.ROOT);
++    this.lowercaseNickname = player.getUsername().toLowerCase(Locale.ROOT);
 +  }
 +
 +  public abstract void onSpawn();
@@ -10148,5 +10475,5 @@ index 7ed4618e..90508ee0 100644
  
  }
 -- 
-2.24.1.windows.2
+2.32.0
 
