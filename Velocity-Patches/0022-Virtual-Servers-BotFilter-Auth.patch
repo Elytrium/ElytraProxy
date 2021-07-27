@@ -1,4 +1,4 @@
-From 25d7ce57562b14b95d94fc87eebfbe92a55a0b91 Mon Sep 17 00:00:00 2001
+From cd578009e1e0f22550314abab3642807f5093fbd Mon Sep 17 00:00:00 2001
 From: Petr Ilin <hevav@hevav.dev>
 Date: Thu, 24 Jun 2021 15:01:38 +0900
 Subject: [PATCH] Virtual Servers, BotFilter, Auth
@@ -7018,10 +7018,10 @@ index a2dc13bf..d3b12ecf 100644
  }
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/auth/handler/AuthSessionHandler.java b/proxy/src/main/java/net/elytrium/elytraproxy/auth/handler/AuthSessionHandler.java
 new file mode 100644
-index 00000000..07febb2a
+index 00000000..59276e02
 --- /dev/null
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/auth/handler/AuthSessionHandler.java
-@@ -0,0 +1,190 @@
+@@ -0,0 +1,194 @@
 +/*
 + * Copyright (C) 2021 Elytrium
 + *
@@ -7043,6 +7043,7 @@ index 00000000..07febb2a
 +
 +import at.favre.lib.crypto.bcrypt.BCrypt;
 +import com.google.common.collect.ImmutableMap;
++import com.velocitypowered.api.network.ProtocolVersion;
 +import com.velocitypowered.proxy.connection.MinecraftConnection;
 +import com.velocitypowered.proxy.connection.MinecraftSessionHandler;
 +import com.velocitypowered.proxy.connection.client.ConnectedPlayer;
@@ -7119,6 +7120,9 @@ index 00000000..07febb2a
 +  public void onSpawn() {
 +    virtualServer.loginComplete(this);
 +    connection.write(packets.getAuthPosAndLook());
++    if (connection.getProtocolVersion().isAfterOrEq(ProtocolVersion.MINECRAFT_1_14)) {
++      connection.write(packets.getAuthView());
++    }
 +    packets.getStaticWorldPacket().forEach(connection::write);
 +    connection.write(packets.getNoAbilities());
 +    if (playerInfo == null) {
@@ -8193,10 +8197,10 @@ index 00000000..e1ca4215
 +}
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/handler/BotFilterSessionHandler.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/handler/BotFilterSessionHandler.java
 new file mode 100644
-index 00000000..3a4cdf09
+index 00000000..5440157d
 --- /dev/null
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/handler/BotFilterSessionHandler.java
-@@ -0,0 +1,345 @@
+@@ -0,0 +1,360 @@
 +/*
 + * This file is part of Velocity-BotFilter, licensed under the AGPLv3 License (AGPLv3).
 + *
@@ -8218,6 +8222,7 @@ index 00000000..3a4cdf09
 +
 +package net.elytrium.elytraproxy.botfilter.handler;
 +
++import com.velocitypowered.api.network.ProtocolVersion;
 +import com.velocitypowered.proxy.connection.MinecraftConnection;
 +import com.velocitypowered.proxy.connection.client.ConnectedPlayer;
 +import com.velocitypowered.proxy.connection.client.LoginSessionHandler;
@@ -8253,6 +8258,7 @@ index 00000000..3a4cdf09
 +  private final MinecraftConnection connection;
 +  private final MinecraftPacket fallingCheckPos;
 +  private final MinecraftPacket fallingCheckChunk;
++  private final MinecraftPacket fallingCheckView;
 +  private final double captchaY = Settings.IMP.ANTIBOT.CAPTCHA_COORDS.Y;
 +  @Setter
 +  private String captchaAnswer;
@@ -8275,6 +8281,7 @@ index 00000000..3a4cdf09
 +    this.fallingCheckPos = packets.createPlayerPosAndLookPacket(validX, validY, validZ);
 +    this.fallingCheckChunk = packets.createChunkDataPacket(
 +        new SimpleChunk(Math.floorDiv(validX, 16), Math.floorDiv(validZ, 16)), validY);
++    this.fallingCheckView = packets.createUpdateViewPosition(validX, validZ);
 +  }
 +
 +  @Override
@@ -8412,8 +8419,8 @@ index 00000000..3a4cdf09
 +        return;
 +      }
 +      // System.out.println("lastY=" + lastY + "; y=" + y + "; diff=" + (lastY - y) + ";" +
-+      //     " need=" + getLoadedChunkSpeed(ticks) + "; ticks=" + ticks +
-+      //     "; x=" + x + "; z=" + z + "; vx=" + validX + "; vz=" + validZ);
++      //    " need=" + getLoadedChunkSpeed(ticks) + "; ticks=" + ticks +
++      //    "; x=" + x + "; z=" + z + "; vx=" + validX + "; vz=" + validZ);
 +      if (ignoredTicks > Settings.IMP.ANTIBOT.NON_VALID_POSITION_Y_ATTEMPTS) {
 +        fallingCheckFailed();
 +        return;
@@ -8442,17 +8449,26 @@ index 00000000..3a4cdf09
 +    if (state == BotFilterSessionHandler.CheckState.ONLY_CAPTCHA) {
 +      sendCaptcha();
 +      connection.write(packets.getCaptchaPosAndLook());
++      if (connection.getProtocolVersion().isAfterOrEq(ProtocolVersion.MINECRAFT_1_14)) {
++        connection.write(packets.getCaptchaView());
++      }
 +      packets.getStaticWorldPacket().forEach(connection::write);
 +    } else if (state == BotFilterSessionHandler.CheckState.CAPTCHA_POSITION) {
 +      sendCaptcha();
-+      connection.write(fallingCheckPos);
-+      connection.write(fallingCheckChunk);
++      sendFallingCheckPackets();
 +    } else if (state == BotFilterSessionHandler.CheckState.ONLY_POSITION
 +        || state == BotFilterSessionHandler.CheckState.CAPTCHA_ON_POSITION_FAILED) {
-+      connection.write(fallingCheckPos);
-+      connection.write(fallingCheckChunk);
++      sendFallingCheckPackets();
 +    }
 +    connection.flush();
++  }
++
++  private void sendFallingCheckPackets() {
++    connection.write(fallingCheckPos);
++    if (connection.getProtocolVersion().isAfterOrEq(ProtocolVersion.MINECRAFT_1_14)) {
++      connection.write(fallingCheckView);
++    }
++    connection.write(fallingCheckChunk);
 +  }
 +
 +  private void sendCaptcha() {
@@ -8479,11 +8495,14 @@ index 00000000..3a4cdf09
 +  }
 +
 +  private void setCaptchaPosition(boolean disableFall) {
++    connection.write(packets.getCaptchaPosAndLook());
++    if (connection.getProtocolVersion().isAfterOrEq(ProtocolVersion.MINECRAFT_1_14)) {
++      connection.write(packets.getCaptchaView());
++    }
 +    packets.getStaticWorldPacket().forEach(connection::write);
 +    if (disableFall) {
 +      connection.write(packets.getNoAbilities());
 +    }
-+    connection.write(packets.getCaptchaPosAndLook());
 +    connection.flush();
 +    waitingTeleportId = 9876;
 +  }
@@ -11527,10 +11546,10 @@ index 1c705b50..e8844c94 100644
  }
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/virtual/protocol/VirtualProtocol.java b/proxy/src/main/java/net/elytrium/elytraproxy/virtual/protocol/VirtualProtocol.java
 new file mode 100644
-index 00000000..567c9ae8
+index 00000000..376a7f2d
 --- /dev/null
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/virtual/protocol/VirtualProtocol.java
-@@ -0,0 +1,174 @@
+@@ -0,0 +1,182 @@
 +/*
 + * This file is part of Velocity-BotFilter, licensed under the AGPLv3 License (AGPLv3).
 + *
@@ -11570,6 +11589,7 @@ index 00000000..567c9ae8
 +import net.elytrium.elytraproxy.virtual.protocol.packet.SetExp;
 +import net.elytrium.elytraproxy.virtual.protocol.packet.SetSlot;
 +import net.elytrium.elytraproxy.virtual.protocol.packet.TeleportConfirm;
++import net.elytrium.elytraproxy.virtual.protocol.packet.UpdateViewPosition;
 +import net.elytrium.elytraproxy.virtual.protocol.packet.world.ChunkData;
 +
 +public class VirtualProtocol {
@@ -11678,6 +11698,13 @@ index 00000000..567c9ae8
 +        map(0x47, ProtocolVersion.MINECRAFT_1_14, true),
 +        map(0x48, ProtocolVersion.MINECRAFT_1_15, true),
 +        map(0x51, ProtocolVersion.MINECRAFT_1_17, true));
++    StateRegistry.VIRTUAL.clientbound.register(
++        UpdateViewPosition.class, UpdateViewPosition::new,
++        map(0x40, ProtocolVersion.MINECRAFT_1_7_2, true),
++        map(0x40, ProtocolVersion.MINECRAFT_1_14, true),
++        map(0x41, ProtocolVersion.MINECRAFT_1_15, true),
++        map(0x40, ProtocolVersion.MINECRAFT_1_16_1, true),
++        map(0x49, ProtocolVersion.MINECRAFT_1_17, true));
 +
 +    StateRegistry.VIRTUAL.serverbound.register(
 +        Chat.class, Chat::new,
@@ -12112,41 +12139,45 @@ index 00000000..b0d2521e
 +  }
 +}
 \ No newline at end of file
-diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/packet/UpdateViewPosition.java b/proxy/src/main/java/net/elytrium/elytraproxy/virtual/protocol/packet/PlayerAbilities.java
-similarity index 65%
-rename from proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/packet/UpdateViewPosition.java
-rename to proxy/src/main/java/net/elytrium/elytraproxy/virtual/protocol/packet/PlayerAbilities.java
-index 4e17995a..5101c6dd 100644
---- a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/packet/UpdateViewPosition.java
+diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/virtual/protocol/packet/PlayerAbilities.java b/proxy/src/main/java/net/elytrium/elytraproxy/virtual/protocol/packet/PlayerAbilities.java
+new file mode 100644
+index 00000000..5101c6dd
+--- /dev/null
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/virtual/protocol/packet/PlayerAbilities.java
-@@ -17,32 +17,37 @@
-  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
-  */
- 
--package net.elytrium.elytraproxy.botfilter.protocol.packet;
+@@ -0,0 +1,53 @@
++/*
++ * This file is part of Velocity-BotFilter, licensed under the AGPLv3 License (AGPLv3).
++ *
++ * Copyright (C) 2021 Vjatšeslav Maspanov <Leymooo>
++ *
++ * This program is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU Affero General Public License as published by
++ * the Free Software Foundation, either version 3 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU Affero General Public License for more details.
++ *
++ * You should have received a copy of the GNU Affero General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ */
++
 +package net.elytrium.elytraproxy.virtual.protocol.packet;
- 
- import com.velocitypowered.api.network.ProtocolVersion;
++
++import com.velocitypowered.api.network.ProtocolVersion;
 +import com.velocitypowered.proxy.connection.MinecraftSessionHandler;
- import com.velocitypowered.proxy.protocol.MinecraftPacket;
- import com.velocitypowered.proxy.protocol.ProtocolUtils;
--import com.velocitypowered.proxy.protocol.ProtocolUtils.Direction;
- import io.netty.buffer.ByteBuf;
- import lombok.AllArgsConstructor;
--import lombok.Getter;
++import com.velocitypowered.proxy.protocol.MinecraftPacket;
++import com.velocitypowered.proxy.protocol.ProtocolUtils;
++import io.netty.buffer.ByteBuf;
++import lombok.AllArgsConstructor;
 +import lombok.Data;
 +import lombok.EqualsAndHashCode;
- import lombok.NoArgsConstructor;
--import lombok.Setter;
--import lombok.ToString;
- 
--@Getter
--@Setter
--@AllArgsConstructor
++import lombok.NoArgsConstructor;
++
 +@Data
- @NoArgsConstructor
--@ToString
--public class UpdateViewPosition implements MinecraftPacket {
++@NoArgsConstructor
 +@AllArgsConstructor
 +@EqualsAndHashCode(callSuper = false)
 +public class PlayerAbilities implements MinecraftPacket {
@@ -12154,24 +12185,19 @@ index 4e17995a..5101c6dd 100644
 +  byte flags;
 +  float speed;
 +  float field;
- 
--  private int chunkX;
--  private int chunkZ;
++
 +  @Override
 +  public void encode(ByteBuf buf, ProtocolUtils.Direction direction, ProtocolVersion protocolVersion) {
 +    buf.writeByte(this.flags);
 +    buf.writeFloat(this.speed);
 +    buf.writeFloat(this.field);
 +  }
- 
-   @Override
--  public void encode(ByteBuf buf, Direction direction, ProtocolVersion protocolVersion) {
--    ProtocolUtils.writeVarInt(buf, chunkX);
--    ProtocolUtils.writeVarInt(buf, chunkZ);
++
++  @Override
 +  public boolean handle(MinecraftSessionHandler handler) {
 +    return false;
-   }
- }
++  }
++}
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/virtual/protocol/packet/PlayerPosition.java b/proxy/src/main/java/net/elytrium/elytraproxy/virtual/protocol/packet/PlayerPosition.java
 new file mode 100644
 index 00000000..2d65f5fe
@@ -12491,6 +12517,57 @@ index 00000000..e3af0ac8
 +    return ((VirtualSessionHandler) handler).handle(this);
 +  }
 +}
+diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/packet/UpdateViewPosition.java b/proxy/src/main/java/net/elytrium/elytraproxy/virtual/protocol/packet/UpdateViewPosition.java
+similarity index 73%
+rename from proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/packet/UpdateViewPosition.java
+rename to proxy/src/main/java/net/elytrium/elytraproxy/virtual/protocol/packet/UpdateViewPosition.java
+index 4e17995a..ca83525f 100644
+--- a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/packet/UpdateViewPosition.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/virtual/protocol/packet/UpdateViewPosition.java
+@@ -17,32 +17,29 @@
+  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  */
+ 
+-package net.elytrium.elytraproxy.botfilter.protocol.packet;
++package net.elytrium.elytraproxy.virtual.protocol.packet;
+ 
+ import com.velocitypowered.api.network.ProtocolVersion;
+ import com.velocitypowered.proxy.protocol.MinecraftPacket;
+ import com.velocitypowered.proxy.protocol.ProtocolUtils;
+-import com.velocitypowered.proxy.protocol.ProtocolUtils.Direction;
+ import io.netty.buffer.ByteBuf;
+ import lombok.AllArgsConstructor;
+-import lombok.Getter;
++import lombok.Data;
++import lombok.EqualsAndHashCode;
+ import lombok.NoArgsConstructor;
+-import lombok.Setter;
+-import lombok.ToString;
+ 
+-@Getter
+-@Setter
+-@AllArgsConstructor
++@Data
+ @NoArgsConstructor
+-@ToString
++@AllArgsConstructor
++@EqualsAndHashCode(callSuper = false)
+ public class UpdateViewPosition implements MinecraftPacket {
+ 
+-  private int chunkX;
+-  private int chunkZ;
++  private int x;
++  private int z;
+ 
+   @Override
+-  public void encode(ByteBuf buf, Direction direction, ProtocolVersion protocolVersion) {
+-    ProtocolUtils.writeVarInt(buf, chunkX);
+-    ProtocolUtils.writeVarInt(buf, chunkZ);
++  public void encode(ByteBuf buf, ProtocolUtils.Direction direction, ProtocolVersion protocolVersion) {
++    ProtocolUtils.writeVarInt(buf, this.x);
++    ProtocolUtils.writeVarInt(buf, this.z);
+   }
+ }
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/packet/world/ChunkData.java b/proxy/src/main/java/net/elytrium/elytraproxy/virtual/protocol/packet/world/ChunkData.java
 similarity index 90%
 rename from proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/packet/world/ChunkData.java
@@ -12678,10 +12755,10 @@ index 596c987c..896a5bdb 100644
  import java.util.Arrays;
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/virtual/server/ServerPackets.java b/proxy/src/main/java/net/elytrium/elytraproxy/virtual/server/ServerPackets.java
 new file mode 100644
-index 00000000..c4a9386d
+index 00000000..a58d230b
 --- /dev/null
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/virtual/server/ServerPackets.java
-@@ -0,0 +1,254 @@
+@@ -0,0 +1,263 @@
 +/*
 + * This file is part of Velocity-BotFilter, licensed under the AGPLv3 License (AGPLv3).
 + *
@@ -12725,6 +12802,7 @@ index 00000000..c4a9386d
 +import net.elytrium.elytraproxy.virtual.protocol.packet.PlayerPositionAndLook;
 +import net.elytrium.elytraproxy.virtual.protocol.packet.SetExp;
 +import net.elytrium.elytraproxy.virtual.protocol.packet.SetSlot;
++import net.elytrium.elytraproxy.virtual.protocol.packet.UpdateViewPosition;
 +import net.elytrium.elytraproxy.virtual.protocol.packet.world.ChunkData;
 +import net.elytrium.elytraproxy.virtual.server.world.VirtualWorld;
 +import net.elytrium.elytraproxy.virtual.server.world.chunk.SimpleChunk;
@@ -12764,6 +12842,8 @@ index 00000000..c4a9386d
 +  private Disconnect successfulAuth;
 +  private PlayerPositionAndLook captchaPosAndLook;
 +  private PlayerPositionAndLook authPosAndLook;
++  private UpdateViewPosition captchaView;
++  private UpdateViewPosition authView;
 +  private PlayerAbilities noAbilities;
 +  private List<SetExp> experience;
 +  private ByteBuf brandBuf;
@@ -12817,6 +12897,8 @@ index 00000000..c4a9386d
 +    experience = createExpPackets();
 +    captchaPosAndLook = createPlayerPosAndLookPacket(captchaCoords.X, captchaCoords.Y, captchaCoords.Z);
 +    authPosAndLook = createPlayerPosAndLookPacket(authCoords.X, authCoords.Y, authCoords.Z);
++    captchaView = createUpdateViewPosition(captchaCoords.X, captchaCoords.Z);
++    authView = createUpdateViewPosition(authCoords.X, authCoords.Z);
 +
 +    joinPacket = createJoinGamePacket();
 +    legacyJoinPacket = createLegacyJoinGamePacket();
@@ -12901,6 +12983,10 @@ index 00000000..c4a9386d
 +  public ChunkData createChunkDataPacket(SimpleChunk chunk, int skyLightY) {
 +    chunk.setSkyLight(chunk.getX() % 16, skyLightY, chunk.getZ() % 16, (byte) 1);
 +    return new ChunkData(chunk.getFullChunkSnapshot(), true);
++  }
++
++  public UpdateViewPosition createUpdateViewPosition(int x, int z) {
++    return new UpdateViewPosition(Math.floorDiv(x, 16), Math.floorDiv(z, 16));
 +  }
 +
 +  private SetSlot createSetSlotPacket(int windowId, int slot, int item, int count, int data) {
