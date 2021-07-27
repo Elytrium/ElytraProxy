@@ -1,0 +1,179 @@
+From e20772d61f9d4cef17b87c58d47b3e3c63cf392e Mon Sep 17 00:00:00 2001
+From: Petr Ilin <hevav@hevav.dev>
+Date: Wed, 28 Jul 2021 01:28:22 +0300
+Subject: [PATCH] SQLite Support
+
+Signed-off-by: Petr Ilin <hevav@hevav.dev>
+
+diff --git a/proxy/build.gradle b/proxy/build.gradle
+index 3916c990..5fd92cc8 100644
+--- a/proxy/build.gradle
++++ b/proxy/build.gradle
+@@ -80,6 +80,7 @@ dependencies {
+     implementation "org.mariadb.jdbc:mariadb-java-client:2.7.3"
+     implementation 'at.favre.lib:bcrypt:0.9.0'
+     implementation 'dev.samstevens.totp:totp:1.7.1'
++    implementation 'org.xerial:sqlite-jdbc:3.36.0.1'
+ 
+     // Note: we depend on the API twice, first the main sourceset, and then the annotation processor.
+     implementation project(/*':velocity-api'*/':elytraproxy-api')
+diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/ElytraProxy.java b/proxy/src/main/java/net/elytrium/elytraproxy/ElytraProxy.java
+index 249ecd0f..7a27baae 100644
+--- a/proxy/src/main/java/net/elytrium/elytraproxy/ElytraProxy.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/ElytraProxy.java
+@@ -55,6 +55,7 @@ import net.elytrium.elytraproxy.commands.UnregisterCommand;
+ import net.elytrium.elytraproxy.config.Settings;
+ import net.elytrium.elytraproxy.database.Database;
+ import net.elytrium.elytraproxy.database.MySqlDatabase;
++import net.elytrium.elytraproxy.database.SqliteDatabase;
+ import net.elytrium.elytraproxy.stats.Statistics;
+ import net.elytrium.elytraproxy.virtual.protocol.VirtualProtocol;
+ import net.elytrium.elytraproxy.virtual.server.VirtualServer;
+@@ -111,12 +112,25 @@ public class ElytraProxy {
+    */
+ 
+   public void initDatabase(VelocityServer server) {
+-    Settings.DATABASE config = Settings.IMP.DATABASE;
+-    if (config.ENABLED) {
++    if (checkDatabaseEnabled()) {
++      Settings.DATABASE config = Settings.IMP.DATABASE;
++
+       try {
+-        database = new MySqlDatabase(config.HOSTNAME, config.DATABASE, config.USER, config.PASSWORD);
++        switch (config.STORAGE_TYPE) {
++          case "sqlite":
++            Class.forName("org.sqlite.JDBC");
++            database = new SqliteDatabase(config.FILENAME);
++            break;
++          case "mysql":
++            database = new MySqlDatabase(config.HOSTNAME, config.DATABASE, config.USER, config.PASSWORD);
++            break;
++          default:
++            logger.error(Settings.IMP.MESSAGES.ELYTRAPROXY.DB_FAILURE);
++            server.shutdown();
++            break;
++        }
+         database.makeTable(Settings.IMP.AUTH.TABLE, RegisteredPlayer.getDatabaseItem());
+-      } catch (SQLException e) {
++      } catch (SQLException | ClassNotFoundException e) {
+         logger.error(e);
+         logger.error(Settings.IMP.MESSAGES.ELYTRAPROXY.DB_FAILURE);
+         server.shutdown();
+@@ -124,6 +138,10 @@ public class ElytraProxy {
+     }
+   }
+ 
++  public boolean checkDatabaseEnabled() {
++    return Settings.IMP.AUTH.ENABLE;
++  }
++
+   /**
+    * Initializes ElytraProxy commands.
+    * Инициализирует команды ElytraProxy.
+diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java b/proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java
+index 413322cd..379888e0 100644
+--- a/proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java
+@@ -339,9 +339,13 @@ public class Settings extends Config {
+ 
+   @Comment("Database settings")
+   public static class DATABASE {
+-    // @Comment("Тип базы данных, mysql или mysql))")
+-    // public String STORAGE_TYPE = "mysql";
+-    public boolean ENABLED = true;
++    @Comment("Database type: mysql, sqlite")
++    public String STORAGE_TYPE = "sqlite";
++
++    @Comment("Settings for SQLite: ")
++    public String FILENAME = "elytraproxy.db";
++
++    @Comment("Settings for MySQL: ")
+     public String HOSTNAME = "127.0.0.1:3306";
+     public String USER = "user";
+     public String PASSWORD = "password";
+diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/database/MySqlDatabase.java b/proxy/src/main/java/net/elytrium/elytraproxy/database/MySqlDatabase.java
+index e8844c94..09903666 100644
+--- a/proxy/src/main/java/net/elytrium/elytraproxy/database/MySqlDatabase.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/database/MySqlDatabase.java
+@@ -52,6 +52,10 @@ public class MySqlDatabase extends Database {
+     this.connection = DriverManager.getConnection(url, user, password);
+   }
+ 
++  public MySqlDatabase(Connection connection) {
++    this.connection = connection;
++  }
++
+   @Override
+   @SuppressFBWarnings(value = "OBL_UNSATISFIED_OBLIGATION_EXCEPTION_EDGE",
+       justification = "We don't need completion of query here")
+@@ -211,13 +215,13 @@ public class MySqlDatabase extends Database {
+     return result;
+   }
+ 
+-  private String joinStream(Stream<Object> stream) {
++  protected String joinStream(Stream<Object> stream) {
+     return stream
+         .map(Object::toString)
+         .collect(Collectors.joining(", "));
+   }
+ 
+-  private String keyFromStream(Stream<Object> stream) {
++  protected String keyFromStream(Stream<Object> stream) {
+     return joinStream(stream.map(e -> (e instanceof String) ? "\"" + e + "\"" : e));
+   }
+ 
+diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/database/SqliteDatabase.java b/proxy/src/main/java/net/elytrium/elytraproxy/database/SqliteDatabase.java
+new file mode 100644
+index 00000000..3862dc4b
+--- /dev/null
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/database/SqliteDatabase.java
+@@ -0,0 +1,46 @@
++/*
++ * Copyright (C) 2021 Elytrium
++ *
++ * This program is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU Affero General Public License as published by
++ * the Free Software Foundation, either version 3 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU Affero General Public License for more details.
++ *
++ * You should have received a copy of the GNU Affero General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ */
++
++package net.elytrium.elytraproxy.database;
++
++import java.sql.DriverManager;
++import java.sql.SQLException;
++import java.util.Map;
++
++public class SqliteDatabase extends MySqlDatabase {
++
++  /**
++   * Initializes and connects to SQLite Database.
++   *
++   * @param filename     Database filename
++   * @throws SQLException Throws if connection was unsuccessful
++   */
++  public SqliteDatabase(String filename) throws SQLException {
++    super(DriverManager.getConnection("jdbc:sqlite:" + filename));
++  }
++
++  @Override
++  public void insertMap(String table, Map<String, Object> toInsert, boolean update) {
++    String keyString = joinStream(toInsert.keySet().stream().map(s -> s));
++    String valueString = keyFromStream(toInsert.values().stream());
++
++    String request = "INSERT " + (update ? "OR REPLACE" : "OR IGNORE")
++        + " INTO " + table + " (" + keyString + ") VALUES(" + valueString + ")";
++
++    query(request);
++  }
++}
+-- 
+2.32.0
+
