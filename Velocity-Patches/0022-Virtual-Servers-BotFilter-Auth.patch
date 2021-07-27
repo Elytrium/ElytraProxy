@@ -1,4 +1,4 @@
-From d6fdf3cc2ff53675f4dbc9f3a198c80774042e11 Mon Sep 17 00:00:00 2001
+From 7d1762d7ad434a72c552616a2020f44ec38c9452 Mon Sep 17 00:00:00 2001
 From: Petr Ilin <hevav@hevav.dev>
 Date: Thu, 24 Jun 2021 15:01:38 +0900
 Subject: [PATCH] Virtual Servers, BotFilter, Auth
@@ -3012,10 +3012,31 @@ index 0ff0dc89..b16d750f 100644
    private ConnectionMessages() {
      throw new AssertionError();
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/console/VelocityConsole.java b/proxy/src/main/java/com/velocitypowered/proxy/console/VelocityConsole.java
-index 0a59858a..1580e926 100644
+index 0a59858a..c2759bd7 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/console/VelocityConsole.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/console/VelocityConsole.java
-@@ -64,10 +64,14 @@ public final class VelocityConsole extends SimpleTerminalConsole implements Cons
+@@ -24,20 +24,13 @@ import com.velocitypowered.api.permission.PermissionFunction;
+ import com.velocitypowered.api.permission.Tristate;
+ import com.velocitypowered.api.proxy.ConsoleCommandSource;
+ import com.velocitypowered.proxy.VelocityServer;
+-import com.velocitypowered.proxy.util.ClosestLocaleMatcher;
+ import java.util.List;
+ import net.elytrium.elytraproxy.config.Settings;
+-import java.util.Locale;
+ import net.kyori.adventure.identity.Identity;
+ import net.kyori.adventure.permission.PermissionChecker;
+ import net.kyori.adventure.pointer.Pointers;
+ import net.kyori.adventure.text.Component;
+ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+-import net.kyori.text.TextComponent;
+-import net.kyori.text.format.TextColor;
+-import net.kyori.adventure.text.format.NamedTextColor;
+-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+-import net.kyori.adventure.translation.GlobalTranslator;
+ import net.minecrell.terminalconsole.SimpleTerminalConsole;
+ import org.apache.logging.log4j.Level;
+ import org.apache.logging.log4j.LogManager;
+@@ -64,10 +57,14 @@ public final class VelocityConsole extends SimpleTerminalConsole implements Cons
  
    @Override
    public void sendMessage(@NonNull Identity identity, @NonNull Component message) {
@@ -3031,7 +3052,7 @@ index 0a59858a..1580e926 100644
  
    @Override
    public @NonNull Tristate getPermissionValue(@NonNull String permission) {
-@@ -130,10 +134,7 @@ public final class VelocityConsole extends SimpleTerminalConsole implements Cons
+@@ -130,10 +127,7 @@ public final class VelocityConsole extends SimpleTerminalConsole implements Cons
          sendMessage(
              LegacyComponentSerializer
                  .legacyAmpersand()
