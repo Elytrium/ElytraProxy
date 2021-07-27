@@ -2,10 +2,27 @@
 
 # ElytraProxy
 [![Join our Discord](https://img.shields.io/discord/775778822334709780.svg?logo=discord&label=Discord)](https://ely.su/discord)
+[![Proxy Stats](https://img.shields.io/bstats/servers/12233?logo=minecraft&label=ElytraProxy%20Servers)](https://bstats.org/plugin/velocity/ElytraProxy/12233)
+[![Proxy Stats](https://img.shields.io/bstats/players/12233?logo=minecraft&label=Players%20on%20ElytraProxy)](https://bstats.org/plugin/velocity/ElytraProxy/12233)
 
 Really customizable Minecraft proxy server with Auth, AntiBot (aka BotFilter) and some another helpful stuff, based on Velocity. Developed for [Elytrium](https://elytrium.net/), cheap and modern Russian game hosting with powerful AntiBot system.
 
+[Описание и обсуждение на русском языке (spigotmc.ru)](https://spigotmc.ru/resources/elytraproxy.715/) <br>
+[Описание и обсуждение на русском языке (rubukkit.org)](http://rubukkit.org/threads/antibot-elytraproxy-proksi-server-fork-velocity-s-avtorizaciej-i-zaschitoj-ot-botov-1-7-1-17-1.177904/)
+
 Test server: [``ely.su``](https://hotmc.ru/minecraft-server-203216)
+
+## Features
+
+- 1.7 - 1.17.1 is supported
+- The most powerful bot protection on market (see below) via Falling Check, Captcha and ClientSettings + MC|Brand packets decryption.
+- Customizable Captcha - change font, backplate or alphabet of captcha
+- MySQL + BCrypt Auth System with IP Limit (by default: 3 accounts on 1 IP during 6 hours), "Online Mode (aka Premium) accounts skip auth" mode is supported
+- Change dimension of VirtualServer
+- BungeeCord common commands(/find, /send, /alert)
+- Hostnames Manager(blocklist or allowlist)
+- Maintenance Motd Mode
+- Fully customisable messages, incl. Velocity messages and server brand/version
 
 ## Build
 
