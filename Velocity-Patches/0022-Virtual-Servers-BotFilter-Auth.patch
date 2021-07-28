@@ -1,4 +1,4 @@
-From 8737a0d5d51069a9fbd4192aaa756c34bb0231d8 Mon Sep 17 00:00:00 2001
+From 5135c2d27b4a0bbf77643a928baa04f5c9413ecd Mon Sep 17 00:00:00 2001
 From: Petr Ilin <hevav@hevav.dev>
 Date: Thu, 24 Jun 2021 15:01:38 +0900
 Subject: [PATCH] Virtual Servers, BotFilter, Auth
@@ -1197,7 +1197,7 @@ index 62be4a34..9d692eb4 100644
     */
    public boolean sendPluginMessage(ChannelIdentifier identifier, ByteBuf data) {
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
-index 67b46aca..7d32d8b0 100644
+index 67b46aca..7244c29e 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
 @@ -68,7 +68,6 @@ import java.util.UUID;
@@ -1208,19 +1208,29 @@ index 67b46aca..7d32d8b0 100644
  import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
  import org.apache.logging.log4j.LogManager;
  import org.apache.logging.log4j.Logger;
-@@ -84,11 +83,6 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+@@ -83,12 +82,7 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+   private static final Logger logger = LogManager.getLogger(ClientPlaySessionHandler.class);
  
    private final ConnectedPlayer player;
-   private boolean spawned = false;
+-  private boolean spawned = false;
 -  // ElytraProxy
 -  private boolean checkedBySettings = false;
 -  private boolean checkedByBrand = false;
 -  private boolean willBeKickedChat = false;
 -  private boolean willBeKickedUnk = false;
++  private boolean spawned;
    private final List<UUID> serverBossBars = new ArrayList<>();
    private final Queue<PluginMessage> loginPluginMessages = new ArrayDeque<>();
    private final VelocityServer server;
-@@ -122,34 +116,6 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+@@ -101,6 +95,7 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+    */
+   public ClientPlaySessionHandler(VelocityServer server, ConnectedPlayer player) {
+     this.player = player;
++    this.spawned = player.isVirtualServerJoined();
+     this.server = server;
+   }
+ 
+@@ -122,34 +117,6 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
      }
    }
  
@@ -1255,7 +1265,7 @@ index 67b46aca..7d32d8b0 100644
    @Override
    public boolean handle(KeepAlive packet) {
      VelocityServerConnection serverConnection = player.getConnectedServer();
-@@ -169,74 +135,11 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+@@ -169,74 +136,11 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
    @Override
    public boolean handle(ClientSettings packet) {
      player.setPlayerSettings(packet);
@@ -1330,7 +1340,7 @@ index 67b46aca..7d32d8b0 100644
      VelocityServerConnection serverConnection = player.getConnectedServer();
      if (serverConnection == null) {
        return true;
-@@ -254,41 +157,37 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+@@ -254,41 +158,37 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
                event.getResult()))
            .whenComplete((ignored, throwable) -> {
              // ElytraProxy Start
@@ -1394,7 +1404,7 @@ index 67b46aca..7d32d8b0 100644
              // ElytraProxy End
              return null;
            });
-@@ -354,11 +253,6 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+@@ -354,11 +254,6 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
          player.setClientBrand(PluginMessageUtil.readBrandMessage(packet.content()));
          backendConn.write(PluginMessageUtil
              .rewriteMinecraftBrand(packet, server.getVersion(), player.getProtocolVersion()));
@@ -1406,7 +1416,7 @@ index 67b46aca..7d32d8b0 100644
        } else if (BungeeCordMessageResponder.isBungeeCordMessage(packet)) {
          return true;
        } else {
-@@ -444,12 +338,6 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+@@ -444,12 +339,6 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
      if (smc != null && !smc.isClosed() && serverConnection.getPhase().consideredComplete()) {
        smc.write(buf.retain());
      }
@@ -1419,7 +1429,7 @@ index 67b46aca..7d32d8b0 100644
    }
  
    @Override
-@@ -460,13 +348,11 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+@@ -460,13 +349,11 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
    @Override
    public void exception(Throwable throwable) {
      // ElytraProxy
@@ -1436,7 +1446,7 @@ index 67b46aca..7d32d8b0 100644
    }
  
    @Override
-@@ -723,7 +609,7 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+@@ -723,7 +610,7 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
          }, player.getConnection().eventLoop())
          .exceptionally((ex) -> {
            logger.error(
@@ -1446,7 +1456,7 @@ index 67b46aca..7d32d8b0 100644
            return null;
          });
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
-index c40d7c3c..9279aa05 100644
+index c40d7c3c..925da793 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
 @@ -67,7 +67,6 @@ import com.velocitypowered.proxy.protocol.packet.title.GenericTitlePacket;
@@ -1457,7 +1467,7 @@ index c40d7c3c..9279aa05 100644
  import com.velocitypowered.proxy.util.DurationUtils;
  import com.velocitypowered.proxy.util.collect.CappedSet;
  import io.netty.buffer.ByteBufUtil;
-@@ -78,7 +77,6 @@ import java.util.Collection;
+@@ -78,13 +77,14 @@ import java.util.Collection;
  import java.util.Collections;
  import java.util.List;
  import java.util.Locale;
@@ -1465,7 +1475,15 @@ index c40d7c3c..9279aa05 100644
  import java.util.Optional;
  import java.util.Queue;
  import java.util.UUID;
-@@ -94,10 +92,6 @@ import net.kyori.adventure.pointer.Pointers;
+ import java.util.concurrent.CompletableFuture;
+ import java.util.concurrent.CompletionException;
+ import java.util.concurrent.ThreadLocalRandom;
++import lombok.Getter;
++import lombok.Setter;
+ import net.elytrium.elytraproxy.config.Settings;
+ import net.kyori.adventure.audience.MessageType;
+ import net.kyori.adventure.bossbar.BossBar;
+@@ -94,10 +94,6 @@ import net.kyori.adventure.pointer.Pointers;
  import net.kyori.adventure.text.Component;
  import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
  import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
@@ -1476,7 +1494,7 @@ index c40d7c3c..9279aa05 100644
  import org.apache.logging.log4j.LogManager;
  import org.apache.logging.log4j.Logger;
  import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
-@@ -108,6 +102,11 @@ import org.jetbrains.annotations.NotNull;
+@@ -108,6 +104,11 @@ import org.jetbrains.annotations.NotNull;
  public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
  
    private static final int MAX_PLUGIN_CHANNELS = 1024;
@@ -1488,7 +1506,7 @@ index c40d7c3c..9279aa05 100644
    static final PermissionProvider DEFAULT_PERMISSIONS = s -> PermissionFunction.ALWAYS_UNDEFINED;
  
    private static final Logger logger = LogManager.getLogger(ConnectedPlayer.class);
-@@ -140,10 +139,10 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
+@@ -140,11 +141,13 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
    private @Nullable ResourcePackInfo pendingResourcePack;
    private @Nullable ResourcePackInfo appliedResourcePack;
    private final @NotNull Pointers pointers = Player.super.pointers().toBuilder()
@@ -1501,9 +1519,12 @@ index c40d7c3c..9279aa05 100644
 +      .withStatic(PermissionChecker.POINTER, getPermissionChecker())
 +      .build();
    private @Nullable String clientBrand;
++  // ElytraProxy: Virtual Server Joined (need to handle JoinGame packet)
++  @Getter @Setter private boolean virtualServerJoined = false;
  
    ConnectedPlayer(VelocityServer server, GameProfile profile, MinecraftConnection connection,
-@@ -264,22 +263,23 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
+       @Nullable InetSocketAddress virtualHost, boolean onlineMode) {
+@@ -264,22 +267,23 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
      return connection.getProtocolVersion();
    }
  
@@ -1540,7 +1561,7 @@ index c40d7c3c..9279aa05 100644
    }
  
    @Override
-@@ -288,30 +288,30 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
+@@ -288,30 +292,30 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
      Preconditions.checkNotNull(message, "message");
      Preconditions.checkNotNull(type, "type");
  
@@ -1577,7 +1598,7 @@ index c40d7c3c..9279aa05 100644
        Chat chat = new Chat();
        chat.setMessage(object.toString());
        chat.setType(Chat.GAME_INFO_TYPE);
-@@ -341,10 +341,12 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
+@@ -341,10 +345,12 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
  
    @Override
    public void sendPlayerListHeaderAndFooter(final Component header, final Component footer) {
@@ -1592,7 +1613,7 @@ index c40d7c3c..9279aa05 100644
      if (this.getProtocolVersion().compareTo(ProtocolVersion.MINECRAFT_1_8) >= 0) {
        this.connection.write(HeaderAndFooter.create(header, footer, this.getProtocolVersion()));
      }
-@@ -357,17 +359,17 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
+@@ -357,17 +363,17 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
            .getProtocolVersion());
  
        GenericTitlePacket titlePkt = GenericTitlePacket.constructTitlePacket(
@@ -1615,7 +1636,7 @@ index c40d7c3c..9279aa05 100644
        net.kyori.adventure.title.Title.Times times = title.times();
        if (times != null) {
          timesPkt.setFadeIn((int) DurationUtils.toTicks(times.fadeIn()));
-@@ -384,7 +386,7 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
+@@ -384,7 +390,7 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
    public void clearTitle() {
      if (this.getProtocolVersion().compareTo(ProtocolVersion.MINECRAFT_1_8) >= 0) {
        connection.write(GenericTitlePacket.constructTitlePacket(
@@ -1624,7 +1645,7 @@ index c40d7c3c..9279aa05 100644
      }
    }
  
-@@ -392,7 +394,7 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
+@@ -392,7 +398,7 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
    public void resetTitle() {
      if (this.getProtocolVersion().compareTo(ProtocolVersion.MINECRAFT_1_8) >= 0) {
        connection.write(GenericTitlePacket.constructTitlePacket(
@@ -1633,7 +1654,7 @@ index c40d7c3c..9279aa05 100644
      }
    }
  
-@@ -446,16 +448,17 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
+@@ -446,16 +452,17 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
  
    /**
     * Disconnects the player from the proxy.
@@ -1655,7 +1676,7 @@ index c40d7c3c..9279aa05 100644
  
    public @Nullable VelocityServerConnection getConnectedServer() {
      return connectedServer;
-@@ -471,9 +474,9 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
+@@ -471,9 +478,9 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
  
    /**
     * Handles unexpected disconnects.
@@ -1667,7 +1688,7 @@ index c40d7c3c..9279aa05 100644
     */
    public void handleConnectionException(RegisteredServer server, Throwable throwable,
        boolean safe) {
-@@ -496,32 +499,34 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
+@@ -496,32 +503,34 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
  
      Component friendlyError;
      if (connectedServer != null && connectedServer.getServerInfo().equals(server.getServerInfo())) {
@@ -1710,7 +1731,7 @@ index c40d7c3c..9279aa05 100644
     */
    public void handleConnectionException(RegisteredServer server, Disconnect disconnect,
        boolean safe) {
-@@ -531,40 +536,38 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
+@@ -531,40 +540,38 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
      }
  
      Component disconnectReason = GsonComponentSerializer.gson().deserialize(disconnect.getReason());
@@ -1764,7 +1785,7 @@ index c40d7c3c..9279aa05 100644
      }
    }
  
-@@ -637,7 +640,7 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
+@@ -637,7 +644,7 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
                      // Impossible/nonsensical cases
                      case ALREADY_CONNECTED:
                      case CONNECTION_IN_PROGRESS:
@@ -1773,7 +1794,7 @@ index c40d7c3c..9279aa05 100644
                      case CONNECTION_CANCELLED:
                        Component fallbackMsg = res.getMessageComponent();
                        if (fallbackMsg == null) {
-@@ -652,19 +655,22 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
+@@ -652,19 +659,22 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
                            getProtocolVersion()), ((Impl) status).isSafe());
                        break;
                      case SUCCESS:
@@ -1809,7 +1830,7 @@ index c40d7c3c..9279aa05 100644
                        break;
                      default:
                        // The only remaining value is successful (no need to do anything!)
-@@ -882,7 +888,7 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
+@@ -882,7 +892,7 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
          while (!outstandingResourcePacks.isEmpty()) {
            queued = outstandingResourcePacks.peek();
            if (queued.getShouldForce() && getProtocolVersion()
@@ -1818,7 +1839,7 @@ index c40d7c3c..9279aa05 100644
              break;
            }
            onResourcePackResponse(PlayerResourcePackStatusEvent.Status.DECLINED);
-@@ -924,19 +930,19 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
+@@ -924,19 +934,19 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
    public boolean onResourcePackResponse(PlayerResourcePackStatusEvent.Status status) {
      final boolean peek = status == PlayerResourcePackStatusEvent.Status.ACCEPTED;
      final ResourcePackInfo queued = peek
@@ -1849,7 +1870,7 @@ index c40d7c3c..9279aa05 100644
  
      switch (status) {
        case ACCEPTED:
-@@ -1033,7 +1039,7 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
+@@ -1033,7 +1043,7 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
          return Optional.of(ConnectionRequestBuilder.Status.CONNECTION_IN_PROGRESS);
        }
        if (connectedServer != null
@@ -1979,7 +2000,7 @@ index c094cc90..00624abc 100644
 +  // ElytraProxy End
  }
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
-index 942c9911..acf75461 100644
+index 942c9911..7ad943c2 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
 @@ -44,7 +44,6 @@ import com.velocitypowered.proxy.config.VelocityConfiguration;
@@ -2049,7 +2070,7 @@ index 942c9911..acf75461 100644
      ServerLogin login = this.login;
      if (login == null) {
        throw new IllegalStateException("No ServerLogin packet received yet.");
-@@ -205,14 +202,32 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+@@ -205,14 +202,34 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
              return;
            }
  
@@ -2061,9 +2082,11 @@ index 942c9911..acf75461 100644
 -            mcConnection.write(request);
 +          InetSocketAddress adr = inbound.getRemoteAddress();
 +          if (!result.isForceOfflineMode()
-+              && (server.getConfiguration().isOnlineMode() || result.isOnlineModeAllowed())
 +              // Reduce amount of Mojang API when player is not checked
-+              && !server.getElytraProxy().shouldCheck(login.getUsername(), adr.getAddress())) {
++              && !server.getElytraProxy().shouldCheck(login.getUsername(), adr.getAddress())
++              && (server.getConfiguration().isOnlineMode()
++                || result.isOnlineModeAllowed()
++                || (Settings.IMP.AUTH.ENABLE && !Settings.IMP.AUTH.ONLINE_MODE_NEED_AUTH))) {
 +            if (Settings.IMP.AUTH.ENABLE) {
 +              ListenableFuture<Response> isPremiumResponse = server.getElytraProxy()
 +                  .isPremiumRequest(login.getUsername()).execute();
@@ -2089,7 +2112,7 @@ index 942c9911..acf75461 100644
            }
          }, mcConnection.eventLoop())
          .exceptionally((ex) -> {
-@@ -221,6 +236,16 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+@@ -221,6 +238,16 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
          });
    }
  
@@ -2106,7 +2129,7 @@ index 942c9911..acf75461 100644
    private EncryptionRequest generateEncryptionRequest() {
      byte[] verify = new byte[4];
      ThreadLocalRandom.current().nextBytes(verify);
-@@ -239,69 +264,80 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+@@ -239,69 +266,80 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
          onlineMode);
      final GameProfile finalProfile = profile;
  
@@ -2218,7 +2241,7 @@ index 942c9911..acf75461 100644
      }, mcConnection.eventLoop()).exceptionally((ex) -> {
        logger.error("Exception during connection of {}", finalProfile, ex);
        return null;
-@@ -310,39 +346,87 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+@@ -310,39 +348,87 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
  
    private void preLoginCheck(ConnectedPlayer player) {
      String formattedNickname = player.getUsername().toLowerCase();
@@ -2319,7 +2342,7 @@ index 942c9911..acf75461 100644
        mcConnection.setCompressionThreshold(threshold);
      }
      VelocityConfiguration configuration = server.getConfiguration();
-@@ -353,22 +437,39 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+@@ -353,22 +439,39 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
      ServerLoginSuccess success = new ServerLoginSuccess();
      success.setUsername(player.getUsername());
      success.setUuid(playerUniqueId);
@@ -2360,7 +2383,7 @@ index 942c9911..acf75461 100644
            // wait for permissions to load, then set the players permission function
            final PermissionFunction function = premissionEvent.createFunction(player);
            if (function == null) {
-@@ -381,46 +482,44 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+@@ -381,46 +484,44 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
            } else {
              player.setPermissionFunction(function);
            }
@@ -2438,7 +2461,7 @@ index 942c9911..acf75461 100644
  
    private CompletableFuture<Void> connectToInitialServer(ConnectedPlayer player) {
      Optional<RegisteredServer> initialFromConfig = player.getNextServerToTry();
-@@ -430,17 +529,17 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+@@ -430,17 +531,17 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
      return server.getEventManager().fire(event)
          .thenRunAsync(() -> {
            Optional<RegisteredServer> toTry = event.getInitialServer();
@@ -3722,10 +3745,10 @@ index a2dc13bf..393c118a 100644
  }
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/auth/handler/AuthSessionHandler.java b/proxy/src/main/java/net/elytrium/elytraproxy/auth/handler/AuthSessionHandler.java
 new file mode 100644
-index 00000000..474b20bc
+index 00000000..f77fbc66
 --- /dev/null
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/auth/handler/AuthSessionHandler.java
-@@ -0,0 +1,250 @@
+@@ -0,0 +1,243 @@
 +/*
 + * Copyright (C) 2021 Elytrium
 + *
@@ -3751,6 +3774,7 @@ index 00000000..474b20bc
 +import com.velocitypowered.proxy.connection.MinecraftConnection;
 +import com.velocitypowered.proxy.connection.MinecraftSessionHandler;
 +import com.velocitypowered.proxy.connection.client.ConnectedPlayer;
++import com.velocitypowered.proxy.connection.client.LoginSessionHandler;
 +import com.velocitypowered.proxy.protocol.packet.Chat;
 +import dev.samstevens.totp.code.CodeGenerator;
 +import dev.samstevens.totp.code.CodeVerifier;
@@ -3946,16 +3970,8 @@ index 00000000..474b20bc
 +
 +  private void finish() {
 +    disconnected();
-+    if (playerInfo == null) {
-+      connection.closeWith(packets.getSuccessfulRegister());
-+    } else {
-+      connection.closeWith(packets.getSuccessfulLogin());
-+    }
-+    // TODO: Fix connection to real server
-+    // VirtualServer -> Real Server causes infinite "Loading terrain"
-+    // I think it's because Velocity doesn't send Respawn packet on "first" join
-+    // connection.setSessionHandler(originalHandler);
-+    // ((LoginSessionHandler) originalHandler).initialize(player);
++    connection.setSessionHandler(originalHandler);
++    ((LoginSessionHandler) originalHandler).initialize(player);
 +    virtualServer.getElytraProxy().cacheAuthUser(player);
 +  }
 +
@@ -4959,10 +4975,10 @@ index 00000000..7e77910b
 +}
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/handler/BotFilterSessionHandler.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/handler/BotFilterSessionHandler.java
 new file mode 100644
-index 00000000..5440157d
+index 00000000..5f28e101
 --- /dev/null
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/handler/BotFilterSessionHandler.java
-@@ -0,0 +1,360 @@
+@@ -0,0 +1,364 @@
 +/*
 + * This file is part of Velocity-BotFilter, licensed under the AGPLv3 License (AGPLv3).
 + *
@@ -5138,9 +5154,13 @@ index 00000000..5440157d
 +    kickIfCheckNotPassed();
 +    state = CheckState.SUCCESSFULLY;
 +    disconnected();
-+    // connection.write(packets.getSuccessfulChat());
-+    // ((LoginSessionHandler) originalHandler).authOrInitialize(player);
-+    connection.closeWith(packets.getSuccessfulBotFilter());
++    if ((Settings.IMP.AUTH.ONLINE_MODE_NEED_AUTH || !player.isOnlineMode())
++        && !Settings.IMP.ANTIBOT.NEED_TO_RECONNECT) {
++      connection.write(packets.getSuccessfulBotFilterChat());
++      ((LoginSessionHandler) originalHandler).authOrInitialize(player);
++    } else {
++      connection.closeWith(packets.getSuccessfulBotFilterDisconnect());
++    }
 +    virtualServer.getElytraProxy().cacheSucceedUser(player);
 +  }
 +
@@ -7770,7 +7790,7 @@ index 9b5cedfd..871941bb 100644
              }
              return null;
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java b/proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java
-index 2751d0bc..413322cd 100644
+index 2751d0bc..4f8fd962 100644
 --- a/proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java
 @@ -27,7 +27,7 @@ public class Settings extends Config {
@@ -7905,7 +7925,7 @@ index 2751d0bc..413322cd 100644
      }
    }
  
-@@ -190,6 +190,15 @@ public class Settings extends Config {
+@@ -190,6 +190,20 @@ public class Settings extends Config {
      public boolean ENABLE = true;
      public boolean CHECK_CLIENT_SETTINGS = true;
      public boolean CHECK_CLIENT_BRAND = true;
@@ -7915,13 +7935,18 @@ index 2751d0bc..413322cd 100644
 +    public int FALLING_CHECK_TICKS = 128;
 +    public double MAX_VALID_POSITION_DIFFERENCE = 0.01;
 +    public String BRAND = "ElytraProxy BotFilter";
++    @Comment({
++        "If the player needs to reconnect after passing AntiBot check.",
++        "If ONLINE_MODE_NEED_AUTH here and online-mode in velocity.toml is set, then premium players need to reconnect"
++    })
++    public boolean NEED_TO_RECONNECT = false;
 +
 +    @Comment("Available - ONLY_POSITION, ONLY_CAPTCHA, CAPTCHA_POSITION, CAPTCHA_ON_POSITION_FAILED, SUCCESSFULLY")
 +    public String CHECK_STATE = "CAPTCHA_POSITION";
      @Comment({
          "If the player's nickname contains something from this list, hes connection will be rejected",
          "In lowercase"
-@@ -197,16 +206,132 @@ public class Settings extends Config {
+@@ -197,16 +211,131 @@ public class Settings extends Config {
      public List<String> BANNED_NICK_PATTERNS = Arrays.asList(
          "dropbot", "mcspam", "mcdrop", "mcrage", "mcstorm", "extremebot", "cipher", "biboran"
      );
@@ -7978,7 +8003,8 @@ index 2751d0bc..413322cd 100644
 +    public static class STRINGS {
 +      public String CHECKING = "{PRFX} Bot-Filter check was started, please wait..";
 +      public String CHECKING_CAPTCHA = "{PRFX} Please, solve the captcha";
-+      public String SUCCESSFUL = "{PRFX} Successfully passed Bot-Filter check. Please, rejoin the server";
++      public String SUCCESSFUL_CRACKED = "{PRFX} Successfully passed Bot-Filter check. ";
++      public String SUCCESSFUL_PREMIUM = "{PRFX} Successfully passed Bot-Filter check. Please, rejoin the server";
 +      public String CAPTCHA_FAILED = "{PRFX} You've mistaken in captcha check. Please, rejoin the server.";
 +      public String TOO_BIG_PACKET = "{PRFX} Your client sent too big packet.";
 +      public String FALLING_CHECK_FAILED = "{PRFX} Falling Check was failed. Please, rejoin the server.";
@@ -8028,8 +8054,6 @@ index 2751d0bc..413322cd 100644
 +      public String NICKNAME_PREMIUM = "{PRFX} Your nickname is set on premium account. Please, change your nickname";
 +      public String NICKNAME_INVALID = "{PRFX} Your nickname includes forbidden characters. Please, change your nickname";
 +      public String IP_LIMIT = "{PRFX} Your IP has reached max registered accounts. If this is an error, restart your router, or wait about 6 hours";
-+      public String REGISTER_SUCCESSFUL = "{PRFX} Registration completed successfully. Please rejoin";
-+      public String LOGIN_SUCCESSFUL = "{PRFX} Login completed successfully. Please rejoin";
 +      public String UNREGISTER_USAGE = "{PRFX} Usage: /unregister <nickname>";
 +      public String UNREGISTER_SUCCESSFUL = "{PRFX} Successfully unregistered player";
 +      public String CHANGE_PASSWORD_USAGE = "{PRFX} Usage: /changepass <old password> <new password>";
@@ -8056,7 +8080,7 @@ index 2751d0bc..413322cd 100644
    }
  
    @Create
-@@ -214,16 +339,14 @@ public class Settings extends Config {
+@@ -214,16 +343,14 @@ public class Settings extends Config {
  
    @Comment("Database settings")
    public static class DATABASE {
@@ -9768,10 +9792,10 @@ index 596c987c..896a5bdb 100644
  import java.util.Arrays;
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/virtual/server/ServerPackets.java b/proxy/src/main/java/net/elytrium/elytraproxy/virtual/server/ServerPackets.java
 new file mode 100644
-index 00000000..e77b4ff0
+index 00000000..06a6db97
 --- /dev/null
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/virtual/server/ServerPackets.java
-@@ -0,0 +1,269 @@
+@@ -0,0 +1,267 @@
 +/*
 + * This file is part of Velocity-BotFilter, licensed under the AGPLv3 License (AGPLv3).
 + *
@@ -9848,14 +9872,13 @@ index 00000000..e77b4ff0
 +  private Chat totpChat;
 +  private Chat registerChat;
 +  private Chat wrongPasswordChat;
++  private Chat successfulBotFilterChat;
 +  private Disconnect nicknamePremium;
 +  private Disconnect nicknameInvalid;
 +  private Disconnect ipLimit;
 +  private Disconnect wrongPassword;
 +  private Disconnect wrongNicknameCase;
-+  private Disconnect successfulBotFilter;
-+  private Disconnect successfulRegister;
-+  private Disconnect successfulLogin;
++  private Disconnect successfulBotFilterDisconnect;
 +  private PlayerPositionAndLook captchaPosAndLook;
 +  private PlayerPositionAndLook authPosAndLook;
 +  private UpdateViewPosition captchaView;
@@ -9938,9 +9961,8 @@ index 00000000..e77b4ff0
 +    wrongNicknameCase = createDisconnectPacket(Settings.IMP.AUTH.STRINGS.WRONG_NICKNAME_CASE);
 +    nicknamePremium = createDisconnectPacket(Settings.IMP.AUTH.STRINGS.NICKNAME_PREMIUM);
 +    nicknameInvalid = createDisconnectPacket(Settings.IMP.AUTH.STRINGS.NICKNAME_INVALID);
-+    successfulBotFilter = createDisconnectPacket(Settings.IMP.ANTIBOT.STRINGS.SUCCESSFUL);
-+    successfulRegister = createDisconnectPacket(Settings.IMP.AUTH.STRINGS.REGISTER_SUCCESSFUL);
-+    successfulLogin = createDisconnectPacket(Settings.IMP.AUTH.STRINGS.LOGIN_SUCCESSFUL);
++    successfulBotFilterChat = createChatPacket(Settings.IMP.ANTIBOT.STRINGS.SUCCESSFUL_CRACKED);
++    successfulBotFilterDisconnect = createDisconnectPacket(Settings.IMP.ANTIBOT.STRINGS.SUCCESSFUL_PREMIUM);
 +    ipLimit = createDisconnectPacket(Settings.IMP.AUTH.STRINGS.IP_LIMIT);
 +    brandBuf = createBrandBuf(hardcodedBrandString);
 +  }
@@ -10045,10 +10067,10 @@ diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/Virtu
 similarity index 50%
 rename from proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/VirtualServer.java
 rename to proxy/src/main/java/net/elytrium/elytraproxy/virtual/server/VirtualServer.java
-index d9b75a41..5dc6ce52 100644
+index d9b75a41..8b53ab92 100644
 --- a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/VirtualServer.java
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/virtual/server/VirtualServer.java
-@@ -17,54 +17,57 @@
+@@ -17,54 +17,58 @@
   * along with this program.  If not, see <http://www.gnu.org/licenses/>.
   */
  
@@ -10095,6 +10117,7 @@ index d9b75a41..5dc6ce52 100644
 -    ConnectedPlayer player = user.getPlayer();
 +  public void spawnPlayer(VirtualSessionHandler handler) {
 +    ConnectedPlayer player = handler.getPlayer();
++    player.setVirtualServerJoined(true);
 +    MinecraftConnection connection = player.getConnection();
 +    connection.setSessionHandler(handler);
 +    handler.onSpawn();
