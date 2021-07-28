@@ -1,4 +1,4 @@
-From 154577ee627e3169b719dc4f840a317cca29b557 Mon Sep 17 00:00:00 2001
+From 37b32cf6f0ba8aab13d311315d01e7fe2c5aff12 Mon Sep 17 00:00:00 2001
 From: Petr Ilin <hevav@hevav.dev>
 Date: Thu, 24 Jun 2021 15:01:38 +0900
 Subject: [PATCH] Virtual Servers, BotFilter, Auth
@@ -3330,7 +3330,7 @@ index 3dc8ea13..697dd589 100644
        packet.setOverlay(OVERLAY_TO_PROTOCOL.get(bar.overlay()));
        packet.setPercent(bar.progress());
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/ElytraProxy.java b/proxy/src/main/java/net/elytrium/elytraproxy/ElytraProxy.java
-index a2dc13bf..249ecd0f 100644
+index a2dc13bf..2abba1fa 100644
 --- a/proxy/src/main/java/net/elytrium/elytraproxy/ElytraProxy.java
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/ElytraProxy.java
 @@ -19,91 +19,111 @@ package net.elytrium.elytraproxy;
@@ -3479,7 +3479,7 @@ index a2dc13bf..249ecd0f 100644
    /**
     * Initializes ElytraProxy commands.
     * Инициализирует команды ElytraProxy.
-@@ -115,42 +135,184 @@ public class ElytraProxy {
+@@ -115,42 +135,186 @@ public class ElytraProxy {
      manager.unregister("alert");
      manager.unregister("find");
      manager.unregister("send");
@@ -3598,6 +3598,8 @@ index a2dc13bf..249ecd0f 100644
 +          player.getConnection().close(true);
 +        }
 +      }, player.getConnection().eventLoop());
++    } else {
++      sendToAuthServer(player, handler, nickname);
 +    }
 +  }
  
@@ -3685,7 +3687,7 @@ index a2dc13bf..249ecd0f 100644
      }
    }
  
-@@ -160,19 +322,13 @@ public class ElytraProxy {
+@@ -160,19 +324,13 @@ public class ElytraProxy {
        source.sendMessage(Identity.nil(),
            LegacyComponentSerializer
                .legacyAmpersand()
@@ -3707,7 +3709,7 @@ index a2dc13bf..249ecd0f 100644
      }
    }
  
-@@ -197,4 +353,9 @@ public class ElytraProxy {
+@@ -197,4 +355,9 @@ public class ElytraProxy {
        logger.warn("Unable to check for updates.", ex);
      }
    }
