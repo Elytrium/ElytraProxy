@@ -1,4 +1,4 @@
-From e20772d61f9d4cef17b87c58d47b3e3c63cf392e Mon Sep 17 00:00:00 2001
+From 2447308317b4d3eaf8a43d315fa274db66ae97d5 Mon Sep 17 00:00:00 2001
 From: Petr Ilin <hevav@hevav.dev>
 Date: Wed, 28 Jul 2021 01:28:22 +0300
 Subject: [PATCH] SQLite Support
@@ -18,10 +18,10 @@ index 3916c990..5fd92cc8 100644
      // Note: we depend on the API twice, first the main sourceset, and then the annotation processor.
      implementation project(/*':velocity-api'*/':elytraproxy-api')
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/ElytraProxy.java b/proxy/src/main/java/net/elytrium/elytraproxy/ElytraProxy.java
-index 249ecd0f..7a27baae 100644
+index 393c118a..92f2ab1f 100644
 --- a/proxy/src/main/java/net/elytrium/elytraproxy/ElytraProxy.java
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/ElytraProxy.java
-@@ -55,6 +55,7 @@ import net.elytrium.elytraproxy.commands.UnregisterCommand;
+@@ -56,6 +56,7 @@ import net.elytrium.elytraproxy.commands.UnregisterCommand;
  import net.elytrium.elytraproxy.config.Settings;
  import net.elytrium.elytraproxy.database.Database;
  import net.elytrium.elytraproxy.database.MySqlDatabase;
@@ -29,7 +29,7 @@ index 249ecd0f..7a27baae 100644
  import net.elytrium.elytraproxy.stats.Statistics;
  import net.elytrium.elytraproxy.virtual.protocol.VirtualProtocol;
  import net.elytrium.elytraproxy.virtual.server.VirtualServer;
-@@ -111,12 +112,25 @@ public class ElytraProxy {
+@@ -112,12 +113,25 @@ public class ElytraProxy {
     */
  
    public void initDatabase(VelocityServer server) {
@@ -59,7 +59,7 @@ index 249ecd0f..7a27baae 100644
          logger.error(e);
          logger.error(Settings.IMP.MESSAGES.ELYTRAPROXY.DB_FAILURE);
          server.shutdown();
-@@ -124,6 +138,10 @@ public class ElytraProxy {
+@@ -125,6 +139,10 @@ public class ElytraProxy {
      }
    }
  

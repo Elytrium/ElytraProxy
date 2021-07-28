@@ -1,4 +1,4 @@
-From 37b32cf6f0ba8aab13d311315d01e7fe2c5aff12 Mon Sep 17 00:00:00 2001
+From 8737a0d5d51069a9fbd4192aaa756c34bb0231d8 Mon Sep 17 00:00:00 2001
 From: Petr Ilin <hevav@hevav.dev>
 Date: Thu, 24 Jun 2021 15:01:38 +0900
 Subject: [PATCH] Virtual Servers, BotFilter, Auth
@@ -3330,10 +3330,10 @@ index 3dc8ea13..697dd589 100644
        packet.setOverlay(OVERLAY_TO_PROTOCOL.get(bar.overlay()));
        packet.setPercent(bar.progress());
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/ElytraProxy.java b/proxy/src/main/java/net/elytrium/elytraproxy/ElytraProxy.java
-index a2dc13bf..2abba1fa 100644
+index a2dc13bf..393c118a 100644
 --- a/proxy/src/main/java/net/elytrium/elytraproxy/ElytraProxy.java
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/ElytraProxy.java
-@@ -19,91 +19,111 @@ package net.elytrium.elytraproxy;
+@@ -19,91 +19,112 @@ package net.elytrium.elytraproxy;
  
  import com.velocitypowered.api.command.CommandManager;
  import com.velocitypowered.api.command.CommandSource;
@@ -3357,8 +3357,9 @@ index a2dc13bf..2abba1fa 100644
 +import java.net.http.HttpClient;
  import java.nio.charset.StandardCharsets;
 +import java.sql.SQLException;
-+import java.util.HashMap;
 +import java.util.Locale;
++import java.util.Map;
++import java.util.concurrent.ConcurrentHashMap;
 +import java.util.concurrent.ExecutionException;
  import lombok.Getter;
  import lombok.ToString;
@@ -3408,8 +3409,8 @@ index a2dc13bf..2abba1fa 100644
    private final Statistics statistics;
 -  // BotFilter end
 +
-+  private final HashMap<String, InetAddress> cachedBotChecks = new HashMap<>();
-+  private final HashMap<String, InetAddress> cachedAuthChecks = new HashMap<>();
++  private final Map<String, InetAddress> cachedBotChecks = new ConcurrentHashMap<>();
++  private final Map<String, InetAddress> cachedAuthChecks = new ConcurrentHashMap<>();
 +  private final HttpClient httpClient = HttpClient.newBuilder()
 +      .version(HttpClient.Version.HTTP_2)
 +      .build();
@@ -3479,7 +3480,7 @@ index a2dc13bf..2abba1fa 100644
    /**
     * Initializes ElytraProxy commands.
     * Инициализирует команды ElytraProxy.
-@@ -115,42 +135,186 @@ public class ElytraProxy {
+@@ -115,42 +136,186 @@ public class ElytraProxy {
      manager.unregister("alert");
      manager.unregister("find");
      manager.unregister("send");
@@ -3687,7 +3688,7 @@ index a2dc13bf..2abba1fa 100644
      }
    }
  
-@@ -160,19 +324,13 @@ public class ElytraProxy {
+@@ -160,19 +325,13 @@ public class ElytraProxy {
        source.sendMessage(Identity.nil(),
            LegacyComponentSerializer
                .legacyAmpersand()
@@ -3709,7 +3710,7 @@ index a2dc13bf..2abba1fa 100644
      }
    }
  
-@@ -197,4 +355,9 @@ public class ElytraProxy {
+@@ -197,4 +356,9 @@ public class ElytraProxy {
        logger.warn("Unable to check for updates.", ex);
      }
    }
@@ -4769,7 +4770,7 @@ index 00000000..65cc30c6
 +}
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/generator/map/MapPalette.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/generator/map/MapPalette.java
 new file mode 100644
-index 00000000..e1ca4215
+index 00000000..7e77910b
 --- /dev/null
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/generator/map/MapPalette.java
 @@ -0,0 +1,183 @@
@@ -4795,8 +4796,8 @@ index 00000000..e1ca4215
 +package net.elytrium.elytraproxy.botfilter.generator.map;
 +
 +import java.awt.image.BufferedImage;
-+import java.util.HashMap;
 +import java.util.Map;
++import java.util.concurrent.ConcurrentHashMap;
 +import lombok.AllArgsConstructor;
 +import lombok.Getter;
 +
@@ -4844,7 +4845,7 @@ index 00000000..e1ca4215
 +
 +  public static final byte WHITE = 34;
 +
-+  private static final Map<Color, Byte> colorToIndexMap = new HashMap<>();
++  private static final Map<Color, Byte> colorToIndexMap = new ConcurrentHashMap<>();
 +
 +  private static Color c(int r, int g, int b) {
 +    return new Color(r, g, b);
@@ -7047,10 +7048,16 @@ index 00000000..0eca4179
 +  }
 +}
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/commands/ElytraProxyCommand.java b/proxy/src/main/java/net/elytrium/elytraproxy/commands/ElytraProxyCommand.java
-index 4a622823..f730dd96 100644
+index 4a622823..850e4d73 100644
 --- a/proxy/src/main/java/net/elytrium/elytraproxy/commands/ElytraProxyCommand.java
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/commands/ElytraProxyCommand.java
-@@ -32,6 +32,7 @@ import java.util.Locale;
+@@ -27,11 +27,13 @@ import com.velocitypowered.proxy.command.builtin.CommandMessages;
+ import com.velocitypowered.proxy.connection.client.ConnectedPlayer;
+ import java.util.ArrayList;
+ import java.util.Arrays;
++import java.util.Collections;
+ import java.util.List;
+ import java.util.Locale;
  import java.util.Map;
  import java.util.Timer;
  import java.util.TimerTask;
@@ -7058,16 +7065,16 @@ index 4a622823..f730dd96 100644
  import lombok.Getter;
  import net.elytrium.elytraproxy.ElytraProxy;
  import net.elytrium.elytraproxy.config.Settings;
-@@ -46,7 +47,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
+@@ -46,7 +48,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
  public class ElytraProxyCommand implements SimpleCommand {
  
    @Getter
 -  private static final List<ConnectedPlayer> playersWithSpy = new ArrayList<>();
-+  private static final List<UUID> playersWithSpy = new ArrayList<>();
++  private static final List<UUID> playersWithSpy = Collections.synchronizedList(new ArrayList<>());
  
    private interface SubCommand {
  
-@@ -75,22 +76,16 @@ public class ElytraProxyCommand implements SimpleCommand {
+@@ -75,22 +77,16 @@ public class ElytraProxyCommand implements SimpleCommand {
    }
  
    private void usage(CommandSource source) {
@@ -7094,7 +7101,7 @@ index 4a622823..f730dd96 100644
      }
    }
  
-@@ -128,8 +123,7 @@ public class ElytraProxyCommand implements SimpleCommand {
+@@ -128,8 +124,7 @@ public class ElytraProxyCommand implements SimpleCommand {
  
      if (currentArgs.length == 1) {
        return commands.entrySet().stream()
@@ -7104,7 +7111,7 @@ index 4a622823..f730dd96 100644
            .filter(e -> e.getValue().hasPermission(source, new String[0]))
            .map(Map.Entry::getKey)
            .collect(ImmutableList.toImmutableList());
-@@ -176,31 +170,22 @@ public class ElytraProxyCommand implements SimpleCommand {
+@@ -176,31 +171,22 @@ public class ElytraProxyCommand implements SimpleCommand {
      public void execute(CommandSource source, String @NonNull [] args) {
        try {
          if (server.reloadConfiguration()) {
@@ -7142,16 +7149,16 @@ index 4a622823..f730dd96 100644
        }
  
        elytraProxy.reload(source);
-@@ -214,7 +199,7 @@ public class ElytraProxyCommand implements SimpleCommand {
+@@ -214,7 +200,7 @@ public class ElytraProxyCommand implements SimpleCommand {
  
    private static class Stats implements SubCommand {
  
 -    private final List<ConnectedPlayer> playersWithStats = new ArrayList<>();
-+    private final List<UUID> playersWithStats = new ArrayList<>();
++    private final List<UUID> playersWithStats = Collections.synchronizedList(new ArrayList<>());
  
      private Stats(VelocityServer server) {
  
-@@ -226,19 +211,16 @@ public class ElytraProxyCommand implements SimpleCommand {
+@@ -226,19 +212,16 @@ public class ElytraProxyCommand implements SimpleCommand {
                return;
              }
              Statistics statistics = server.getElytraProxy().getStatistics();
@@ -7181,7 +7188,7 @@ index 4a622823..f730dd96 100644
            } catch (Exception e) {
              e.printStackTrace();
            }
-@@ -253,24 +235,18 @@ public class ElytraProxyCommand implements SimpleCommand {
+@@ -253,24 +236,18 @@ public class ElytraProxyCommand implements SimpleCommand {
          return;
        }
        ConnectedPlayer player = (ConnectedPlayer) source;
@@ -7211,7 +7218,7 @@ index 4a622823..f730dd96 100644
        }
      }
  
-@@ -282,10 +258,6 @@ public class ElytraProxyCommand implements SimpleCommand {
+@@ -282,10 +259,6 @@ public class ElytraProxyCommand implements SimpleCommand {
  
    private static class CommandSpy implements SubCommand {
  
@@ -7222,7 +7229,7 @@ index 4a622823..f730dd96 100644
      @Override
      public void execute(CommandSource source, String @NonNull [] args) {
        if (!(source instanceof Player)) {
-@@ -293,24 +265,18 @@ public class ElytraProxyCommand implements SimpleCommand {
+@@ -293,24 +266,18 @@ public class ElytraProxyCommand implements SimpleCommand {
          return;
        }
        ConnectedPlayer player = (ConnectedPlayer) source;
