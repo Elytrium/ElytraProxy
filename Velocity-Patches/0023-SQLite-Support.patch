@@ -1,4 +1,4 @@
-From 881e587f885dd3c2b66862e727c0eb4e10a543b8 Mon Sep 17 00:00:00 2001
+From bce05d9075ec3c4de15aabafe3a64fd125ea5b70 Mon Sep 17 00:00:00 2001
 From: Petr Ilin <hevav@hevav.dev>
 Date: Wed, 28 Jul 2021 01:28:22 +0300
 Subject: [PATCH] SQLite Support
@@ -18,10 +18,10 @@ index 3916c990..5fd92cc8 100644
      // Note: we depend on the API twice, first the main sourceset, and then the annotation processor.
      implementation project(/*':velocity-api'*/':elytraproxy-api')
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/ElytraProxy.java b/proxy/src/main/java/net/elytrium/elytraproxy/ElytraProxy.java
-index 393c118a..92f2ab1f 100644
+index 819823c2..8ca825f5 100644
 --- a/proxy/src/main/java/net/elytrium/elytraproxy/ElytraProxy.java
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/ElytraProxy.java
-@@ -56,6 +56,7 @@ import net.elytrium.elytraproxy.commands.UnregisterCommand;
+@@ -60,6 +60,7 @@ import net.elytrium.elytraproxy.commands.UnregisterCommand;
  import net.elytrium.elytraproxy.config.Settings;
  import net.elytrium.elytraproxy.database.Database;
  import net.elytrium.elytraproxy.database.MySqlDatabase;
@@ -29,7 +29,7 @@ index 393c118a..92f2ab1f 100644
  import net.elytrium.elytraproxy.stats.Statistics;
  import net.elytrium.elytraproxy.virtual.protocol.VirtualProtocol;
  import net.elytrium.elytraproxy.virtual.server.VirtualServer;
-@@ -112,12 +113,25 @@ public class ElytraProxy {
+@@ -139,12 +140,25 @@ public class ElytraProxy {
     */
  
    public void initDatabase(VelocityServer server) {
@@ -59,7 +59,7 @@ index 393c118a..92f2ab1f 100644
          logger.error(e);
          logger.error(Settings.IMP.MESSAGES.ELYTRAPROXY.DB_FAILURE);
          server.shutdown();
-@@ -125,6 +139,10 @@ public class ElytraProxy {
+@@ -152,6 +166,10 @@ public class ElytraProxy {
      }
    }
  
@@ -71,10 +71,10 @@ index 393c118a..92f2ab1f 100644
     * Initializes ElytraProxy commands.
     * Инициализирует команды ElytraProxy.
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java b/proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java
-index 4f8fd962..6de8a693 100644
+index ee65cc1a..d594f198 100644
 --- a/proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java
-@@ -343,9 +343,13 @@ public class Settings extends Config {
+@@ -345,9 +345,13 @@ public class Settings extends Config {
  
    @Comment("Database settings")
    public static class DATABASE {

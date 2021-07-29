@@ -1,4 +1,4 @@
-From 5135c2d27b4a0bbf77643a928baa04f5c9413ecd Mon Sep 17 00:00:00 2001
+From e480b23fc91482ed07562aa2022aeacea635f739 Mon Sep 17 00:00:00 2001
 From: Petr Ilin <hevav@hevav.dev>
 Date: Thu, 24 Jun 2021 15:01:38 +0900
 Subject: [PATCH] Virtual Servers, BotFilter, Auth
@@ -3353,10 +3353,10 @@ index 3dc8ea13..697dd589 100644
        packet.setOverlay(OVERLAY_TO_PROTOCOL.get(bar.overlay()));
        packet.setPercent(bar.progress());
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/ElytraProxy.java b/proxy/src/main/java/net/elytrium/elytraproxy/ElytraProxy.java
-index a2dc13bf..393c118a 100644
+index a2dc13bf..819823c2 100644
 --- a/proxy/src/main/java/net/elytrium/elytraproxy/ElytraProxy.java
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/ElytraProxy.java
-@@ -19,91 +19,112 @@ package net.elytrium.elytraproxy;
+@@ -19,91 +19,139 @@ package net.elytrium.elytraproxy;
  
  import com.velocitypowered.api.command.CommandManager;
  import com.velocitypowered.api.command.CommandSource;
@@ -3384,6 +3384,10 @@ index a2dc13bf..393c118a 100644
 +import java.util.Map;
 +import java.util.concurrent.ConcurrentHashMap;
 +import java.util.concurrent.ExecutionException;
++import java.util.concurrent.Executors;
++import java.util.concurrent.ScheduledExecutorService;
++import java.util.concurrent.TimeUnit;
++import lombok.AllArgsConstructor;
  import lombok.Getter;
  import lombok.ToString;
 -import net.elytrium.elytraproxy.botfilter.protocol.cache.netty.MultiplePreparedPacketsEncoder;
@@ -3426,14 +3430,15 @@ index a2dc13bf..393c118a 100644
  
 -  // BotFilter start
 -  private final Logger bfLogger = LogManager.getLogger("BotFilter");
--
++  private Map<String, CachedUser> cachedBotChecks;
++  private Map<String, CachedUser> cachedAuthChecks;
++  private ScheduledExecutorService scheduler;
+ 
    private final VelocityServer velocityServer;
    private final VirtualServer virtualServer;
    private final Statistics statistics;
 -  // BotFilter end
 +
-+  private final Map<String, InetAddress> cachedBotChecks = new ConcurrentHashMap<>();
-+  private final Map<String, InetAddress> cachedAuthChecks = new ConcurrentHashMap<>();
 +  private final HttpClient httpClient = HttpClient.newBuilder()
 +      .version(HttpClient.Version.HTTP_2)
 +      .build();
@@ -3445,6 +3450,7 @@ index a2dc13bf..393c118a 100644
    public ElytraProxy(VelocityServer velocityServer) {
 +    Settings.IMP.reload(new File("ElytraProxy", "config.yml"));
 +    initDatabase(velocityServer);
++    initCaching();
 +    statistics = new Statistics();
 +    statistics.startUpdating();
      // BotFilter start
@@ -3471,6 +3477,26 @@ index a2dc13bf..393c118a 100644
 -    try {
 -      MysqlConfig config = getConfig().getMySql();
 -      database = new MySqlDatabase(config.hostname, config.database, config.user, config.password);
++  public void initCaching() {
++    cachedAuthChecks = new ConcurrentHashMap<>();
++    cachedBotChecks = new ConcurrentHashMap<>();
++    if (scheduler != null) {
++      scheduler.shutdown();
++    }
++    scheduler =
++        Executors.newScheduledThreadPool(1, task -> new Thread(task, "purge-cache"));
++    scheduler.scheduleAtFixedRate(
++        () -> checkCache(cachedAuthChecks, Settings.IMP.AUTH.PURGE_CACHE_MILLIS),
++        Settings.IMP.AUTH.PURGE_CACHE_MILLIS,
++        Settings.IMP.AUTH.PURGE_CACHE_MILLIS,
++        TimeUnit.MILLISECONDS);
++    scheduler.scheduleAtFixedRate(
++        () -> checkCache(cachedBotChecks, Settings.IMP.ANTIBOT.PURGE_CACHE_MILLIS),
++        Settings.IMP.ANTIBOT.PURGE_CACHE_MILLIS,
++        Settings.IMP.ANTIBOT.PURGE_CACHE_MILLIS,
++        TimeUnit.MILLISECONDS);
++  }
++
 +  /**
 +   * Initializes database, creates missing tables.
 +   * Инициализирует базу данных, создает отсутствующие таблицы.
@@ -3503,7 +3529,7 @@ index a2dc13bf..393c118a 100644
    /**
     * Initializes ElytraProxy commands.
     * Инициализирует команды ElytraProxy.
-@@ -115,42 +136,186 @@ public class ElytraProxy {
+@@ -115,42 +163,193 @@ public class ElytraProxy {
      manager.unregister("alert");
      manager.unregister("find");
      manager.unregister("send");
@@ -3533,7 +3559,7 @@ index a2dc13bf..393c118a 100644
 +      return false;
 +    }
 +    if (cachedBotChecks.containsKey(nickname)) {
-+      return !ip.equals(cachedBotChecks.get(nickname));
++      return !ip.equals(cachedBotChecks.get(nickname).getInetAddress());
 +    } else {
 +      return true;
 +    }
@@ -3543,7 +3569,7 @@ index a2dc13bf..393c118a 100644
 +    if (Settings.IMP.AUTH.CACHE_AUTH_USERS) {
 +      if (cachedAuthChecks.containsKey(player.getUsername())) {
 +        InetSocketAddress adr = (InetSocketAddress) player.getConnection().getRemoteAddress();
-+        return !adr.getAddress().equals(cachedAuthChecks.get(player.getUsername()));
++        return !adr.getAddress().equals(cachedAuthChecks.get(player.getUsername()).getInetAddress());
 +      } else {
 +        return true;
 +      }
@@ -3555,14 +3581,14 @@ index a2dc13bf..393c118a 100644
 +  public void cacheSucceedUser(ConnectedPlayer player) {
 +    cachedBotChecks.remove(player.getUsername());
 +    InetSocketAddress adr = (InetSocketAddress) player.getConnection().getRemoteAddress();
-+    cachedBotChecks.put(player.getUsername(), adr.getAddress());
++    cachedBotChecks.put(player.getUsername(), new CachedUser(adr.getAddress(), System.currentTimeMillis()));
 +  }
 +
 +  public void cacheAuthUser(ConnectedPlayer player) {
 +    if (Settings.IMP.AUTH.CACHE_AUTH_USERS) {
 +      cachedAuthChecks.remove(player.getUsername());
 +      InetSocketAddress adr = (InetSocketAddress) player.getConnection().getRemoteAddress();
-+      cachedAuthChecks.put(player.getUsername(), adr.getAddress());
++      cachedAuthChecks.put(player.getUsername(), new CachedUser(adr.getAddress(), System.currentTimeMillis()));
 +    }
    }
  
@@ -3631,6 +3657,13 @@ index a2dc13bf..393c118a 100644
 +  public BoundRequestBuilder isPremiumRequest(String nickname) {
 +    return velocityServer.getAsyncHttpClient()
 +        .prepareGet("https://api.mojang.com/users/profiles/minecraft/" + nickname);
++  }
++
++  private void checkCache(Map<String, CachedUser> userMap, long time) {
++    userMap.entrySet().stream()
++        .filter(u -> u.getValue().getCheckTime() + time <= System.currentTimeMillis())
++        .map(Map.Entry::getKey)
++        .forEach(userMap::remove);
 +  }
 +
 +  private void sendToAuthServer(ConnectedPlayer player, LoginSessionHandler handler, String nickname) {
@@ -3711,7 +3744,7 @@ index a2dc13bf..393c118a 100644
      }
    }
  
-@@ -160,19 +325,13 @@ public class ElytraProxy {
+@@ -160,19 +359,13 @@ public class ElytraProxy {
        source.sendMessage(Identity.nil(),
            LegacyComponentSerializer
                .legacyAmpersand()
@@ -3733,7 +3766,7 @@ index a2dc13bf..393c118a 100644
      }
    }
  
-@@ -197,4 +356,9 @@ public class ElytraProxy {
+@@ -197,4 +390,16 @@ public class ElytraProxy {
        logger.warn("Unable to check for updates.", ex);
      }
    }
@@ -3742,13 +3775,20 @@ index a2dc13bf..393c118a 100644
 +    LOGIN,
 +    PING
 +  }
++
++  @AllArgsConstructor
++  @Getter
++  private static class CachedUser {
++    private InetAddress inetAddress;
++    private long checkTime;
++  }
  }
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/auth/handler/AuthSessionHandler.java b/proxy/src/main/java/net/elytrium/elytraproxy/auth/handler/AuthSessionHandler.java
 new file mode 100644
-index 00000000..f77fbc66
+index 00000000..26b8d99c
 --- /dev/null
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/auth/handler/AuthSessionHandler.java
-@@ -0,0 +1,243 @@
+@@ -0,0 +1,239 @@
 +/*
 + * Copyright (C) 2021 Elytrium
 + *
@@ -3770,7 +3810,6 @@ index 00000000..f77fbc66
 +
 +import at.favre.lib.crypto.bcrypt.BCrypt;
 +import com.google.common.collect.ImmutableMap;
-+import com.velocitypowered.api.network.ProtocolVersion;
 +import com.velocitypowered.proxy.connection.MinecraftConnection;
 +import com.velocitypowered.proxy.connection.MinecraftSessionHandler;
 +import com.velocitypowered.proxy.connection.client.ConnectedPlayer;
@@ -3874,11 +3913,8 @@ index 00000000..f77fbc66
 +  @Override
 +  public void onSpawn() {
 +    virtualServer.loginComplete(this);
-+    connection.write(packets.getAuthPosAndLook());
-+    if (connection.getProtocolVersion().isAfterOrEq(ProtocolVersion.MINECRAFT_1_14)) {
-+      connection.write(packets.getAuthView());
-+    }
-+    packets.getStaticWorldPacket().forEach(connection::write);
++    connection.write(packets.getAuthPosition());
++    connection.write(packets.getStaticWorldPacket());
 +    connection.write(packets.getNoAbilities());
 +    if (playerInfo == null) {
 +      checkIp();
@@ -4975,10 +5011,10 @@ index 00000000..7e77910b
 +}
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/handler/BotFilterSessionHandler.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/handler/BotFilterSessionHandler.java
 new file mode 100644
-index 00000000..5f28e101
+index 00000000..7d80ea5f
 --- /dev/null
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/handler/BotFilterSessionHandler.java
-@@ -0,0 +1,364 @@
+@@ -0,0 +1,358 @@
 +/*
 + * This file is part of Velocity-BotFilter, licensed under the AGPLv3 License (AGPLv3).
 + *
@@ -5169,7 +5205,7 @@ index 00000000..5f28e101
 +    if (!startedListening && state != CheckState.ONLY_CAPTCHA) {
 +      if (x == validX && z == validZ) {
 +        startedListening = true;
-+        connection.write(packets.getBotFilterBrand());
++        connection.write(packets.getAntiBotBrand());
 +      }
 +      if (nonValidPacketsSize > Settings.IMP.ANTIBOT.NON_VALID_POSITION_XZ_ATTEMPTS) {
 +        fallingCheckFailed();
@@ -5230,11 +5266,8 @@ index 00000000..5f28e101
 +    virtualServer.loginComplete(this);
 +    if (state == BotFilterSessionHandler.CheckState.ONLY_CAPTCHA) {
 +      sendCaptcha();
-+      connection.write(packets.getCaptchaPosAndLook());
-+      if (connection.getProtocolVersion().isAfterOrEq(ProtocolVersion.MINECRAFT_1_14)) {
-+        connection.write(packets.getCaptchaView());
-+      }
-+      packets.getStaticWorldPacket().forEach(connection::write);
++      connection.write(packets.getCaptchaPosition());
++      connection.write(packets.getStaticWorldPacket());
 +    } else if (state == BotFilterSessionHandler.CheckState.CAPTCHA_POSITION) {
 +      sendCaptcha();
 +      sendFallingCheckPackets();
@@ -5277,11 +5310,8 @@ index 00000000..5f28e101
 +  }
 +
 +  private void setCaptchaPosition(boolean disableFall) {
-+    connection.write(packets.getCaptchaPosAndLook());
-+    if (connection.getProtocolVersion().isAfterOrEq(ProtocolVersion.MINECRAFT_1_14)) {
-+      connection.write(packets.getCaptchaView());
-+    }
-+    packets.getStaticWorldPacket().forEach(connection::write);
++    connection.write(packets.getCaptchaPosition());
++    connection.write(packets.getStaticWorldPacket());
 +    if (disableFall) {
 +      connection.write(packets.getNoAbilities());
 +    }
@@ -7790,7 +7820,7 @@ index 9b5cedfd..871941bb 100644
              }
              return null;
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java b/proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java
-index 2751d0bc..4f8fd962 100644
+index 2751d0bc..ee65cc1a 100644
 --- a/proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java
 @@ -27,7 +27,7 @@ public class Settings extends Config {
@@ -7925,10 +7955,11 @@ index 2751d0bc..4f8fd962 100644
      }
    }
  
-@@ -190,6 +190,20 @@ public class Settings extends Config {
+@@ -190,6 +190,21 @@ public class Settings extends Config {
      public boolean ENABLE = true;
      public boolean CHECK_CLIENT_SETTINGS = true;
      public boolean CHECK_CLIENT_BRAND = true;
++    public long PURGE_CACHE_MILLIS = 3600000;
 +    public int CAPTCHA_ATTEMPTS = 2;
 +    public int NON_VALID_POSITION_XZ_ATTEMPTS = 10;
 +    public int NON_VALID_POSITION_Y_ATTEMPTS = 10;
@@ -7946,7 +7977,7 @@ index 2751d0bc..4f8fd962 100644
      @Comment({
          "If the player's nickname contains something from this list, hes connection will be rejected",
          "In lowercase"
-@@ -197,16 +211,131 @@ public class Settings extends Config {
+@@ -197,16 +212,132 @@ public class Settings extends Config {
      public List<String> BANNED_NICK_PATTERNS = Arrays.asList(
          "dropbot", "mcspam", "mcdrop", "mcrage", "mcstorm", "extremebot", "cipher", "biboran"
      );
@@ -8029,6 +8060,7 @@ index 2751d0bc..4f8fd962 100644
 -    public boolean ONLINE_MODE_REQUIRES_LOGIN = false;
 +    public boolean ONLINE_MODE_NEED_AUTH = false;
 +    public boolean CACHE_AUTH_USERS = true;
++    public long PURGE_CACHE_MILLIS = 3600000;
 +    @Comment({
 +        "QR Generator URL, set {data} placeholder"
 +    })
@@ -8080,7 +8112,7 @@ index 2751d0bc..4f8fd962 100644
    }
  
    @Create
-@@ -214,16 +343,14 @@ public class Settings extends Config {
+@@ -214,16 +345,14 @@ public class Settings extends Config {
  
    @Comment("Database settings")
    public static class DATABASE {
@@ -8769,6 +8801,155 @@ index 00000000..376a7f2d
 +        StateRegistry.PLAY.clientbound.getMappingsForPacket(Respawn.class, true));
 +  }
 +}
+diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/virtual/protocol/cache/PreparedPacket.java b/proxy/src/main/java/net/elytrium/elytraproxy/virtual/protocol/cache/PreparedPacket.java
+new file mode 100644
+index 00000000..43f44212
+--- /dev/null
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/virtual/protocol/cache/PreparedPacket.java
+@@ -0,0 +1,96 @@
++/*
++ * This file is part of Velocity-BotFilter, licensed under the AGPLv3 License (AGPLv3).
++ *
++ * Copyright (C) 2021 Vjatšeslav Maspanov <Leymooo>
++ *
++ * This program is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU Affero General Public License as published by
++ * the Free Software Foundation, either version 3 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU Affero General Public License for more details.
++ *
++ * You should have received a copy of the GNU Affero General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ */
++
++package net.elytrium.elytraproxy.virtual.protocol.cache;
++
++import com.velocitypowered.api.network.ProtocolVersion;
++import com.velocitypowered.proxy.protocol.MinecraftPacket;
++import com.velocitypowered.proxy.protocol.ProtocolUtils;
++import com.velocitypowered.proxy.protocol.ProtocolUtils.Direction;
++import com.velocitypowered.proxy.protocol.StateRegistry;
++import io.netty.buffer.ByteBuf;
++import io.netty.buffer.Unpooled;
++import java.util.ArrayList;
++import java.util.EnumSet;
++import java.util.List;
++import java.util.Map;
++import java.util.concurrent.ConcurrentHashMap;
++import java.util.stream.Collectors;
++
++public class PreparedPacket {
++
++  private final Map<ProtocolVersion, List<ByteBuf>> packets =
++      new ConcurrentHashMap<>();
++
++  public <T extends MinecraftPacket> PreparedPacket prepare(T packet) {
++    return prepare(packet, ProtocolVersion.MINIMUM_VERSION, ProtocolVersion.MAXIMUM_VERSION);
++  }
++
++  public <T extends MinecraftPacket> PreparedPacket prepare(T packet, ProtocolVersion from) {
++    return prepare(packet, from, ProtocolVersion.MAXIMUM_VERSION);
++  }
++
++  public <T extends MinecraftPacket> PreparedPacket prepare(T packet, ProtocolVersion from, StateRegistry protocol) {
++    return prepare(packet, from, ProtocolVersion.MAXIMUM_VERSION, protocol);
++  }
++
++  public <T extends MinecraftPacket> PreparedPacket prepare(T packet, ProtocolVersion from, ProtocolVersion to) {
++    return prepare(packet, from, to, StateRegistry.VIRTUAL);
++  }
++
++  public <T extends MinecraftPacket> PreparedPacket prepare(T packet, ProtocolVersion from, ProtocolVersion to, StateRegistry protocol) {
++    for (ProtocolVersion protocolVersion : EnumSet.range(from, to)) {
++      ByteBuf buf = encodePacket(packet, protocolVersion, protocol);
++      if (packets.containsKey(protocolVersion)) {
++        packets.get(protocolVersion).add(buf);
++      } else {
++        List<ByteBuf> list = new ArrayList<>();
++        list.add(buf);
++        packets.put(protocolVersion, list);
++      }
++    }
++
++    return this;
++  }
++
++  public List<ByteBuf> getPackets(ProtocolVersion version) {
++    return packets.get(version).stream().map(ByteBuf::copy).collect(Collectors.toList());
++  }
++
++  public boolean hasPacketsFor(ProtocolVersion version) {
++    return packets.containsKey(version);
++  }
++
++  private <T extends MinecraftPacket> ByteBuf encodePacket(T packet, ProtocolVersion version, StateRegistry protocol) {
++    int id = getPacketId(packet, version, protocol);
++    ByteBuf byteBuf = Unpooled.buffer();
++    ProtocolUtils.writeVarInt(byteBuf, id);
++    packet.encode(byteBuf, Direction.CLIENTBOUND, version);
++    return byteBuf;
++  }
++
++  private <T extends MinecraftPacket> int getPacketId(T packet, ProtocolVersion version, StateRegistry protocol) {
++    try {
++      return protocol.clientbound.getProtocolRegistry(version).getPacketId(packet.getClass());
++    } catch (Exception e) {
++      return protocol.clientbound.getProtocolRegistry(version).getPacketId(
++          (Class<? extends MinecraftPacket>) packet.getClass().getSuperclass());
++    }
++  }
++}
+\ No newline at end of file
+diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/virtual/protocol/cache/PreparedPacketEncoder.java b/proxy/src/main/java/net/elytrium/elytraproxy/virtual/protocol/cache/PreparedPacketEncoder.java
+new file mode 100644
+index 00000000..54e7d0a7
+--- /dev/null
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/virtual/protocol/cache/PreparedPacketEncoder.java
+@@ -0,0 +1,39 @@
++/*
++ * This file is part of Velocity-BotFilter, licensed under the AGPLv3 License (AGPLv3).
++ *
++ * Copyright (C) 2021 Vjatšeslav Maspanov <Leymooo>
++ *
++ * This program is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU Affero General Public License as published by
++ * the Free Software Foundation, either version 3 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU Affero General Public License for more details.
++ *
++ * You should have received a copy of the GNU Affero General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ */
++
++package net.elytrium.elytraproxy.virtual.protocol.cache;
++
++import com.velocitypowered.api.network.ProtocolVersion;
++import io.netty.channel.ChannelHandlerContext;
++import io.netty.handler.codec.MessageToMessageEncoder;
++import java.util.List;
++import lombok.AllArgsConstructor;
++
++@AllArgsConstructor
++public class PreparedPacketEncoder extends MessageToMessageEncoder<PreparedPacket> {
++  private final ProtocolVersion protocolVersion;
++
++  @Override
++  protected void encode(ChannelHandlerContext ctx, PreparedPacket msg, List<Object> out)
++      throws Exception {
++    if (msg.hasPacketsFor(protocolVersion)) {
++      out.addAll(msg.getPackets(protocolVersion));
++    }
++  }
++}
+\ No newline at end of file
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/data/registry/Biome.java b/proxy/src/main/java/net/elytrium/elytraproxy/virtual/protocol/data/registry/Biome.java
 similarity index 79%
 rename from proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/data/registry/Biome.java
@@ -9792,10 +9973,10 @@ index 596c987c..896a5bdb 100644
  import java.util.Arrays;
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/virtual/server/ServerPackets.java b/proxy/src/main/java/net/elytrium/elytraproxy/virtual/server/ServerPackets.java
 new file mode 100644
-index 00000000..06a6db97
+index 00000000..1ecf95b1
 --- /dev/null
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/virtual/server/ServerPackets.java
-@@ -0,0 +1,267 @@
+@@ -0,0 +1,282 @@
 +/*
 + * This file is part of Velocity-BotFilter, licensed under the AGPLv3 License (AGPLv3).
 + *
@@ -9822,6 +10003,7 @@ index 00000000..06a6db97
 +import com.velocitypowered.proxy.connection.registry.DimensionData;
 +import com.velocitypowered.proxy.connection.registry.DimensionInfo;
 +import com.velocitypowered.proxy.connection.registry.DimensionRegistry;
++import com.velocitypowered.proxy.protocol.MinecraftPacket;
 +import com.velocitypowered.proxy.protocol.ProtocolUtils;
 +import com.velocitypowered.proxy.protocol.packet.Chat;
 +import com.velocitypowered.proxy.protocol.packet.Disconnect;
@@ -9834,6 +10016,7 @@ index 00000000..06a6db97
 +import lombok.Getter;
 +import net.elytrium.elytraproxy.botfilter.handler.BotFilterSessionHandler;
 +import net.elytrium.elytraproxy.config.Settings;
++import net.elytrium.elytraproxy.virtual.protocol.cache.PreparedPacket;
 +import net.elytrium.elytraproxy.virtual.protocol.data.registry.Biome;
 +import net.elytrium.elytraproxy.virtual.protocol.packet.PlayerAbilities;
 +import net.elytrium.elytraproxy.virtual.protocol.packet.PlayerPositionAndLook;
@@ -9857,35 +10040,32 @@ index 00000000..06a6db97
 +  private DimensionData dimension;
 +  private DimensionData legacyDimension;
 +  private VirtualWorld virtualWorld;
-+  private List<ChunkData> staticWorldPacket;
-+  private JoinGame joinPacket;
-+  private JoinGame legacyJoinPacket;
-+  private Disconnect alreadyConnected;
-+  private Disconnect tooBigPacket;
-+  private Disconnect captchaFailed;
-+  private Disconnect fallingCheckFailed;
-+  private SetSlot setSlot;
-+  private SetSlot resetSlot;
-+  private Chat checkingChat;
-+  private Chat checkingCaptchaChat;
-+  private Chat loginChat;
-+  private Chat totpChat;
-+  private Chat registerChat;
-+  private Chat wrongPasswordChat;
-+  private Chat successfulBotFilterChat;
-+  private Disconnect nicknamePremium;
-+  private Disconnect nicknameInvalid;
-+  private Disconnect ipLimit;
-+  private Disconnect wrongPassword;
-+  private Disconnect wrongNicknameCase;
-+  private Disconnect successfulBotFilterDisconnect;
-+  private PlayerPositionAndLook captchaPosAndLook;
-+  private PlayerPositionAndLook authPosAndLook;
-+  private UpdateViewPosition captchaView;
-+  private UpdateViewPosition authView;
-+  private PlayerAbilities noAbilities;
++  private PreparedPacket staticWorldPacket;
++  private PreparedPacket joinPacket;
++  private PreparedPacket alreadyConnected;
++  private PreparedPacket tooBigPacket;
++  private PreparedPacket captchaFailed;
++  private PreparedPacket fallingCheckFailed;
++  private PreparedPacket setSlot;
++  private PreparedPacket resetSlot;
++  private PreparedPacket checkingChat;
++  private PreparedPacket checkingCaptchaChat;
++  private PreparedPacket loginChat;
++  private PreparedPacket totpChat;
++  private PreparedPacket registerChat;
++  private PreparedPacket wrongPasswordChat;
++  private PreparedPacket successfulBotFilterChat;
++  private PreparedPacket nicknamePremium;
++  private PreparedPacket nicknameInvalid;
++  private PreparedPacket ipLimit;
++  private PreparedPacket wrongPassword;
++  private PreparedPacket wrongNicknameCase;
++  private PreparedPacket successfulBotFilterDisconnect;
++  private PreparedPacket captchaPosition;
++  private PreparedPacket authPosition;
++  private PreparedPacket noAbilities;
++  private PreparedPacket antiBotBrand;
 +  private List<SetExp> experience;
-+  private ByteBuf brandBuf;
 +
 +  public ServerPackets(VirtualServer virtualServer) {
 +    this.virtualServer = virtualServer;
@@ -9934,37 +10114,40 @@ index 00000000..06a6db97
 +    */
 +
 +    experience = createExpPackets();
-+    captchaPosAndLook = createPlayerPosAndLookPacket(captchaCoords.X, captchaCoords.Y, captchaCoords.Z);
-+    authPosAndLook = createPlayerPosAndLookPacket(authCoords.X, authCoords.Y, authCoords.Z);
-+    captchaView = createUpdateViewPosition(captchaCoords.X, captchaCoords.Z);
-+    authView = createUpdateViewPosition(authCoords.X, authCoords.Z);
++    captchaPosition = new PreparedPacket()
++        .prepare(createPlayerPosAndLookPacket(captchaCoords.X, captchaCoords.Y, captchaCoords.Z))
++        .prepare(createUpdateViewPosition(captchaCoords.X, captchaCoords.Z), ProtocolVersion.MINECRAFT_1_14);
++    authPosition = new PreparedPacket()
++        .prepare(createPlayerPosAndLookPacket(authCoords.X, authCoords.Y, authCoords.Z))
++        .prepare(createUpdateViewPosition(authCoords.X, authCoords.Z), ProtocolVersion.MINECRAFT_1_14);
 +
-+    joinPacket = createJoinGamePacket();
-+    legacyJoinPacket = createLegacyJoinGamePacket();
-+    staticWorldPacket = createChunksPackets(60);
++    joinPacket = new PreparedPacket()
++        .prepare(createLegacyJoinGamePacket(), ProtocolVersion.MINIMUM_VERSION, ProtocolVersion.MINECRAFT_1_15_2)
++        .prepare(createJoinGamePacket(), ProtocolVersion.MINECRAFT_1_16);
 +
-+    noAbilities = createAbilitiesPacket();
-+    alreadyConnected = createDisconnectPacket(Settings.IMP.MESSAGES.VELOCITY.ERROR.ALREADY_CONNECTED_PROXY);
-+    tooBigPacket = createDisconnectPacket(Settings.IMP.ANTIBOT.STRINGS.TOO_BIG_PACKET);
-+    captchaFailed = createDisconnectPacket(Settings.IMP.ANTIBOT.STRINGS.CAPTCHA_FAILED);
-+    fallingCheckFailed = createDisconnectPacket(Settings.IMP.ANTIBOT.STRINGS.FALLING_CHECK_FAILED);
-+    setSlot = createSetSlotPacket(0, 36, 358, 1, 0);
-+    resetSlot = createSetSlotPacket(0, 36, -1, 0, 0);
++    staticWorldPacket = prepare(createChunksPackets(60));
 +
-+    checkingChat = createChatPacket(Settings.IMP.ANTIBOT.STRINGS.CHECKING);
-+    checkingCaptchaChat = createChatPacket(Settings.IMP.ANTIBOT.STRINGS.CHECKING_CAPTCHA);
-+    loginChat = createChatPacket(Settings.IMP.AUTH.STRINGS.LOGIN);
-+    totpChat = createChatPacket(Settings.IMP.AUTH.STRINGS.TOTP);
-+    registerChat = createChatPacket(Settings.IMP.AUTH.STRINGS.REGISTER);
-+    wrongPasswordChat = createChatPacket(Settings.IMP.AUTH.STRINGS.PASSWORD_WRONG);
-+    wrongPassword = createDisconnectPacket(Settings.IMP.AUTH.STRINGS.PASSWORD_WRONG);
-+    wrongNicknameCase = createDisconnectPacket(Settings.IMP.AUTH.STRINGS.WRONG_NICKNAME_CASE);
-+    nicknamePremium = createDisconnectPacket(Settings.IMP.AUTH.STRINGS.NICKNAME_PREMIUM);
-+    nicknameInvalid = createDisconnectPacket(Settings.IMP.AUTH.STRINGS.NICKNAME_INVALID);
-+    successfulBotFilterChat = createChatPacket(Settings.IMP.ANTIBOT.STRINGS.SUCCESSFUL_CRACKED);
-+    successfulBotFilterDisconnect = createDisconnectPacket(Settings.IMP.ANTIBOT.STRINGS.SUCCESSFUL_PREMIUM);
-+    ipLimit = createDisconnectPacket(Settings.IMP.AUTH.STRINGS.IP_LIMIT);
-+    brandBuf = createBrandBuf(hardcodedBrandString);
++    noAbilities = prepare(createAbilitiesPacket());
++    alreadyConnected = prepare(createDisconnectPacket(Settings.IMP.MESSAGES.VELOCITY.ERROR.ALREADY_CONNECTED_PROXY));
++    tooBigPacket = prepare(createDisconnectPacket(Settings.IMP.ANTIBOT.STRINGS.TOO_BIG_PACKET));
++    captchaFailed = prepare(createDisconnectPacket(Settings.IMP.ANTIBOT.STRINGS.CAPTCHA_FAILED));
++    fallingCheckFailed = prepare(createDisconnectPacket(Settings.IMP.ANTIBOT.STRINGS.FALLING_CHECK_FAILED));
++    setSlot = prepare(createSetSlotPacket(0, 36, 358, 1, 0));
++    resetSlot = prepare(createSetSlotPacket(0, 36, -1, 0, 0));
++    checkingChat = prepare(createChatPacket(Settings.IMP.ANTIBOT.STRINGS.CHECKING));
++    checkingCaptchaChat = prepare(createChatPacket(Settings.IMP.ANTIBOT.STRINGS.CHECKING_CAPTCHA));
++    loginChat = prepare(createChatPacket(Settings.IMP.AUTH.STRINGS.LOGIN));
++    totpChat = prepare(createChatPacket(Settings.IMP.AUTH.STRINGS.TOTP));
++    registerChat = prepare(createChatPacket(Settings.IMP.AUTH.STRINGS.REGISTER));
++    wrongPasswordChat = prepare(createChatPacket(Settings.IMP.AUTH.STRINGS.PASSWORD_WRONG));
++    wrongPassword = prepare(createDisconnectPacket(Settings.IMP.AUTH.STRINGS.PASSWORD_WRONG));
++    wrongNicknameCase = prepare(createDisconnectPacket(Settings.IMP.AUTH.STRINGS.WRONG_NICKNAME_CASE));
++    nicknamePremium = prepare(createDisconnectPacket(Settings.IMP.AUTH.STRINGS.NICKNAME_PREMIUM));
++    nicknameInvalid = prepare(createDisconnectPacket(Settings.IMP.AUTH.STRINGS.NICKNAME_INVALID));
++    successfulBotFilterChat = prepare(createChatPacket(Settings.IMP.ANTIBOT.STRINGS.SUCCESSFUL_CRACKED));
++    successfulBotFilterDisconnect = prepare(createDisconnectPacket(Settings.IMP.ANTIBOT.STRINGS.SUCCESSFUL_PREMIUM));
++    ipLimit = prepare(createDisconnectPacket(Settings.IMP.AUTH.STRINGS.IP_LIMIT));
++    antiBotBrand = prepare(createBrandPacket(createBrandBuf(hardcodedBrandString)));
 +  }
 +
 +  private PlayerAbilities createAbilitiesPacket() {
@@ -10034,8 +10217,21 @@ index 00000000..06a6db97
 +    return new SetSlot(windowId, slot, item, count, data);
 +  }
 +
-+  public PluginMessage getBotFilterBrand() {
-+    return createBrandPacket(brandBuf.copy());
++  @SafeVarargs
++  private <T extends MinecraftPacket> PreparedPacket prepare(T... packets) {
++    PreparedPacket preparedPacket = new PreparedPacket();
++
++    for (T packet : packets) {
++      preparedPacket.prepare(packet);
++    }
++
++    return preparedPacket;
++  }
++
++  private <T extends MinecraftPacket> PreparedPacket prepare(List<T> packets) {
++    PreparedPacket preparedPacket = new PreparedPacket();
++    packets.forEach(preparedPacket::prepare);
++    return preparedPacket;
 +  }
 +
 +  private PluginMessage createBrandPacket(ByteBuf brandBuf) {
@@ -10067,26 +10263,28 @@ diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/Virtu
 similarity index 50%
 rename from proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/VirtualServer.java
 rename to proxy/src/main/java/net/elytrium/elytraproxy/virtual/server/VirtualServer.java
-index d9b75a41..8b53ab92 100644
+index d9b75a41..b48599ef 100644
 --- a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/VirtualServer.java
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/virtual/server/VirtualServer.java
-@@ -17,54 +17,58 @@
+@@ -17,54 +17,61 @@
   * along with this program.  If not, see <http://www.gnu.org/licenses/>.
   */
  
 -package net.elytrium.elytraproxy.botfilter.server;
 +package net.elytrium.elytraproxy.virtual.server;
  
-+import com.velocitypowered.api.network.ProtocolVersion;
  import com.velocitypowered.proxy.connection.MinecraftConnection;
 +import com.velocitypowered.proxy.connection.MinecraftSessionHandler;
  import com.velocitypowered.proxy.connection.client.ConnectedPlayer;
++import com.velocitypowered.proxy.network.Connections;
  import com.velocitypowered.proxy.protocol.StateRegistry;
 -import java.util.concurrent.ConcurrentHashMap;
 -import java.util.concurrent.ConcurrentMap;
++import io.netty.channel.ChannelPipeline;
  import lombok.Getter;
  import net.elytrium.elytraproxy.ElytraProxy;
 -import net.elytrium.elytraproxy.botfilter.protocol.cache.PacketCompressor;
++import net.elytrium.elytraproxy.virtual.protocol.cache.PreparedPacketEncoder;
  
 -public class VirtualServer {
 +public class VirtualServer implements MinecraftSessionHandler {
@@ -10117,29 +10315,31 @@ index d9b75a41..8b53ab92 100644
 -    ConnectedPlayer player = user.getPlayer();
 +  public void spawnPlayer(VirtualSessionHandler handler) {
 +    ConnectedPlayer player = handler.getPlayer();
+     MinecraftConnection connection = player.getConnection();
+-    if (activeConnections.putIfAbsent(username, user) != null) {
+-      connection.closeWith(packets.getAlreadyConnected());
+-      //user.closeWith(preparedPackets.getAlreadyConnected());
+-      return;
+-    }
+-    user.getOriginalHandler().completeLoginProtocol(player, false);
+-    connection.setState(StateRegistry.BotFilter);
+-    packets.getSpawnPackets().write(connection, player.isOnlineMode());
+-    connection.flush();
++    ChannelPipeline pipeline = connection.getChannel().pipeline();
++
++    pipeline.addAfter(Connections.MINECRAFT_ENCODER,
++        "prepared-encoder", new PreparedPacketEncoder(connection.getProtocolVersion()));
++
 +    player.setVirtualServerJoined(true);
-+    MinecraftConnection connection = player.getConnection();
 +    connection.setSessionHandler(handler);
 +    handler.onSpawn();
 +  }
 +
 +  public void sendJoinPacket(VirtualSessionHandler handler) {
 +    ConnectedPlayer player = handler.getPlayer();
-     MinecraftConnection connection = player.getConnection();
--    if (activeConnections.putIfAbsent(username, user) != null) {
--      connection.closeWith(packets.getAlreadyConnected());
--      //user.closeWith(preparedPackets.getAlreadyConnected());
--      return;
++    MinecraftConnection connection = player.getConnection();
 +
-+    if (connection.getProtocolVersion().isBefore(ProtocolVersion.MINECRAFT_1_16)) {
-+      connection.write(packets.getLegacyJoinPacket());
-+    } else {
-+      connection.write(packets.getJoinPacket());
-     }
--    user.getOriginalHandler().completeLoginProtocol(player, false);
--    connection.setState(StateRegistry.BotFilter);
--    packets.getSpawnPackets().write(connection, player.isOnlineMode());
--    connection.flush();
++    connection.write(packets.getJoinPacket());
    }
  
 -  public void disconnected(BotFilterSessionHandler botFilterConnection) {
@@ -10156,10 +10356,10 @@ index d9b75a41..8b53ab92 100644
  }
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/virtual/server/VirtualSessionHandler.java b/proxy/src/main/java/net/elytrium/elytraproxy/virtual/server/VirtualSessionHandler.java
 new file mode 100644
-index 00000000..4e92b2d5
+index 00000000..3b9f5fa9
 --- /dev/null
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/virtual/server/VirtualSessionHandler.java
-@@ -0,0 +1,61 @@
+@@ -0,0 +1,70 @@
 +/*
 + * Copyright (C) 2021 Elytrium
 + *
@@ -10181,8 +10381,10 @@ index 00000000..4e92b2d5
 +
 +import com.velocitypowered.proxy.connection.MinecraftSessionHandler;
 +import com.velocitypowered.proxy.connection.client.ConnectedPlayer;
++import io.netty.channel.ChannelPipeline;
 +import java.util.Locale;
 +import lombok.Getter;
++import net.elytrium.elytraproxy.virtual.protocol.cache.PreparedPacketEncoder;
 +import net.elytrium.elytraproxy.virtual.protocol.packet.Player;
 +import net.elytrium.elytraproxy.virtual.protocol.packet.PlayerPosition;
 +import net.elytrium.elytraproxy.virtual.protocol.packet.PlayerPositionAndLook;
@@ -10219,6 +10421,13 @@ index 00000000..4e92b2d5
 +
 +  public boolean handle(TeleportConfirm packet) {
 +    return false;
++  }
++
++  public void disconnected() {
++    ChannelPipeline pipeline = player.getConnection().getChannel().pipeline();
++    if (pipeline.names().contains("prepared-encoder")) {
++      pipeline.remove(PreparedPacketEncoder.class);
++    }
 +  }
 +}
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/world/SimpleBlock.java b/proxy/src/main/java/net/elytrium/elytraproxy/virtual/server/world/SimpleBlock.java
