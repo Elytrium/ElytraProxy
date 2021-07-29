@@ -1,4 +1,4 @@
-From bc843fec9b90a698243907c35292e847ad5a99e0 Mon Sep 17 00:00:00 2001
+From a0ccb2093ebe0f926a87bfe17cd21b7ee6225d0d Mon Sep 17 00:00:00 2001
 From: Petr Ilin <hevav@hevav.dev>
 Date: Wed, 28 Jul 2021 01:28:22 +0300
 Subject: [PATCH] SQLite Support
@@ -6,10 +6,10 @@ Subject: [PATCH] SQLite Support
 Signed-off-by: Petr Ilin <hevav@hevav.dev>
 
 diff --git a/proxy/build.gradle b/proxy/build.gradle
-index 3916c990..5fd92cc8 100644
+index ed351cd2..a34a693d 100644
 --- a/proxy/build.gradle
 +++ b/proxy/build.gradle
-@@ -80,6 +80,7 @@ dependencies {
+@@ -83,6 +83,7 @@ dependencies {
      implementation "org.mariadb.jdbc:mariadb-java-client:2.7.3"
      implementation 'at.favre.lib:bcrypt:0.9.0'
      implementation 'dev.samstevens.totp:totp:1.7.1'
@@ -101,10 +101,10 @@ index 819823c2..f38cadd6 100644
      userMap.entrySet().stream()
          .filter(u -> u.getValue().getCheckTime() + time <= System.currentTimeMillis())
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java b/proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java
-index ee65cc1a..d594f198 100644
+index 28a62399..f8062a91 100644
 --- a/proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java
-@@ -345,9 +345,13 @@ public class Settings extends Config {
+@@ -365,9 +365,13 @@ public class Settings extends Config {
  
    @Comment("Database settings")
    public static class DATABASE {

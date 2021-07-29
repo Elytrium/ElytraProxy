@@ -1,4 +1,4 @@
-From e480b23fc91482ed07562aa2022aeacea635f739 Mon Sep 17 00:00:00 2001
+From e218959fe3b5f8f92ef525098eb4ba5ae9f0077e Mon Sep 17 00:00:00 2001
 From: Petr Ilin <hevav@hevav.dev>
 Date: Thu, 24 Jun 2021 15:01:38 +0900
 Subject: [PATCH] Virtual Servers, BotFilter, Auth
@@ -109,10 +109,10 @@ index 37b994ba..0c0c0871 100644
      this.inflater = new Inflater();
    }
 diff --git a/proxy/build.gradle b/proxy/build.gradle
-index 578a56e5..3916c990 100644
+index 578a56e5..ed351cd2 100644
 --- a/proxy/build.gradle
 +++ b/proxy/build.gradle
-@@ -10,12 +10,19 @@ apply from: '../gradle/checkstyle.gradle'
+@@ -10,12 +10,22 @@ apply from: '../gradle/checkstyle.gradle'
  apply plugin: 'com.github.johnrengelman.shadow'
  
  license {
@@ -126,13 +126,16 @@ index 578a56e5..3916c990 100644
 +    matching(includes: ['**/virtual/**']) {
 +        header = project.rootProject.file('HEADER_BOTFILTER.txt')
 +    }
++    matching(includes: ['**/virtual/file/**']) {
++        header = project.rootProject.file('HEADER_ELYTRAPROXY.txt')
++    }
 +    matching(includes: ['**/virtual/server/VirtualSessionHandler.java']) {
 +        header = project.rootProject.file('HEADER_ELYTRAPROXY.txt')
 +    }
      matching(includes: ['**/botfilter/**']) {
          header = project.rootProject.file('HEADER_BOTFILTER.txt')
      }
-@@ -25,6 +32,7 @@ license {
+@@ -25,6 +35,7 @@ license {
      matching(includes: ['**/ElytraProxyCommand.java']) {
          header = project.rootProject.file('HEADER.txt')
      }
@@ -140,7 +143,7 @@ index 578a56e5..3916c990 100644
      header = project.rootProject.file('HEADER.txt')
  }
  
-@@ -39,9 +47,9 @@ jar {
+@@ -39,9 +50,9 @@ jar {
          }
  
          attributes 'Main-Class': 'com.velocitypowered.proxy.Velocity'
@@ -152,7 +155,7 @@ index 578a56e5..3916c990 100644
          attributes 'Multi-Release': 'true'
      }
  }
-@@ -52,25 +60,32 @@ shadowJar {
+@@ -52,25 +63,32 @@ shadowJar {
  
  tasks.withType(Checkstyle) {
      exclude('**/com/velocitypowered/proxy/protocol/packet/*.java')
@@ -7820,7 +7823,7 @@ index 9b5cedfd..871941bb 100644
              }
              return null;
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java b/proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java
-index 2751d0bc..ee65cc1a 100644
+index 2751d0bc..28a62399 100644
 --- a/proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java
 @@ -27,7 +27,7 @@ public class Settings extends Config {
@@ -7977,7 +7980,7 @@ index 2751d0bc..ee65cc1a 100644
      @Comment({
          "If the player's nickname contains something from this list, hes connection will be rejected",
          "In lowercase"
-@@ -197,16 +212,132 @@ public class Settings extends Config {
+@@ -197,16 +212,152 @@ public class Settings extends Config {
      public List<String> BANNED_NICK_PATTERNS = Arrays.asList(
          "dropbot", "mcspam", "mcdrop", "mcrage", "mcstorm", "extremebot", "cipher", "biboran"
      );
@@ -8109,10 +8112,30 @@ index 2751d0bc..ee65cc1a 100644
 +      public int Y = 0;
 +      public int Z = 0;
 +    }
++  }
++
++  @Create
++  public VIRTUAL VIRTUAL;
++
++  @Comment("Settings of Virtual Server")
++  public static class VIRTUAL {
++    public boolean LOAD_WORLD = false;
++    @Comment("World file type: schematic")
++    public String WORLD_FILE_TYPE = "schematic";
++    public String WORLD_FILE_PATH = "world.schematic";
++
++    @Create
++    public VIRTUAL.VIRTUAL_COORDS VIRTUAL_COORDS;
++
++    public static class VIRTUAL_COORDS {
++      public int X = 0;
++      public int Y = 0;
++      public int Z = 0;
++    }
    }
  
    @Create
-@@ -214,16 +345,14 @@ public class Settings extends Config {
+@@ -214,16 +365,14 @@ public class Settings extends Config {
  
    @Comment("Database settings")
    public static class DATABASE {
@@ -8613,6 +8636,111 @@ index 1c705b50..e8844c94 100644
          .collect(Collectors.joining(delimiter));
    }
  }
+diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/virtual/file/SchematicFile.java b/proxy/src/main/java/net/elytrium/elytraproxy/virtual/file/SchematicFile.java
+new file mode 100644
+index 00000000..1b60377f
+--- /dev/null
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/virtual/file/SchematicFile.java
+@@ -0,0 +1,69 @@
++/*
++ * Copyright (C) 2021 Elytrium
++ *
++ * This program is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU Affero General Public License as published by
++ * the Free Software Foundation, either version 3 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU Affero General Public License for more details.
++ *
++ * You should have received a copy of the GNU Affero General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ */
++
++package net.elytrium.elytraproxy.virtual.file;
++
++import java.io.IOException;
++import java.io.InputStream;
++import java.nio.file.Path;
++import lombok.Getter;
++import net.elytrium.elytraproxy.virtual.server.world.SimpleBlock;
++import net.elytrium.elytraproxy.virtual.server.world.VirtualWorld;
++import net.kyori.adventure.nbt.BinaryTagIO;
++import net.kyori.adventure.nbt.CompoundBinaryTag;
++
++@Getter
++public class SchematicFile implements WorldFile {
++  private short width;
++  private short height;
++  private short length;
++  private byte[] blocks;
++
++  public SchematicFile(Path file) throws IOException {
++    CompoundBinaryTag tag = BinaryTagIO.reader().read(file, BinaryTagIO.Compression.GZIP);
++    fromNBT(tag);
++  }
++
++  public SchematicFile(InputStream stream) throws IOException {
++    CompoundBinaryTag tag = BinaryTagIO.reader().read(stream, BinaryTagIO.Compression.GZIP);
++    fromNBT(tag);
++  }
++
++  public SchematicFile(CompoundBinaryTag tag) {
++    fromNBT(tag);
++  }
++
++  @Override
++  public void toWorld(VirtualWorld world, int offsetX, int offsetY, int offsetZ) {
++    for (int x = 0; x < width; ++x) {
++      for (int y = 0; y < height; ++y) {
++        for (int z = 0; z < length; ++z) {
++          world.setBlock(
++              x + offsetX, y + offsetY, z + offsetZ,
++              SimpleBlock.fromLegacyId(blocks[(y * length + z) * width + x]));
++        }
++      }
++    }
++  }
++
++  private void fromNBT(CompoundBinaryTag tag) {
++    width = tag.getShort("Width");
++    height = tag.getShort("Height");
++    length = tag.getShort("Length");
++    blocks = tag.getByteArray("Blocks");
++  }
++}
+diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/virtual/file/WorldFile.java b/proxy/src/main/java/net/elytrium/elytraproxy/virtual/file/WorldFile.java
+new file mode 100644
+index 00000000..6595acf8
+--- /dev/null
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/virtual/file/WorldFile.java
+@@ -0,0 +1,24 @@
++/*
++ * Copyright (C) 2021 Elytrium
++ *
++ * This program is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU Affero General Public License as published by
++ * the Free Software Foundation, either version 3 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU Affero General Public License for more details.
++ *
++ * You should have received a copy of the GNU Affero General Public License
++ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ */
++
++package net.elytrium.elytraproxy.virtual.file;
++
++import net.elytrium.elytraproxy.virtual.server.world.VirtualWorld;
++
++public interface WorldFile {
++  void toWorld(VirtualWorld world, int offsetX, int offsetY, int offsetZ);
++}
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/virtual/protocol/VirtualProtocol.java b/proxy/src/main/java/net/elytrium/elytraproxy/virtual/protocol/VirtualProtocol.java
 new file mode 100644
 index 00000000..376a7f2d
@@ -9127,13 +9255,13 @@ index fb35f4d1..be9a81b8 100644
          public CompoundBinaryTag encode() {
            return CompoundBinaryTag.builder()
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/data/storage/BlockStorage.java b/proxy/src/main/java/net/elytrium/elytraproxy/virtual/protocol/data/storage/BlockStorage.java
-similarity index 88%
+similarity index 82%
 rename from proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/data/storage/BlockStorage.java
 rename to proxy/src/main/java/net/elytrium/elytraproxy/virtual/protocol/data/storage/BlockStorage.java
-index 8f207fa2..7b796797 100644
+index 8f207fa2..5f3788a0 100644
 --- a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/data/storage/BlockStorage.java
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/virtual/protocol/data/storage/BlockStorage.java
-@@ -17,14 +17,14 @@
+@@ -17,14 +17,13 @@
   * along with this program.  If not, see <http://www.gnu.org/licenses/>.
   */
  
@@ -9144,18 +9272,28 @@ index 8f207fa2..7b796797 100644
  import io.netty.buffer.ByteBuf;
  import lombok.NonNull;
 +import net.elytrium.elytraproxy.virtual.server.world.SimpleBlock;
-+import net.elytrium.elytraproxy.virtual.server.world.SimpleBlock.Version;
  import org.jetbrains.annotations.NotNull;
 -import net.elytrium.elytraproxy.botfilter.server.world.SimpleBlock;
 -import net.elytrium.elytraproxy.botfilter.server.world.SimpleBlock.Version;
  
  public interface BlockStorage {
  
+@@ -42,8 +41,8 @@ public interface BlockStorage {
+     return y << 8 | z << 4 | x;
+   }
+ 
+-  static BlockStorage create(Version version) {
+-    if (version.isBefore(Version.MINECRAFT_1_9)) {
++  static BlockStorage create(ProtocolVersion version) {
++    if (version.isBefore(ProtocolVersion.MINECRAFT_1_9)) {
+       return new BlockStorage17();
+     } else {
+       return new BlockStorage19(version);
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/data/storage/BlockStorage17.java b/proxy/src/main/java/net/elytrium/elytraproxy/virtual/protocol/data/storage/BlockStorage17.java
-similarity index 90%
+similarity index 84%
 rename from proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/data/storage/BlockStorage17.java
 rename to proxy/src/main/java/net/elytrium/elytraproxy/virtual/protocol/data/storage/BlockStorage17.java
-index 755d5a11..2d4801fa 100644
+index 755d5a11..732d9fbb 100644
 --- a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/data/storage/BlockStorage17.java
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/virtual/protocol/data/storage/BlockStorage17.java
 @@ -17,7 +17,7 @@
@@ -9167,13 +9305,12 @@ index 755d5a11..2d4801fa 100644
  
  import com.velocitypowered.api.network.ProtocolVersion;
  import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-@@ -26,11 +26,11 @@ import java.util.Arrays;
+@@ -26,11 +26,10 @@ import java.util.Arrays;
  import lombok.AccessLevel;
  import lombok.NonNull;
  import lombok.RequiredArgsConstructor;
 +import net.elytrium.elytraproxy.virtual.protocol.util.mcprotocollib.NibbleArray3d;
 +import net.elytrium.elytraproxy.virtual.server.world.SimpleBlock;
-+import net.elytrium.elytraproxy.virtual.server.world.SimpleBlock.Version;
 +import net.elytrium.elytraproxy.virtual.server.world.chunk.SimpleChunk;
  import org.jetbrains.annotations.NotNull;
 -import net.elytrium.elytraproxy.botfilter.protocol.util.mcprotocollib.NibbleArray3d;
@@ -9183,11 +9320,38 @@ index 755d5a11..2d4801fa 100644
  
  @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
  public class BlockStorage17 implements BlockStorage {
+@@ -66,7 +65,7 @@ public class BlockStorage17 implements BlockStorage {
+     } else if (pass == 1) {
+       NibbleArray3d metadata = new NibbleArray3d(16 * 16 * 16);
+       for (int i = 0; i < blocks.length; i++) {
+-        metadata.set(i, blocks[i] == null ? 0 : blocks[i].getData(Version.MINECRAFT_1_7));
++        metadata.set(i, blocks[i] == null ? 0 : blocks[i].getData(ProtocolVersion.MINECRAFT_1_7_2));
+       }
+       buf.writeBytes(metadata.getData());
+       pass = 0;
+@@ -82,7 +81,7 @@ public class BlockStorage17 implements BlockStorage {
+     byte[] raw = new byte[blocks.length];
+     for (int i = 0; i < blocks.length; i++) {
+       SimpleBlock block = blocks[i];
+-      raw[i] = (byte) (block == null ? 0 : block.getId(Version.MINECRAFT_1_7));
++      raw[i] = (byte) (block == null ? 0 : block.getId(ProtocolVersion.MINECRAFT_1_7_2));
+     }
+     buf.writeBytes(raw);
+   }
+@@ -92,7 +91,7 @@ public class BlockStorage17 implements BlockStorage {
+     for (int i = 0; i < blocks.length; i++) {
+       SimpleBlock block = blocks[i];
+       raw[i] = (short) (block == null ? 0
+-          : (block.getId(Version.MINECRAFT_1_8) << 4 | block.getData(Version.MINECRAFT_1_8)));
++          : (block.getId(ProtocolVersion.MINECRAFT_1_8) << 4 | block.getData(ProtocolVersion.MINECRAFT_1_8)));
+     }
+     for (Short s : raw) {
+       buf.writeShortLE(s);
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/data/storage/BlockStorage19.java b/proxy/src/main/java/net/elytrium/elytraproxy/virtual/protocol/data/storage/BlockStorage19.java
-similarity index 91%
+similarity index 82%
 rename from proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/data/storage/BlockStorage19.java
 rename to proxy/src/main/java/net/elytrium/elytraproxy/virtual/protocol/data/storage/BlockStorage19.java
-index 708be90c..f898ed14 100644
+index 708be90c..f45e0165 100644
 --- a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/data/storage/BlockStorage19.java
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/virtual/protocol/data/storage/BlockStorage19.java
 @@ -17,7 +17,7 @@
@@ -9199,7 +9363,7 @@ index 708be90c..f898ed14 100644
  
  import com.velocitypowered.api.network.ProtocolVersion;
  import com.velocitypowered.proxy.protocol.ProtocolUtils;
-@@ -30,13 +30,13 @@ import java.util.Map;
+@@ -30,23 +30,23 @@ import java.util.Map;
  import lombok.AccessLevel;
  import lombok.AllArgsConstructor;
  import lombok.NonNull;
@@ -9219,6 +9383,68 @@ index 708be90c..f898ed14 100644
  
  @AllArgsConstructor(access = AccessLevel.PRIVATE)
  public class BlockStorage19 implements BlockStorage {
+ 
+-  private final Version version;
++  private final ProtocolVersion version;
+   private List<SimpleBlock> palette = new ArrayList<>();
+   private Map<Integer, SimpleBlock> rawToBlock = new HashMap<>();
+   private CompactStorage storage;
+ 
+-  public BlockStorage19(Version version) {
++  public BlockStorage19(ProtocolVersion version) {
+     this.version = version;
+     this.storage = createStorage(4);
+     palette.add(SimpleBlock.AIR);
+@@ -77,7 +77,7 @@ public class BlockStorage19 implements BlockStorage {
+   public void write(ByteBuf buf, ProtocolVersion version) {
+     buf.writeByte(storage.getBitsPerEntry());
+     if (storage.getBitsPerEntry() > 8) {
+-      if (this.version.isBefore(Version.MINECRAFT_1_13)) {
++      if (this.version.isBefore(ProtocolVersion.MINECRAFT_1_13)) {
+         ProtocolUtils.writeVarInt(buf, 0);
+       }
+     } else {
+@@ -93,7 +93,7 @@ public class BlockStorage19 implements BlockStorage {
+   public int getDataLength(ProtocolVersion version) {
+     int length = 1;
+     if (storage.getBitsPerEntry() > 8) {
+-      if (this.version.isBefore(Version.MINECRAFT_1_13)) {
++      if (this.version.isBefore(ProtocolVersion.MINECRAFT_1_13)) {
+         length += 1;
+       }
+     } else {
+@@ -146,9 +146,9 @@ public class BlockStorage19 implements BlockStorage {
+       return 4;
+     } else if (newSize < 9) {
+       return newSize;
+-    } else if (version.isBefore(Version.MINECRAFT_1_13)) {
++    } else if (version.isBefore(ProtocolVersion.MINECRAFT_1_13)) {
+       return 13;
+-    } else if (version.isBefore(Version.MINECRAFT_1_16_4)) {
++    } else if (version.isBefore(ProtocolVersion.MINECRAFT_1_16_4)) {
+       return 14;
+     } else {
+       return 15;
+@@ -156,7 +156,7 @@ public class BlockStorage19 implements BlockStorage {
+   }
+ 
+   private CompactStorage createStorage(int bits) {
+-    return version.isBefore(Version.MINECRAFT_1_16)
++    return version.isBefore(ProtocolVersion.MINECRAFT_1_16)
+         ? new BitStorage19(bits, SimpleChunk.MAX_BLOCKS_PER_SECTION)
+         : new BitStorage116(bits, SimpleChunk.MAX_BLOCKS_PER_SECTION);
+   }
+@@ -171,8 +171,8 @@ public class BlockStorage19 implements BlockStorage {
+         + '}';
+   }
+ 
+-  private static int toRaw(SimpleBlock state, Version version) {
+-    if (version.isBefore(Version.MINECRAFT_1_13)) {
++  private static int toRaw(SimpleBlock state, ProtocolVersion version) {
++    if (version.isBefore(ProtocolVersion.MINECRAFT_1_13)) {
+       return (state.getId(version) << 4) | (state.getData(version) & 0xF);
+     } else {
+       return state.getId(version);
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/virtual/protocol/packet/MapDataPacket.java b/proxy/src/main/java/net/elytrium/elytraproxy/virtual/protocol/packet/MapDataPacket.java
 new file mode 100644
 index 00000000..8d00e584
@@ -9865,10 +10091,10 @@ index 0be862f1..aca3b339 100644
  import com.velocitypowered.api.network.ProtocolVersion;
  import io.netty.buffer.ByteBuf;
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/util/NetworkSection.java b/proxy/src/main/java/net/elytrium/elytraproxy/virtual/protocol/util/NetworkSection.java
-similarity index 90%
+similarity index 89%
 rename from proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/util/NetworkSection.java
 rename to proxy/src/main/java/net/elytrium/elytraproxy/virtual/protocol/util/NetworkSection.java
-index f4fa8d89..7c7ad844 100644
+index f4fa8d89..5bd70f76 100644
 --- a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/util/NetworkSection.java
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/virtual/protocol/util/NetworkSection.java
 @@ -17,18 +17,18 @@
@@ -9906,6 +10132,15 @@ index f4fa8d89..7c7ad844 100644
      this.section = section;
      this.blockLight = blockLight;
      this.skyLight = skyLight;
+@@ -50,7 +49,7 @@ public class NetworkSection {
+     if (storage == null) {
+       synchronized (storages) {
+         Version bVersion = Version.map(version);
+-        BlockStorage blockStorage = BlockStorage.create(bVersion);
++        BlockStorage blockStorage = BlockStorage.create(version);
+         fillBlocks(blockStorage);
+         for (ProtocolVersion pVersion : bVersion.getVersions()) {
+           storages.put(pVersion, blockStorage);
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/util/mcprotocollib/BitStorage116.java b/proxy/src/main/java/net/elytrium/elytraproxy/virtual/protocol/util/mcprotocollib/BitStorage116.java
 similarity index 97%
 rename from proxy/src/main/java/net/elytrium/elytraproxy/botfilter/protocol/util/mcprotocollib/BitStorage116.java
@@ -9973,10 +10208,10 @@ index 596c987c..896a5bdb 100644
  import java.util.Arrays;
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/virtual/server/ServerPackets.java b/proxy/src/main/java/net/elytrium/elytraproxy/virtual/server/ServerPackets.java
 new file mode 100644
-index 00000000..1ecf95b1
+index 00000000..469b3b3c
 --- /dev/null
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/virtual/server/ServerPackets.java
-@@ -0,0 +1,282 @@
+@@ -0,0 +1,284 @@
 +/*
 + * This file is part of Velocity-BotFilter, licensed under the AGPLv3 License (AGPLv3).
 + *
@@ -10011,11 +10246,16 @@ index 00000000..1ecf95b1
 +import com.velocitypowered.proxy.protocol.packet.PluginMessage;
 +import io.netty.buffer.ByteBuf;
 +import io.netty.buffer.ByteBufAllocator;
++import java.io.IOException;
++import java.nio.file.Path;
 +import java.util.ArrayList;
 +import java.util.List;
++import java.util.function.Supplier;
 +import lombok.Getter;
 +import net.elytrium.elytraproxy.botfilter.handler.BotFilterSessionHandler;
 +import net.elytrium.elytraproxy.config.Settings;
++import net.elytrium.elytraproxy.virtual.file.SchematicFile;
++import net.elytrium.elytraproxy.virtual.file.WorldFile;
 +import net.elytrium.elytraproxy.virtual.protocol.cache.PreparedPacket;
 +import net.elytrium.elytraproxy.virtual.protocol.data.registry.Biome;
 +import net.elytrium.elytraproxy.virtual.protocol.packet.PlayerAbilities;
@@ -10088,30 +10328,23 @@ index 00000000..1ecf95b1
 +    this.virtualWorld = new VirtualWorld(dimension,
 +        new DimensionInfo(key, key, true, false), captchaCoords.X, captchaCoords.Y);
 +
-+    /*
-+    for (int x = 0; x < 16; x++) {
-+      for (int z = 0; z < 16; z++) {
-+        virtualWorld.setBlock(x, 40, z, SimpleBlock.GRANITE);
-+        virtualWorld.setBlock(x, 60, z, SimpleBlock.GRANITE);
-+      }
-+    }
-+    for (int x = 1; x < 15; x++) {
-+      for (int z = 1; z < 15; z++) {
-+        if (x % 3 == 0 && z % 3 == 0) {
-+          virtualWorld.setBlock(x, 40, z, SimpleBlock.BARRIER);
-+          virtualWorld.setBlockLight(x, 41, z, (byte) 15);
++    if (Settings.IMP.VIRTUAL.LOAD_WORLD) {
++      try {
++        Path path = Path.of(Settings.IMP.VIRTUAL.WORLD_FILE_PATH);
++        WorldFile file;
++        switch (Settings.IMP.VIRTUAL.WORLD_FILE_TYPE) {
++          case "schematic":
++          default:
++              file = new SchematicFile(path);
++            break;
 +        }
++
++        Settings.VIRTUAL.VIRTUAL_COORDS coords = Settings.IMP.VIRTUAL.VIRTUAL_COORDS;
++        file.toWorld(virtualWorld, coords.X, coords.Y, coords.Z);
++      } catch (IOException e) {
++        e.printStackTrace();
 +      }
 +    }
-+    for (int x = 0; x < 16; x++) {
-+      for (int y = 40; y <= 60; y++) {
-+        virtualWorld.setBlock(x, y, 0, SimpleBlock.GRANITE);
-+        virtualWorld.setBlock(0, y, x, SimpleBlock.GRANITE);
-+        virtualWorld.setBlock(x, y, 15, SimpleBlock.GRANITE);
-+        virtualWorld.setBlock(15, y, x, SimpleBlock.GRANITE);
-+      }
-+    }
-+    */
 +
 +    experience = createExpPackets();
 +    captchaPosition = new PreparedPacket()
@@ -10147,7 +10380,7 @@ index 00000000..1ecf95b1
 +    successfulBotFilterChat = prepare(createChatPacket(Settings.IMP.ANTIBOT.STRINGS.SUCCESSFUL_CRACKED));
 +    successfulBotFilterDisconnect = prepare(createDisconnectPacket(Settings.IMP.ANTIBOT.STRINGS.SUCCESSFUL_PREMIUM));
 +    ipLimit = prepare(createDisconnectPacket(Settings.IMP.AUTH.STRINGS.IP_LIMIT));
-+    antiBotBrand = prepare(createBrandPacket(createBrandBuf(hardcodedBrandString)));
++    antiBotBrand = prepare(() -> createBrandPacket(createBrandBuf(hardcodedBrandString)));
 +  }
 +
 +  private PlayerAbilities createAbilitiesPacket() {
@@ -10215,6 +10448,10 @@ index 00000000..1ecf95b1
 +
 +  private SetSlot createSetSlotPacket(int windowId, int slot, int item, int count, int data) {
 +    return new SetSlot(windowId, slot, item, count, data);
++  }
++
++  private <T extends MinecraftPacket> PreparedPacket prepare(Supplier<T> packets) {
++    return prepare(packets.get());
 +  }
 +
 +  @SafeVarargs
@@ -10431,13 +10668,13 @@ index 00000000..3b9f5fa9
 +  }
 +}
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/world/SimpleBlock.java b/proxy/src/main/java/net/elytrium/elytraproxy/virtual/server/world/SimpleBlock.java
-similarity index 87%
+similarity index 68%
 rename from proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/world/SimpleBlock.java
 rename to proxy/src/main/java/net/elytrium/elytraproxy/virtual/server/world/SimpleBlock.java
-index fe06742f..c041013e 100644
+index fe06742f..817df68a 100644
 --- a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/world/SimpleBlock.java
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/virtual/server/world/SimpleBlock.java
-@@ -17,18 +17,18 @@
+@@ -17,23 +17,23 @@
   * along with this program.  If not, see <http://www.gnu.org/licenses/>.
   */
  
@@ -10454,20 +10691,177 @@ index fe06742f..c041013e 100644
 -import static net.elytrium.elytraproxy.botfilter.server.world.SimpleBlock.Version.MINECRAFT_1_7;
 -import static net.elytrium.elytraproxy.botfilter.server.world.SimpleBlock.Version.MINECRAFT_1_8;
 +package net.elytrium.elytraproxy.virtual.server.world;
-+
-+import static net.elytrium.elytraproxy.virtual.server.world.SimpleBlock.BlockInfo.fallback;
-+import static net.elytrium.elytraproxy.virtual.server.world.SimpleBlock.BlockInfo.info;
-+import static net.elytrium.elytraproxy.virtual.server.world.SimpleBlock.Version.MINECRAFT_1_13;
-+import static net.elytrium.elytraproxy.virtual.server.world.SimpleBlock.Version.MINECRAFT_1_13_1;
-+import static net.elytrium.elytraproxy.virtual.server.world.SimpleBlock.Version.MINECRAFT_1_14;
-+import static net.elytrium.elytraproxy.virtual.server.world.SimpleBlock.Version.MINECRAFT_1_16;
-+import static net.elytrium.elytraproxy.virtual.server.world.SimpleBlock.Version.MINECRAFT_1_16_2;
-+import static net.elytrium.elytraproxy.virtual.server.world.SimpleBlock.Version.MINECRAFT_1_17;
-+import static net.elytrium.elytraproxy.virtual.server.world.SimpleBlock.Version.MINECRAFT_1_7;
-+import static net.elytrium.elytraproxy.virtual.server.world.SimpleBlock.Version.MINECRAFT_1_8;
  
++import static net.elytrium.elytraproxy.virtual.server.world.SimpleBlock.BlockInfo.info;
++import static net.elytrium.elytraproxy.virtual.server.world.SimpleBlock.Version.LEGACY;
++import static net.elytrium.elytraproxy.virtual.server.world.SimpleBlock.Version.MINECRAFT_1_17;
++
++import com.google.gson.Gson;
++import com.google.gson.internal.LinkedTreeMap;
  import com.velocitypowered.api.network.ProtocolVersion;
++import java.io.IOException;
++import java.io.InputStreamReader;
++import java.net.URL;
++import java.nio.charset.StandardCharsets;
  import java.util.Arrays;
+ import java.util.EnumMap;
+ import java.util.EnumSet;
++import java.util.HashMap;
+ import java.util.Map;
+ import java.util.Set;
+ import lombok.NonNull;
+@@ -42,41 +42,32 @@ import org.jetbrains.annotations.NotNull;
+ public class SimpleBlock {
+ 
+   public static final SimpleBlock AIR = air(
+-      info(MINECRAFT_1_7, 0)
+-  );
+-  public static final SimpleBlock STONE = solid(
+-      info(MINECRAFT_1_7, 1)
+-  );
+-  public static final SimpleBlock GRANITE = solid(
+-      fallback(MINECRAFT_1_7, STONE),
+-      info(MINECRAFT_1_8, 1, 1),
+-      info(MINECRAFT_1_13, 2)
+-  );
+-  public static final SimpleBlock GLASS = solid(
+-      info(MINECRAFT_1_7, 20),
+-      info(MINECRAFT_1_13, 230),
+-      info(MINECRAFT_1_16, 231),
+-      info(MINECRAFT_1_17, 262)
+-  );
+-  public static final SimpleBlock TORCH = nonSolid(false,
+-      info(MINECRAFT_1_7, 50, 14),
+-      info(MINECRAFT_1_13, 1130),
+-      info(MINECRAFT_1_13_1, 1131),
+-      info(MINECRAFT_1_14, 1134),
+-      info(MINECRAFT_1_16, 1435),
+-      info(MINECRAFT_1_17, 1491)
+-  );
+-  public static final SimpleBlock BARRIER = solid(
+-      fallback(MINECRAFT_1_7, GLASS),
+-      info(MINECRAFT_1_8, 166),
+-      info(MINECRAFT_1_13, 6493),
+-      info(MINECRAFT_1_13_1, 6494),
+-      info(MINECRAFT_1_14, 7000),
+-      info(MINECRAFT_1_16, 7536),
+-      info(MINECRAFT_1_16_2, 7540),
+-      info(MINECRAFT_1_17, 7754)
++      info(LEGACY, 0)
+   );
+ 
++  private static final Gson gson = new Gson();
++  private static final HashMap<Short, SimpleBlock> legacyIDsMap = new HashMap<>();
++
++  static {
++    try {
++      URL file = ClassLoader.getSystemResource("net/elytrium/elytraproxy/virtual/ids.json");
++      LinkedTreeMap<String, LinkedTreeMap<String, Double>> map = gson.fromJson(
++          new InputStreamReader(file.openStream(), StandardCharsets.UTF_8), LinkedTreeMap.class);
++
++      map.forEach((legacyBlockId, versionMap) -> {
++        BlockInfo[] info = versionMap.entrySet().stream()
++            .map(e -> info(Version.parse(e.getKey()), e.getValue().intValue()))
++            .toArray(BlockInfo[]::new);
++
++        legacyIDsMap.put(Short.valueOf(legacyBlockId), solid(info));
++      });
++
++      legacyIDsMap.put((short) 0, AIR);
++    } catch (IOException e) {
++      e.printStackTrace();
++    }
++  }
++
+   private final Map<Version, BlockInfo> blockInfos = new EnumMap<>(Version.class);
+   private final boolean solid;
+   private final boolean air;
+@@ -101,6 +92,14 @@ public class SimpleBlock {
+     return blockInfos.get(version).getData();
+   }
+ 
++  public short getId(ProtocolVersion version) {
++    return getId(Version.map(version));
++  }
++
++  public byte getData(ProtocolVersion version) {
++    return getData(Version.map(version));
++  }
++
+   public boolean isSolid() {
+     return solid;
+   }
+@@ -129,29 +128,56 @@ public class SimpleBlock {
+     return new SimpleBlock(false, false, motionBlocking, infos);
+   }
+ 
++  public static @NotNull SimpleBlock fromLegacyId(short id) {
++    return legacyIDsMap.get(id);
++  }
++
+   public static @NotNull SimpleBlock air(BlockInfo... infos) {
+     return new SimpleBlock(false, true, false, infos);
+   }
+ 
+   public enum Version {
++    /*
+     MINECRAFT_1_7(ProtocolVersion.MINECRAFT_1_7_2, ProtocolVersion.MINECRAFT_1_7_6),
+     MINECRAFT_1_8(ProtocolVersion.MINECRAFT_1_8),
+     MINECRAFT_1_9(EnumSet.range(ProtocolVersion.MINECRAFT_1_9, ProtocolVersion.MINECRAFT_1_9_4)),
+     MINECRAFT_1_10(ProtocolVersion.MINECRAFT_1_10),
+     MINECRAFT_1_11(ProtocolVersion.MINECRAFT_1_11, ProtocolVersion.MINECRAFT_1_11_1),
+     MINECRAFT_1_12(EnumSet.range(ProtocolVersion.MINECRAFT_1_12, ProtocolVersion.MINECRAFT_1_12_2)),
++    */
++    LEGACY(EnumSet.range(ProtocolVersion.MINECRAFT_1_7_2, ProtocolVersion.MINECRAFT_1_12_2)),
+     MINECRAFT_1_13(ProtocolVersion.MINECRAFT_1_13),
+-    MINECRAFT_1_13_1(ProtocolVersion.MINECRAFT_1_13_1, ProtocolVersion.MINECRAFT_1_13_2),
++    MINECRAFT_1_13_2(ProtocolVersion.MINECRAFT_1_13_1, ProtocolVersion.MINECRAFT_1_13_2),
+     MINECRAFT_1_14(EnumSet.range(ProtocolVersion.MINECRAFT_1_14, ProtocolVersion.MINECRAFT_1_14_4)),
+     MINECRAFT_1_15(EnumSet.range(ProtocolVersion.MINECRAFT_1_15, ProtocolVersion.MINECRAFT_1_15_2)),
+     MINECRAFT_1_16(ProtocolVersion.MINECRAFT_1_16, ProtocolVersion.MINECRAFT_1_16_1),
+-    MINECRAFT_1_16_2(ProtocolVersion.MINECRAFT_1_16_2, ProtocolVersion.MINECRAFT_1_16_3),
+-    MINECRAFT_1_16_4(ProtocolVersion.MINECRAFT_1_16_4),
+-    MINECRAFT_1_17(ProtocolVersion.MINECRAFT_1_17);
++    MINECRAFT_1_16_2(EnumSet.range(ProtocolVersion.MINECRAFT_1_16_2, ProtocolVersion.MINECRAFT_1_16_4)),
++    MINECRAFT_1_17(EnumSet.range(ProtocolVersion.MINECRAFT_1_17, ProtocolVersion.MINECRAFT_1_17_1));
+ 
+-    private static EnumMap<ProtocolVersion, Version> mcVersionToBlockVersions = new EnumMap<>(
++    private static final EnumMap<ProtocolVersion, Version> mcVersionToBlockVersions = new EnumMap<>(
+         ProtocolVersion.class);
+ 
++    public static Version parse(String from) {
++      switch (from) {
++        case "1.13":
++          return MINECRAFT_1_13;
++        case "1.13.2":
++          return MINECRAFT_1_13_2;
++        case "1.14":
++          return MINECRAFT_1_14;
++        case "1.15":
++          return MINECRAFT_1_15;
++        case "1.16":
++          return MINECRAFT_1_16;
++        case "1.16.2":
++          return MINECRAFT_1_16_2;
++        case "1.17":
++          return MINECRAFT_1_17;
++        default:
++          return LEGACY;
++      }
++    }
++
+     static {
+       for (Version version : Version.values()) {
+         for (ProtocolVersion protocolVersion : version.versions) {
+@@ -160,7 +186,7 @@ public class SimpleBlock {
+       }
+     }
+ 
+-    private Set<ProtocolVersion> versions;
++    private final Set<ProtocolVersion> versions;
+ 
+     Version(ProtocolVersion... versions) {
+       this.versions = EnumSet.copyOf(Arrays.asList(versions));
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/world/VirtualWorld.java b/proxy/src/main/java/net/elytrium/elytraproxy/virtual/server/world/VirtualWorld.java
 similarity index 81%
 rename from proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/world/VirtualWorld.java
@@ -10652,13 +11046,13 @@ index db6ca3a7..db6a8cca 100644
    }
  
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/world/chunk/SimpleSection.java b/proxy/src/main/java/net/elytrium/elytraproxy/virtual/server/world/chunk/SimpleSection.java
-similarity index 88%
+similarity index 83%
 rename from proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/world/chunk/SimpleSection.java
 rename to proxy/src/main/java/net/elytrium/elytraproxy/virtual/server/world/chunk/SimpleSection.java
-index 1a062bd0..5825c7c0 100644
+index 1a062bd0..c4fbdf79 100644
 --- a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/server/world/chunk/SimpleSection.java
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/virtual/server/world/chunk/SimpleSection.java
-@@ -17,15 +17,15 @@
+@@ -17,15 +17,16 @@
   * along with this program.  If not, see <http://www.gnu.org/licenses/>.
   */
  
@@ -10666,6 +11060,7 @@ index 1a062bd0..5825c7c0 100644
 +package net.elytrium.elytraproxy.virtual.server.world.chunk;
  
  import com.google.common.base.Preconditions;
++import com.velocitypowered.api.network.ProtocolVersion;
  import lombok.AllArgsConstructor;
  import lombok.Getter;
  import lombok.RequiredArgsConstructor;
@@ -10678,6 +11073,2534 @@ index 1a062bd0..5825c7c0 100644
  import org.jetbrains.annotations.Nullable;
  
  @RequiredArgsConstructor
+@@ -37,7 +38,7 @@ public class SimpleSection {
+   private long lastUpdate = System.nanoTime();
+ 
+   public SimpleSection() {
+-    this(new BlockStorage19(SimpleBlock.Version.MINECRAFT_1_17));
++    this(new BlockStorage19(ProtocolVersion.MINECRAFT_1_17));
+   }
+ 
+   public SimpleBlock getBlockAt(int x, int y, int z) {
+diff --git a/proxy/src/main/resources/net/elytrium/elytraproxy/virtual/ids.json b/proxy/src/main/resources/net/elytrium/elytraproxy/virtual/ids.json
+new file mode 100644
+index 00000000..18b22e81
+--- /dev/null
++++ b/proxy/src/main/resources/net/elytrium/elytraproxy/virtual/ids.json
+@@ -0,0 +1,2512 @@
++{
++  "1": {
++    "legacy": 1,
++    "1.13": 1,
++    "1.13.2": 1,
++    "1.14": 1,
++    "1.15": 1,
++    "1.16": 1,
++    "1.16.2": 1,
++    "1.17": 1
++  },
++  "2": {
++    "legacy": 2,
++    "1.13": 94,
++    "1.13.2": 94,
++    "1.14": 94,
++    "1.15": 94,
++    "1.16": 95,
++    "1.16.2": 95,
++    "1.17": 101
++  },
++  "3": {
++    "legacy": 3,
++    "1.13": 9,
++    "1.13.2": 9,
++    "1.14": 9,
++    "1.15": 9,
++    "1.16": 9,
++    "1.16.2": 9,
++    "1.17": 9
++  },
++  "4": {
++    "legacy": 4,
++    "1.13": 12,
++    "1.13.2": 12,
++    "1.14": 12,
++    "1.15": 12,
++    "1.16": 12,
++    "1.16.2": 12,
++    "1.17": 12
++  },
++  "5": {
++    "legacy": 5,
++    "1.13": 13,
++    "1.13.2": 13,
++    "1.14": 13,
++    "1.15": 13,
++    "1.16": 13,
++    "1.16.2": 13,
++    "1.17": 13
++  },
++  "6": {
++    "legacy": 6,
++    "1.13": 19,
++    "1.13.2": 19,
++    "1.14": 19,
++    "1.15": 19,
++    "1.16": 19,
++    "1.16.2": 19,
++    "1.17": 19
++  },
++  "7": {
++    "legacy": 7,
++    "1.13": 25,
++    "1.13.2": 25,
++    "1.14": 25,
++    "1.15": 25,
++    "1.16": 25,
++    "1.16.2": 25,
++    "1.17": 25
++  },
++  "8": {
++    "legacy": 8,
++    "1.13": 26,
++    "1.13.2": 26,
++    "1.14": 26,
++    "1.15": 26,
++    "1.16": 26,
++    "1.16.2": 26,
++    "1.17": 26
++  },
++  "9": {
++    "legacy": 9,
++    "1.13": 26,
++    "1.13.2": 26,
++    "1.14": 26,
++    "1.15": 26,
++    "1.16": 26,
++    "1.16.2": 26,
++    "1.17": 26
++  },
++  "10": {
++    "legacy": 10,
++    "1.13": 27,
++    "1.13.2": 27,
++    "1.14": 27,
++    "1.15": 27,
++    "1.16": 27,
++    "1.16.2": 27,
++    "1.17": 27
++  },
++  "11": {
++    "legacy": 11,
++    "1.13": 27,
++    "1.13.2": 27,
++    "1.14": 27,
++    "1.15": 27,
++    "1.16": 27,
++    "1.16.2": 27,
++    "1.17": 27
++  },
++  "12": {
++    "legacy": 12,
++    "1.13": 28,
++    "1.13.2": 28,
++    "1.14": 28,
++    "1.15": 28,
++    "1.16": 28,
++    "1.16.2": 28,
++    "1.17": 28
++  },
++  "13": {
++    "legacy": 13,
++    "1.13": 30,
++    "1.13.2": 30,
++    "1.14": 30,
++    "1.15": 30,
++    "1.16": 30,
++    "1.16.2": 30,
++    "1.17": 30
++  },
++  "14": {
++    "legacy": 14,
++    "1.13": 31,
++    "1.13.2": 31,
++    "1.14": 31,
++    "1.15": 31,
++    "1.16": 31,
++    "1.16.2": 31,
++    "1.17": 31
++  },
++  "15": {
++    "legacy": 15,
++    "1.13": 32,
++    "1.13.2": 32,
++    "1.14": 32,
++    "1.15": 32,
++    "1.16": 32,
++    "1.16.2": 32,
++    "1.17": 33
++  },
++  "16": {
++    "legacy": 16,
++    "1.13": 33,
++    "1.13.2": 33,
++    "1.14": 33,
++    "1.15": 33,
++    "1.16": 33,
++    "1.16.2": 33,
++    "1.17": 35
++  },
++  "17": {
++    "legacy": 17,
++    "1.13": 34,
++    "1.13.2": 34,
++    "1.14": 34,
++    "1.15": 34,
++    "1.16": 35,
++    "1.16.2": 35,
++    "1.17": 38
++  },
++  "18": {
++    "legacy": 18,
++    "1.13": 58,
++    "1.13.2": 58,
++    "1.14": 58,
++    "1.15": 58,
++    "1.16": 59,
++    "1.16.2": 59,
++    "1.17": 62
++  },
++  "19": {
++    "legacy": 19,
++    "1.13": 64,
++    "1.13.2": 64,
++    "1.14": 64,
++    "1.15": 64,
++    "1.16": 65,
++    "1.16.2": 65,
++    "1.17": 70
++  },
++  "20": {
++    "legacy": 20,
++    "1.13": 66,
++    "1.13.2": 66,
++    "1.14": 66,
++    "1.15": 66,
++    "1.16": 67,
++    "1.16.2": 67,
++    "1.17": 72
++  },
++  "21": {
++    "legacy": 21,
++    "1.13": 67,
++    "1.13.2": 67,
++    "1.14": 67,
++    "1.15": 67,
++    "1.16": 68,
++    "1.16.2": 68,
++    "1.17": 73
++  },
++  "22": {
++    "legacy": 22,
++    "1.13": 68,
++    "1.13.2": 68,
++    "1.14": 68,
++    "1.15": 68,
++    "1.16": 69,
++    "1.16.2": 69,
++    "1.17": 75
++  },
++  "23": {
++    "legacy": 23,
++    "1.13": 69,
++    "1.13.2": 69,
++    "1.14": 69,
++    "1.15": 69,
++    "1.16": 70,
++    "1.16.2": 70,
++    "1.17": 76
++  },
++  "24": {
++    "legacy": 24,
++    "1.13": 70,
++    "1.13.2": 70,
++    "1.14": 70,
++    "1.15": 70,
++    "1.16": 71,
++    "1.16.2": 71,
++    "1.17": 77
++  },
++  "25": {
++    "legacy": 25,
++    "1.13": 73,
++    "1.13.2": 73,
++    "1.14": 73,
++    "1.15": 73,
++    "1.16": 74,
++    "1.16.2": 74,
++    "1.17": 80
++  },
++  "26": {
++    "legacy": 26,
++    "1.13": 74,
++    "1.13.2": 74,
++    "1.14": 74,
++    "1.15": 74,
++    "1.16": 75,
++    "1.16.2": 75,
++    "1.17": 81
++  },
++  "27": {
++    "legacy": 27,
++    "1.13": 90,
++    "1.13.2": 90,
++    "1.14": 90,
++    "1.15": 90,
++    "1.16": 91,
++    "1.16.2": 91,
++    "1.17": 97
++  },
++  "28": {
++    "legacy": 28,
++    "1.13": 91,
++    "1.13.2": 91,
++    "1.14": 91,
++    "1.15": 91,
++    "1.16": 92,
++    "1.16.2": 92,
++    "1.17": 98
++  },
++  "29": {
++    "legacy": 29,
++    "1.13": 92,
++    "1.13.2": 92,
++    "1.14": 92,
++    "1.15": 92,
++    "1.16": 93,
++    "1.16.2": 93,
++    "1.17": 99
++  },
++  "30": {
++    "legacy": 30,
++    "1.13": 93,
++    "1.13.2": 93,
++    "1.14": 93,
++    "1.15": 93,
++    "1.16": 94,
++    "1.16.2": 94,
++    "1.17": 100
++  },
++  "31": {
++    "legacy": 31,
++    "1.13": 390,
++    "1.13.2": 390,
++    "1.14": 406,
++    "1.15": 406,
++    "1.16": 414,
++    "1.16.2": 414,
++    "1.17": 428
++  },
++  "32": {
++    "legacy": 32,
++    "1.13": 96,
++    "1.13.2": 96,
++    "1.14": 96,
++    "1.15": 96,
++    "1.16": 97,
++    "1.16.2": 97,
++    "1.17": 103
++  },
++  "33": {
++    "legacy": 33,
++    "1.13": 99,
++    "1.13.2": 99,
++    "1.14": 99,
++    "1.15": 99,
++    "1.16": 100,
++    "1.16.2": 100,
++    "1.17": 106
++  },
++  "34": {
++    "legacy": 34,
++    "1.13": 100,
++    "1.13.2": 100,
++    "1.14": 100,
++    "1.15": 100,
++    "1.16": 101,
++    "1.16.2": 101,
++    "1.17": 107
++  },
++  "35": {
++    "legacy": 35,
++    "1.13": 101,
++    "1.13.2": 101,
++    "1.14": 101,
++    "1.15": 101,
++    "1.16": 102,
++    "1.16.2": 102,
++    "1.17": 108
++  },
++  "37": {
++    "legacy": 37,
++    "1.13": 118,
++    "1.13.2": 118,
++    "1.14": 118,
++    "1.15": 118,
++    "1.16": 119,
++    "1.16.2": 119,
++    "1.17": 125
++  },
++  "38": {
++    "legacy": 38,
++    "1.13": 119,
++    "1.13.2": 119,
++    "1.14": 119,
++    "1.15": 119,
++    "1.16": 120,
++    "1.16.2": 120,
++    "1.17": 126
++  },
++  "39": {
++    "legacy": 39,
++    "1.13": 128,
++    "1.13.2": 128,
++    "1.14": 131,
++    "1.15": 131,
++    "1.16": 132,
++    "1.16.2": 132,
++    "1.17": 138
++  },
++  "40": {
++    "legacy": 40,
++    "1.13": 129,
++    "1.13.2": 129,
++    "1.14": 132,
++    "1.15": 132,
++    "1.16": 133,
++    "1.16.2": 133,
++    "1.17": 139
++  },
++  "41": {
++    "legacy": 41,
++    "1.13": 130,
++    "1.13.2": 130,
++    "1.14": 133,
++    "1.15": 133,
++    "1.16": 134,
++    "1.16.2": 134,
++    "1.17": 140
++  },
++  "42": {
++    "legacy": 42,
++    "1.13": 131,
++    "1.13.2": 131,
++    "1.14": 134,
++    "1.15": 134,
++    "1.16": 135,
++    "1.16.2": 135,
++    "1.17": 141
++  },
++  "43": {
++    "legacy": 43,
++    "1.13": 437,
++    "1.13.2": 437,
++    "1.14": 450,
++    "1.15": 450,
++    "1.16": 458,
++    "1.16.2": 458,
++    "1.17": 472
++  },
++  "44": {
++    "legacy": 44,
++    "1.13": 437,
++    "1.13.2": 437,
++    "1.14": 450,
++    "1.15": 450,
++    "1.16": 458,
++    "1.16.2": 458,
++    "1.17": 472
++  },
++  "45": {
++    "legacy": 45,
++    "1.13": 132,
++    "1.13.2": 132,
++    "1.14": 135,
++    "1.15": 135,
++    "1.16": 136,
++    "1.16.2": 136,
++    "1.17": 142
++  },
++  "46": {
++    "legacy": 46,
++    "1.13": 133,
++    "1.13.2": 133,
++    "1.14": 136,
++    "1.15": 136,
++    "1.16": 137,
++    "1.16.2": 137,
++    "1.17": 143
++  },
++  "47": {
++    "legacy": 47,
++    "1.13": 134,
++    "1.13.2": 134,
++    "1.14": 137,
++    "1.15": 137,
++    "1.16": 138,
++    "1.16.2": 138,
++    "1.17": 144
++  },
++  "48": {
++    "legacy": 48,
++    "1.13": 135,
++    "1.13.2": 135,
++    "1.14": 138,
++    "1.15": 138,
++    "1.16": 139,
++    "1.16.2": 139,
++    "1.17": 145
++  },
++  "49": {
++    "legacy": 49,
++    "1.13": 136,
++    "1.13.2": 136,
++    "1.14": 139,
++    "1.15": 139,
++    "1.16": 140,
++    "1.16.2": 140,
++    "1.17": 146
++  },
++  "50": {
++    "legacy": 50,
++    "1.13": 137,
++    "1.13.2": 137,
++    "1.14": 140,
++    "1.15": 140,
++    "1.16": 141,
++    "1.16.2": 141,
++    "1.17": 147
++  },
++  "51": {
++    "legacy": 51,
++    "1.13": 139,
++    "1.13.2": 139,
++    "1.14": 142,
++    "1.15": 142,
++    "1.16": 143,
++    "1.16.2": 143,
++    "1.17": 149
++  },
++  "52": {
++    "legacy": 52,
++    "1.13": 140,
++    "1.13.2": 140,
++    "1.14": 143,
++    "1.15": 143,
++    "1.16": 145,
++    "1.16.2": 145,
++    "1.17": 151
++  },
++  "53": {
++    "legacy": 53,
++    "1.13": 141,
++    "1.13.2": 141,
++    "1.14": 144,
++    "1.15": 144,
++    "1.16": 146,
++    "1.16.2": 146,
++    "1.17": 152
++  },
++  "54": {
++    "legacy": 54,
++    "1.13": 142,
++    "1.13.2": 142,
++    "1.14": 145,
++    "1.15": 145,
++    "1.16": 147,
++    "1.16.2": 147,
++    "1.17": 153
++  },
++  "55": {
++    "legacy": 55,
++    "1.13": 143,
++    "1.13.2": 143,
++    "1.14": 146,
++    "1.15": 146,
++    "1.16": 148,
++    "1.16.2": 148,
++    "1.17": 154
++  },
++  "56": {
++    "legacy": 56,
++    "1.13": 144,
++    "1.13.2": 144,
++    "1.14": 147,
++    "1.15": 147,
++    "1.16": 149,
++    "1.16.2": 149,
++    "1.17": 155
++  },
++  "57": {
++    "legacy": 57,
++    "1.13": 145,
++    "1.13.2": 145,
++    "1.14": 148,
++    "1.15": 148,
++    "1.16": 150,
++    "1.16.2": 150,
++    "1.17": 157
++  },
++  "58": {
++    "legacy": 58,
++    "1.13": 146,
++    "1.13.2": 146,
++    "1.14": 149,
++    "1.15": 149,
++    "1.16": 151,
++    "1.16.2": 151,
++    "1.17": 158
++  },
++  "59": {
++    "legacy": 59,
++    "1.13": 147,
++    "1.13.2": 147,
++    "1.14": 150,
++    "1.15": 150,
++    "1.16": 152,
++    "1.16.2": 152,
++    "1.17": 159
++  },
++  "60": {
++    "legacy": 60,
++    "1.13": 148,
++    "1.13.2": 148,
++    "1.14": 151,
++    "1.15": 151,
++    "1.16": 153,
++    "1.16.2": 153,
++    "1.17": 160
++  },
++  "61": {
++    "legacy": 61,
++    "1.13": 149,
++    "1.13.2": 149,
++    "1.14": 152,
++    "1.15": 152,
++    "1.16": 154,
++    "1.16.2": 154,
++    "1.17": 161
++  },
++  "62": {
++    "legacy": 62,
++    "1.13": 149,
++    "1.13.2": 149,
++    "1.14": 152,
++    "1.15": 152,
++    "1.16": 154,
++    "1.16.2": 154,
++    "1.17": 161
++  },
++  "63": {
++    "legacy": 63,
++    "1.13": 150,
++    "1.13.2": 150,
++    "1.14": 153,
++    "1.15": 153,
++    "1.16": 155,
++    "1.16.2": 155,
++    "1.17": 162
++  },
++  "64": {
++    "legacy": 64,
++    "1.13": 151,
++    "1.13.2": 151,
++    "1.14": 159,
++    "1.15": 159,
++    "1.16": 161,
++    "1.16.2": 161,
++    "1.17": 168
++  },
++  "65": {
++    "legacy": 65,
++    "1.13": 152,
++    "1.13.2": 152,
++    "1.14": 160,
++    "1.15": 160,
++    "1.16": 162,
++    "1.16.2": 162,
++    "1.17": 169
++  },
++  "66": {
++    "legacy": 66,
++    "1.13": 153,
++    "1.13.2": 153,
++    "1.14": 161,
++    "1.15": 161,
++    "1.16": 163,
++    "1.16.2": 163,
++    "1.17": 170
++  },
++  "67": {
++    "legacy": 67,
++    "1.13": 154,
++    "1.13.2": 154,
++    "1.14": 625,
++    "1.15": 625,
++    "1.16": 633,
++    "1.16.2": 633,
++    "1.17": 647
++  },
++  "68": {
++    "legacy": 68,
++    "1.13": 155,
++    "1.13.2": 155,
++    "1.14": 163,
++    "1.15": 163,
++    "1.16": 165,
++    "1.16.2": 165,
++    "1.17": 172
++  },
++  "69": {
++    "legacy": 69,
++    "1.13": 156,
++    "1.13.2": 156,
++    "1.14": 169,
++    "1.15": 169,
++    "1.16": 171,
++    "1.16.2": 171,
++    "1.17": 178
++  },
++  "70": {
++    "legacy": 70,
++    "1.13": 157,
++    "1.13.2": 157,
++    "1.14": 170,
++    "1.15": 170,
++    "1.16": 172,
++    "1.16.2": 172,
++    "1.17": 179
++  },
++  "71": {
++    "legacy": 71,
++    "1.13": 158,
++    "1.13.2": 158,
++    "1.14": 171,
++    "1.15": 171,
++    "1.16": 173,
++    "1.16.2": 173,
++    "1.17": 180
++  },
++  "72": {
++    "legacy": 72,
++    "1.13": 159,
++    "1.13.2": 159,
++    "1.14": 172,
++    "1.15": 172,
++    "1.16": 174,
++    "1.16.2": 174,
++    "1.17": 181
++  },
++  "73": {
++    "legacy": 73,
++    "1.13": 165,
++    "1.13.2": 165,
++    "1.14": 178,
++    "1.15": 178,
++    "1.16": 180,
++    "1.16.2": 180,
++    "1.17": 187
++  },
++  "74": {
++    "legacy": 74,
++    "1.13": 165,
++    "1.13.2": 165,
++    "1.14": 178,
++    "1.15": 178,
++    "1.16": 180,
++    "1.16.2": 180,
++    "1.17": 187
++  },
++  "75": {
++    "legacy": 75,
++    "1.13": 166,
++    "1.13.2": 166,
++    "1.14": 179,
++    "1.15": 179,
++    "1.16": 181,
++    "1.16.2": 181,
++    "1.17": 189
++  },
++  "76": {
++    "legacy": 76,
++    "1.13": 166,
++    "1.13.2": 166,
++    "1.14": 179,
++    "1.15": 179,
++    "1.16": 181,
++    "1.16.2": 181,
++    "1.17": 189
++  },
++  "77": {
++    "legacy": 77,
++    "1.13": 168,
++    "1.13.2": 168,
++    "1.14": 181,
++    "1.15": 181,
++    "1.16": 183,
++    "1.16.2": 183,
++    "1.17": 191
++  },
++  "78": {
++    "legacy": 78,
++    "1.13": 171,
++    "1.13.2": 171,
++    "1.14": 184,
++    "1.15": 184,
++    "1.16": 186,
++    "1.16.2": 186,
++    "1.17": 194
++  },
++  "79": {
++    "legacy": 79,
++    "1.13": 170,
++    "1.13.2": 170,
++    "1.14": 183,
++    "1.15": 183,
++    "1.16": 185,
++    "1.16.2": 185,
++    "1.17": 193
++  },
++  "80": {
++    "legacy": 80,
++    "1.13": 169,
++    "1.13.2": 169,
++    "1.14": 182,
++    "1.15": 182,
++    "1.16": 184,
++    "1.16.2": 184,
++    "1.17": 192
++  },
++  "81": {
++    "legacy": 81,
++    "1.13": 172,
++    "1.13.2": 172,
++    "1.14": 185,
++    "1.15": 185,
++    "1.16": 187,
++    "1.16.2": 187,
++    "1.17": 195
++  },
++  "82": {
++    "legacy": 82,
++    "1.13": 173,
++    "1.13.2": 173,
++    "1.14": 186,
++    "1.15": 186,
++    "1.16": 188,
++    "1.16.2": 188,
++    "1.17": 196
++  },
++  "83": {
++    "legacy": 83,
++    "1.13": 174,
++    "1.13.2": 174,
++    "1.14": 187,
++    "1.15": 187,
++    "1.16": 189,
++    "1.16.2": 189,
++    "1.17": 197
++  },
++  "84": {
++    "legacy": 84,
++    "1.13": 175,
++    "1.13.2": 175,
++    "1.14": 188,
++    "1.15": 188,
++    "1.16": 190,
++    "1.16.2": 190,
++    "1.17": 198
++  },
++  "85": {
++    "legacy": 85,
++    "1.13": 176,
++    "1.13.2": 176,
++    "1.14": 189,
++    "1.15": 189,
++    "1.16": 191,
++    "1.16.2": 191,
++    "1.17": 199
++  },
++  "86": {
++    "legacy": 86,
++    "1.13": 177,
++    "1.13.2": 177,
++    "1.14": 190,
++    "1.15": 190,
++    "1.16": 192,
++    "1.16.2": 192,
++    "1.17": 200
++  },
++  "87": {
++    "legacy": 87,
++    "1.13": 178,
++    "1.13.2": 178,
++    "1.14": 191,
++    "1.15": 191,
++    "1.16": 193,
++    "1.16.2": 193,
++    "1.17": 201
++  },
++  "88": {
++    "legacy": 88,
++    "1.13": 179,
++    "1.13.2": 179,
++    "1.14": 192,
++    "1.15": 192,
++    "1.16": 194,
++    "1.16.2": 194,
++    "1.17": 202
++  },
++  "89": {
++    "legacy": 89,
++    "1.13": 180,
++    "1.13.2": 180,
++    "1.14": 193,
++    "1.15": 193,
++    "1.16": 200,
++    "1.16.2": 200,
++    "1.17": 208
++  },
++  "90": {
++    "legacy": 90,
++    "1.13": 181,
++    "1.13.2": 181,
++    "1.14": 194,
++    "1.15": 194,
++    "1.16": 201,
++    "1.16.2": 201,
++    "1.17": 209
++  },
++  "91": {
++    "legacy": 91,
++    "1.13": 177,
++    "1.13.2": 177,
++    "1.14": 190,
++    "1.15": 190,
++    "1.16": 192,
++    "1.16.2": 192,
++    "1.17": 200
++  },
++  "92": {
++    "legacy": 92,
++    "1.13": 184,
++    "1.13.2": 184,
++    "1.14": 197,
++    "1.15": 197,
++    "1.16": 204,
++    "1.16.2": 204,
++    "1.17": 212
++  },
++  "93": {
++    "legacy": 93,
++    "1.13": 185,
++    "1.13.2": 185,
++    "1.14": 198,
++    "1.15": 198,
++    "1.16": 205,
++    "1.16.2": 205,
++    "1.17": 213
++  },
++  "94": {
++    "legacy": 94,
++    "1.13": 185,
++    "1.13.2": 185,
++    "1.14": 198,
++    "1.15": 198,
++    "1.16": 205,
++    "1.16.2": 205,
++    "1.17": 213
++  },
++  "95": {
++    "legacy": 95,
++    "1.13": 186,
++    "1.13.2": 186,
++    "1.14": 199,
++    "1.15": 199,
++    "1.16": 206,
++    "1.16.2": 206,
++    "1.17": 214
++  },
++  "96": {
++    "legacy": 96,
++    "1.13": 202,
++    "1.13.2": 202,
++    "1.14": 215,
++    "1.15": 215,
++    "1.16": 222,
++    "1.16.2": 222,
++    "1.17": 230
++  },
++  "98": {
++    "legacy": 98,
++    "1.13": 214,
++    "1.13.2": 214,
++    "1.14": 221,
++    "1.15": 221,
++    "1.16": 228,
++    "1.16.2": 228,
++    "1.17": 236
++  },
++  "99": {
++    "legacy": 99,
++    "1.13": 218,
++    "1.13.2": 218,
++    "1.14": 231,
++    "1.15": 231,
++    "1.16": 238,
++    "1.16.2": 238,
++    "1.17": 246
++  },
++  "100": {
++    "legacy": 100,
++    "1.13": 219,
++    "1.13.2": 219,
++    "1.14": 232,
++    "1.15": 232,
++    "1.16": 239,
++    "1.16.2": 239,
++    "1.17": 247
++  },
++  "101": {
++    "legacy": 101,
++    "1.13": 221,
++    "1.13.2": 221,
++    "1.14": 234,
++    "1.15": 234,
++    "1.16": 241,
++    "1.16.2": 241,
++    "1.17": 249
++  },
++  "102": {
++    "legacy": 102,
++    "1.13": 222,
++    "1.13.2": 222,
++    "1.14": 235,
++    "1.15": 235,
++    "1.16": 243,
++    "1.16.2": 243,
++    "1.17": 251
++  },
++  "103": {
++    "legacy": 103,
++    "1.13": 223,
++    "1.13.2": 223,
++    "1.14": 236,
++    "1.15": 236,
++    "1.16": 244,
++    "1.16.2": 244,
++    "1.17": 252
++  },
++  "104": {
++    "legacy": 104,
++    "1.13": 226,
++    "1.13.2": 226,
++    "1.14": 239,
++    "1.15": 239,
++    "1.16": 247,
++    "1.16.2": 247,
++    "1.17": 255
++  },
++  "105": {
++    "legacy": 105,
++    "1.13": 227,
++    "1.13.2": 227,
++    "1.14": 240,
++    "1.15": 240,
++    "1.16": 248,
++    "1.16.2": 248,
++    "1.17": 256
++  },
++  "106": {
++    "legacy": 106,
++    "1.13": 228,
++    "1.13.2": 228,
++    "1.14": 241,
++    "1.15": 241,
++    "1.16": 249,
++    "1.16.2": 249,
++    "1.17": 257
++  },
++  "107": {
++    "legacy": 107,
++    "1.13": 229,
++    "1.13.2": 229,
++    "1.14": 242,
++    "1.15": 242,
++    "1.16": 250,
++    "1.16.2": 250,
++    "1.17": 259
++  },
++  "108": {
++    "legacy": 108,
++    "1.13": 230,
++    "1.13.2": 230,
++    "1.14": 243,
++    "1.15": 243,
++    "1.16": 251,
++    "1.16.2": 251,
++    "1.17": 260
++  },
++  "109": {
++    "legacy": 109,
++    "1.13": 231,
++    "1.13.2": 231,
++    "1.14": 244,
++    "1.15": 244,
++    "1.16": 252,
++    "1.16.2": 252,
++    "1.17": 261
++  },
++  "110": {
++    "legacy": 110,
++    "1.13": 232,
++    "1.13.2": 232,
++    "1.14": 245,
++    "1.15": 245,
++    "1.16": 253,
++    "1.16.2": 253,
++    "1.17": 262
++  },
++  "111": {
++    "legacy": 111,
++    "1.13": 233,
++    "1.13.2": 233,
++    "1.14": 246,
++    "1.15": 246,
++    "1.16": 254,
++    "1.16.2": 254,
++    "1.17": 263
++  },
++  "112": {
++    "legacy": 112,
++    "1.13": 234,
++    "1.13.2": 234,
++    "1.14": 247,
++    "1.15": 247,
++    "1.16": 255,
++    "1.16.2": 255,
++    "1.17": 264
++  },
++  "113": {
++    "legacy": 113,
++    "1.13": 235,
++    "1.13.2": 235,
++    "1.14": 248,
++    "1.15": 248,
++    "1.16": 256,
++    "1.16.2": 256,
++    "1.17": 265
++  },
++  "114": {
++    "legacy": 114,
++    "1.13": 236,
++    "1.13.2": 236,
++    "1.14": 249,
++    "1.15": 249,
++    "1.16": 257,
++    "1.16.2": 257,
++    "1.17": 266
++  },
++  "115": {
++    "legacy": 115,
++    "1.13": 237,
++    "1.13.2": 237,
++    "1.14": 250,
++    "1.15": 250,
++    "1.16": 258,
++    "1.16.2": 258,
++    "1.17": 267
++  },
++  "116": {
++    "legacy": 116,
++    "1.13": 238,
++    "1.13.2": 238,
++    "1.14": 251,
++    "1.15": 251,
++    "1.16": 259,
++    "1.16.2": 259,
++    "1.17": 268
++  },
++  "117": {
++    "legacy": 117,
++    "1.13": 239,
++    "1.13.2": 239,
++    "1.14": 252,
++    "1.15": 252,
++    "1.16": 260,
++    "1.16.2": 260,
++    "1.17": 269
++  },
++  "118": {
++    "legacy": 118,
++    "1.13": 240,
++    "1.13.2": 240,
++    "1.14": 253,
++    "1.15": 253,
++    "1.16": 261,
++    "1.16.2": 261,
++    "1.17": 270
++  },
++  "119": {
++    "legacy": 119,
++    "1.13": 241,
++    "1.13.2": 241,
++    "1.14": 254,
++    "1.15": 254,
++    "1.16": 262,
++    "1.16.2": 262,
++    "1.17": 274
++  },
++  "120": {
++    "legacy": 120,
++    "1.13": 242,
++    "1.13.2": 242,
++    "1.14": 255,
++    "1.15": 255,
++    "1.16": 263,
++    "1.16.2": 263,
++    "1.17": 275
++  },
++  "121": {
++    "legacy": 121,
++    "1.13": 243,
++    "1.13.2": 243,
++    "1.14": 256,
++    "1.15": 256,
++    "1.16": 264,
++    "1.16.2": 264,
++    "1.17": 276
++  },
++  "122": {
++    "legacy": 122,
++    "1.13": 244,
++    "1.13.2": 244,
++    "1.14": 257,
++    "1.15": 257,
++    "1.16": 265,
++    "1.16.2": 265,
++    "1.17": 277
++  },
++  "123": {
++    "legacy": 123,
++    "1.13": 245,
++    "1.13.2": 245,
++    "1.14": 258,
++    "1.15": 258,
++    "1.16": 266,
++    "1.16.2": 266,
++    "1.17": 278
++  },
++  "124": {
++    "legacy": 124,
++    "1.13": 245,
++    "1.13.2": 245,
++    "1.14": 258,
++    "1.15": 258,
++    "1.16": 266,
++    "1.16.2": 266,
++    "1.17": 278
++  },
++  "125": {
++    "legacy": 125,
++    "1.13": 428,
++    "1.13.2": 428,
++    "1.14": 444,
++    "1.15": 444,
++    "1.16": 452,
++    "1.16.2": 452,
++    "1.17": 466
++  },
++  "126": {
++    "legacy": 126,
++    "1.13": 428,
++    "1.13.2": 428,
++    "1.14": 444,
++    "1.15": 444,
++    "1.16": 452,
++    "1.16.2": 452,
++    "1.17": 466
++  },
++  "127": {
++    "legacy": 127,
++    "1.13": 246,
++    "1.13.2": 246,
++    "1.14": 259,
++    "1.15": 259,
++    "1.16": 267,
++    "1.16.2": 267,
++    "1.17": 279
++  },
++  "128": {
++    "legacy": 128,
++    "1.13": 247,
++    "1.13.2": 247,
++    "1.14": 260,
++    "1.15": 260,
++    "1.16": 268,
++    "1.16.2": 268,
++    "1.17": 280
++  },
++  "129": {
++    "legacy": 129,
++    "1.13": 248,
++    "1.13.2": 248,
++    "1.14": 261,
++    "1.15": 261,
++    "1.16": 269,
++    "1.16.2": 269,
++    "1.17": 281
++  },
++  "130": {
++    "legacy": 130,
++    "1.13": 249,
++    "1.13.2": 249,
++    "1.14": 262,
++    "1.15": 262,
++    "1.16": 270,
++    "1.16.2": 270,
++    "1.17": 283
++  },
++  "131": {
++    "legacy": 131,
++    "1.13": 250,
++    "1.13.2": 250,
++    "1.14": 263,
++    "1.15": 263,
++    "1.16": 271,
++    "1.16.2": 271,
++    "1.17": 284
++  },
++  "132": {
++    "legacy": 132,
++    "1.13": 251,
++    "1.13.2": 251,
++    "1.14": 264,
++    "1.15": 264,
++    "1.16": 272,
++    "1.16.2": 272,
++    "1.17": 285
++  },
++  "133": {
++    "legacy": 133,
++    "1.13": 252,
++    "1.13.2": 252,
++    "1.14": 265,
++    "1.15": 265,
++    "1.16": 273,
++    "1.16.2": 273,
++    "1.17": 286
++  },
++  "134": {
++    "legacy": 134,
++    "1.13": 253,
++    "1.13.2": 253,
++    "1.14": 266,
++    "1.15": 266,
++    "1.16": 274,
++    "1.16.2": 274,
++    "1.17": 287
++  },
++  "135": {
++    "legacy": 135,
++    "1.13": 254,
++    "1.13.2": 254,
++    "1.14": 267,
++    "1.15": 267,
++    "1.16": 275,
++    "1.16.2": 275,
++    "1.17": 288
++  },
++  "136": {
++    "legacy": 136,
++    "1.13": 255,
++    "1.13.2": 255,
++    "1.14": 268,
++    "1.15": 268,
++    "1.16": 276,
++    "1.16.2": 276,
++    "1.17": 289
++  },
++  "137": {
++    "legacy": 137,
++    "1.13": 256,
++    "1.13.2": 256,
++    "1.14": 269,
++    "1.15": 269,
++    "1.16": 277,
++    "1.16.2": 277,
++    "1.17": 290
++  },
++  "138": {
++    "legacy": 138,
++    "1.13": 257,
++    "1.13.2": 257,
++    "1.14": 270,
++    "1.15": 270,
++    "1.16": 278,
++    "1.16.2": 278,
++    "1.17": 291
++  },
++  "139": {
++    "legacy": 139,
++    "1.13": 258,
++    "1.13.2": 258,
++    "1.14": 271,
++    "1.15": 271,
++    "1.16": 279,
++    "1.16.2": 279,
++    "1.17": 292
++  },
++  "140": {
++    "legacy": 140,
++    "1.13": 260,
++    "1.13.2": 260,
++    "1.14": 273,
++    "1.15": 273,
++    "1.16": 281,
++    "1.16.2": 281,
++    "1.17": 294
++  },
++  "141": {
++    "legacy": 141,
++    "1.13": 282,
++    "1.13.2": 282,
++    "1.14": 298,
++    "1.15": 298,
++    "1.16": 306,
++    "1.16.2": 306,
++    "1.17": 319
++  },
++  "142": {
++    "legacy": 142,
++    "1.13": 283,
++    "1.13.2": 283,
++    "1.14": 299,
++    "1.15": 299,
++    "1.16": 307,
++    "1.16.2": 307,
++    "1.17": 320
++  },
++  "143": {
++    "legacy": 143,
++    "1.13": 284,
++    "1.13.2": 284,
++    "1.14": 300,
++    "1.15": 300,
++    "1.16": 308,
++    "1.16.2": 308,
++    "1.17": 321
++  },
++  "144": {
++    "legacy": 144,
++    "1.13": 297,
++    "1.13.2": 297,
++    "1.14": 312,
++    "1.15": 312,
++    "1.16": 320,
++    "1.16.2": 320,
++    "1.17": 333
++  },
++  "145": {
++    "legacy": 145,
++    "1.13": 302,
++    "1.13.2": 302,
++    "1.14": 318,
++    "1.15": 318,
++    "1.16": 326,
++    "1.16.2": 326,
++    "1.17": 339
++  },
++  "146": {
++    "legacy": 146,
++    "1.13": 305,
++    "1.13.2": 305,
++    "1.14": 321,
++    "1.15": 321,
++    "1.16": 329,
++    "1.16.2": 329,
++    "1.17": 342
++  },
++  "147": {
++    "legacy": 147,
++    "1.13": 306,
++    "1.13.2": 306,
++    "1.14": 322,
++    "1.15": 322,
++    "1.16": 330,
++    "1.16.2": 330,
++    "1.17": 343
++  },
++  "148": {
++    "legacy": 148,
++    "1.13": 307,
++    "1.13.2": 307,
++    "1.14": 323,
++    "1.15": 323,
++    "1.16": 331,
++    "1.16.2": 331,
++    "1.17": 344
++  },
++  "149": {
++    "legacy": 149,
++    "1.13": 308,
++    "1.13.2": 308,
++    "1.14": 324,
++    "1.15": 324,
++    "1.16": 332,
++    "1.16.2": 332,
++    "1.17": 345
++  },
++  "150": {
++    "legacy": 150,
++    "1.13": 308,
++    "1.13.2": 308,
++    "1.14": 324,
++    "1.15": 324,
++    "1.16": 332,
++    "1.16.2": 332,
++    "1.17": 345
++  },
++  "151": {
++    "legacy": 151,
++    "1.13": 309,
++    "1.13.2": 309,
++    "1.14": 325,
++    "1.15": 325,
++    "1.16": 333,
++    "1.16.2": 333,
++    "1.17": 346
++  },
++  "152": {
++    "legacy": 152,
++    "1.13": 310,
++    "1.13.2": 310,
++    "1.14": 326,
++    "1.15": 326,
++    "1.16": 334,
++    "1.16.2": 334,
++    "1.17": 347
++  },
++  "153": {
++    "legacy": 153,
++    "1.13": 311,
++    "1.13.2": 311,
++    "1.14": 327,
++    "1.15": 327,
++    "1.16": 335,
++    "1.16.2": 335,
++    "1.17": 348
++  },
++  "154": {
++    "legacy": 154,
++    "1.13": 312,
++    "1.13.2": 312,
++    "1.14": 328,
++    "1.15": 328,
++    "1.16": 336,
++    "1.16.2": 336,
++    "1.17": 349
++  },
++  "155": {
++    "legacy": 155,
++    "1.13": 313,
++    "1.13.2": 313,
++    "1.14": 329,
++    "1.15": 329,
++    "1.16": 337,
++    "1.16.2": 337,
++    "1.17": 350
++  },
++  "156": {
++    "legacy": 156,
++    "1.13": 316,
++    "1.13.2": 316,
++    "1.14": 332,
++    "1.15": 332,
++    "1.16": 340,
++    "1.16.2": 340,
++    "1.17": 353
++  },
++  "157": {
++    "legacy": 157,
++    "1.13": 317,
++    "1.13.2": 317,
++    "1.14": 333,
++    "1.15": 333,
++    "1.16": 341,
++    "1.16.2": 341,
++    "1.17": 354
++  },
++  "158": {
++    "legacy": 158,
++    "1.13": 318,
++    "1.13.2": 318,
++    "1.14": 334,
++    "1.15": 334,
++    "1.16": 342,
++    "1.16.2": 342,
++    "1.17": 355
++  },
++  "159": {
++    "legacy": 159,
++    "1.13": 515,
++    "1.13.2": 515,
++    "1.14": 534,
++    "1.15": 534,
++    "1.16": 542,
++    "1.16.2": 542,
++    "1.17": 556
++  },
++  "160": {
++    "legacy": 160,
++    "1.13": 335,
++    "1.13.2": 335,
++    "1.14": 351,
++    "1.15": 351,
++    "1.16": 359,
++    "1.16.2": 359,
++    "1.17": 372
++  },
++  "161": {
++    "legacy": 161,
++    "1.13": 62,
++    "1.13.2": 62,
++    "1.14": 62,
++    "1.15": 62,
++    "1.16": 63,
++    "1.16.2": 63,
++    "1.17": 66
++  },
++  "162": {
++    "legacy": 162,
++    "1.13": 38,
++    "1.13.2": 38,
++    "1.14": 38,
++    "1.15": 38,
++    "1.16": 39,
++    "1.16.2": 39,
++    "1.17": 42
++  },
++  "163": {
++    "legacy": 163,
++    "1.13": 351,
++    "1.13.2": 351,
++    "1.14": 367,
++    "1.15": 367,
++    "1.16": 375,
++    "1.16.2": 375,
++    "1.17": 388
++  },
++  "164": {
++    "legacy": 164,
++    "1.13": 352,
++    "1.13.2": 352,
++    "1.14": 368,
++    "1.15": 368,
++    "1.16": 376,
++    "1.16.2": 376,
++    "1.17": 389
++  },
++  "165": {
++    "legacy": 165,
++    "1.13": 353,
++    "1.13.2": 353,
++    "1.14": 369,
++    "1.15": 369,
++    "1.16": 377,
++    "1.16.2": 377,
++    "1.17": 390
++  },
++  "166": {
++    "legacy": 166,
++    "1.13": 354,
++    "1.13.2": 354,
++    "1.14": 370,
++    "1.15": 370,
++    "1.16": 378,
++    "1.16.2": 378,
++    "1.17": 391
++  },
++  "167": {
++    "legacy": 167,
++    "1.13": 355,
++    "1.13.2": 355,
++    "1.14": 371,
++    "1.15": 371,
++    "1.16": 379,
++    "1.16.2": 379,
++    "1.17": 393
++  },
++  "168": {
++    "legacy": 168,
++    "1.13": 356,
++    "1.13.2": 356,
++    "1.14": 372,
++    "1.15": 372,
++    "1.16": 380,
++    "1.16.2": 380,
++    "1.17": 394
++  },
++  "169": {
++    "legacy": 169,
++    "1.13": 365,
++    "1.13.2": 365,
++    "1.14": 381,
++    "1.15": 381,
++    "1.16": 389,
++    "1.16.2": 389,
++    "1.17": 403
++  },
++  "170": {
++    "legacy": 170,
++    "1.13": 366,
++    "1.13.2": 366,
++    "1.14": 382,
++    "1.15": 382,
++    "1.16": 390,
++    "1.16.2": 390,
++    "1.17": 404
++  },
++  "171": {
++    "legacy": 171,
++    "1.13": 367,
++    "1.13.2": 367,
++    "1.14": 383,
++    "1.15": 383,
++    "1.16": 391,
++    "1.16.2": 391,
++    "1.17": 405
++  },
++  "172": {
++    "legacy": 172,
++    "1.13": 527,
++    "1.13.2": 527,
++    "1.14": 546,
++    "1.15": 546,
++    "1.16": 554,
++    "1.16.2": 554,
++    "1.17": 568
++  },
++  "173": {
++    "legacy": 173,
++    "1.13": 384,
++    "1.13.2": 384,
++    "1.14": 400,
++    "1.15": 400,
++    "1.16": 408,
++    "1.16.2": 408,
++    "1.17": 422
++  },
++  "174": {
++    "legacy": 174,
++    "1.13": 385,
++    "1.13.2": 385,
++    "1.14": 401,
++    "1.15": 401,
++    "1.16": 409,
++    "1.16.2": 409,
++    "1.17": 423
++  },
++  "175": {
++    "legacy": 175,
++    "1.13": 386,
++    "1.13.2": 386,
++    "1.14": 402,
++    "1.15": 402,
++    "1.16": 410,
++    "1.16.2": 410,
++    "1.17": 424
++  },
++  "176": {
++    "legacy": 176,
++    "1.13": 392,
++    "1.13.2": 392,
++    "1.14": 408,
++    "1.15": 408,
++    "1.16": 416,
++    "1.16.2": 416,
++    "1.17": 430
++  },
++  "177": {
++    "legacy": 177,
++    "1.13": 408,
++    "1.13.2": 408,
++    "1.14": 424,
++    "1.15": 424,
++    "1.16": 432,
++    "1.16.2": 432,
++    "1.17": 446
++  },
++  "178": {
++    "legacy": 178,
++    "1.13": 309,
++    "1.13.2": 309,
++    "1.14": 325,
++    "1.15": 325,
++    "1.16": 333,
++    "1.16.2": 333,
++    "1.17": 346
++  },
++  "179": {
++    "legacy": 179,
++    "1.13": 424,
++    "1.13.2": 424,
++    "1.14": 440,
++    "1.15": 440,
++    "1.16": 448,
++    "1.16.2": 448,
++    "1.17": 462
++  },
++  "180": {
++    "legacy": 180,
++    "1.13": 427,
++    "1.13.2": 427,
++    "1.14": 443,
++    "1.15": 443,
++    "1.16": 451,
++    "1.16.2": 451,
++    "1.17": 465
++  },
++  "181": {
++    "legacy": 181,
++    "1.13": 437,
++    "1.13.2": 437,
++    "1.14": 455,
++    "1.15": 455,
++    "1.16": 463,
++    "1.16.2": 463,
++    "1.17": 477
++  },
++  "182": {
++    "legacy": 182,
++    "1.13": 437,
++    "1.13.2": 437,
++    "1.14": 455,
++    "1.15": 455,
++    "1.16": 463,
++    "1.16.2": 463,
++    "1.17": 477
++  },
++  "183": {
++    "legacy": 183,
++    "1.13": 448,
++    "1.13.2": 448,
++    "1.14": 467,
++    "1.15": 467,
++    "1.16": 475,
++    "1.16.2": 475,
++    "1.17": 489
++  },
++  "184": {
++    "legacy": 184,
++    "1.13": 449,
++    "1.13.2": 449,
++    "1.14": 468,
++    "1.15": 468,
++    "1.16": 476,
++    "1.16.2": 476,
++    "1.17": 490
++  },
++  "185": {
++    "legacy": 185,
++    "1.13": 450,
++    "1.13.2": 450,
++    "1.14": 469,
++    "1.15": 469,
++    "1.16": 477,
++    "1.16.2": 477,
++    "1.17": 491
++  },
++  "186": {
++    "legacy": 186,
++    "1.13": 452,
++    "1.13.2": 452,
++    "1.14": 471,
++    "1.15": 471,
++    "1.16": 479,
++    "1.16.2": 479,
++    "1.17": 493
++  },
++  "187": {
++    "legacy": 187,
++    "1.13": 451,
++    "1.13.2": 451,
++    "1.14": 470,
++    "1.15": 470,
++    "1.16": 478,
++    "1.16.2": 478,
++    "1.17": 492
++  },
++  "188": {
++    "legacy": 188,
++    "1.13": 453,
++    "1.13.2": 453,
++    "1.14": 472,
++    "1.15": 472,
++    "1.16": 480,
++    "1.16.2": 480,
++    "1.17": 494
++  },
++  "189": {
++    "legacy": 189,
++    "1.13": 454,
++    "1.13.2": 454,
++    "1.14": 473,
++    "1.15": 473,
++    "1.16": 481,
++    "1.16.2": 481,
++    "1.17": 495
++  },
++  "190": {
++    "legacy": 190,
++    "1.13": 455,
++    "1.13.2": 455,
++    "1.14": 474,
++    "1.15": 474,
++    "1.16": 482,
++    "1.16.2": 482,
++    "1.17": 496
++  },
++  "191": {
++    "legacy": 191,
++    "1.13": 457,
++    "1.13.2": 457,
++    "1.14": 476,
++    "1.15": 476,
++    "1.16": 484,
++    "1.16.2": 484,
++    "1.17": 498
++  },
++  "192": {
++    "legacy": 192,
++    "1.13": 456,
++    "1.13.2": 456,
++    "1.14": 475,
++    "1.15": 475,
++    "1.16": 483,
++    "1.16.2": 483,
++    "1.17": 497
++  },
++  "193": {
++    "legacy": 193,
++    "1.13": 458,
++    "1.13.2": 458,
++    "1.14": 477,
++    "1.15": 477,
++    "1.16": 485,
++    "1.16.2": 485,
++    "1.17": 499
++  },
++  "194": {
++    "legacy": 194,
++    "1.13": 459,
++    "1.13.2": 459,
++    "1.14": 478,
++    "1.15": 478,
++    "1.16": 486,
++    "1.16.2": 486,
++    "1.17": 500
++  },
++  "195": {
++    "legacy": 195,
++    "1.13": 460,
++    "1.13.2": 460,
++    "1.14": 479,
++    "1.15": 479,
++    "1.16": 487,
++    "1.16.2": 487,
++    "1.17": 501
++  },
++  "196": {
++    "legacy": 196,
++    "1.13": 461,
++    "1.13.2": 461,
++    "1.14": 480,
++    "1.15": 480,
++    "1.16": 488,
++    "1.16.2": 488,
++    "1.17": 502
++  },
++  "197": {
++    "legacy": 197,
++    "1.13": 462,
++    "1.13.2": 462,
++    "1.14": 481,
++    "1.15": 481,
++    "1.16": 489,
++    "1.16.2": 489,
++    "1.17": 503
++  },
++  "198": {
++    "legacy": 198,
++    "1.13": 463,
++    "1.13.2": 463,
++    "1.14": 482,
++    "1.15": 482,
++    "1.16": 490,
++    "1.16.2": 490,
++    "1.17": 504
++  },
++  "199": {
++    "legacy": 199,
++    "1.13": 464,
++    "1.13.2": 464,
++    "1.14": 483,
++    "1.15": 483,
++    "1.16": 491,
++    "1.16.2": 491,
++    "1.17": 505
++  },
++  "200": {
++    "legacy": 200,
++    "1.13": 465,
++    "1.13.2": 465,
++    "1.14": 484,
++    "1.15": 484,
++    "1.16": 492,
++    "1.16.2": 492,
++    "1.17": 506
++  },
++  "201": {
++    "legacy": 201,
++    "1.13": 466,
++    "1.13.2": 466,
++    "1.14": 485,
++    "1.15": 485,
++    "1.16": 493,
++    "1.16.2": 493,
++    "1.17": 507
++  },
++  "202": {
++    "legacy": 202,
++    "1.13": 467,
++    "1.13.2": 467,
++    "1.14": 486,
++    "1.15": 486,
++    "1.16": 494,
++    "1.16.2": 494,
++    "1.17": 508
++  },
++  "203": {
++    "legacy": 203,
++    "1.13": 468,
++    "1.13.2": 468,
++    "1.14": 487,
++    "1.15": 487,
++    "1.16": 495,
++    "1.16.2": 495,
++    "1.17": 509
++  },
++  "204": {
++    "legacy": 204,
++    "1.13": 443,
++    "1.13.2": 443,
++    "1.14": 462,
++    "1.15": 462,
++    "1.16": 470,
++    "1.16.2": 470,
++    "1.17": 484
++  },
++  "205": {
++    "legacy": 205,
++    "1.13": 443,
++    "1.13.2": 443,
++    "1.14": 462,
++    "1.15": 462,
++    "1.16": 470,
++    "1.16.2": 470,
++    "1.17": 484
++  },
++  "206": {
++    "legacy": 206,
++    "1.13": 469,
++    "1.13.2": 469,
++    "1.14": 488,
++    "1.15": 488,
++    "1.16": 496,
++    "1.16.2": 496,
++    "1.17": 510
++  },
++  "207": {
++    "legacy": 207,
++    "1.13": 470,
++    "1.13.2": 470,
++    "1.14": 489,
++    "1.15": 489,
++    "1.16": 497,
++    "1.16.2": 497,
++    "1.17": 511
++  },
++  "208": {
++    "legacy": 208,
++    "1.13": 471,
++    "1.13.2": 471,
++    "1.14": 490,
++    "1.15": 490,
++    "1.16": 498,
++    "1.16.2": 498,
++    "1.17": 14
++  },
++  "209": {
++    "legacy": 209,
++    "1.13": 472,
++    "1.13.2": 472,
++    "1.14": 491,
++    "1.15": 491,
++    "1.16": 499,
++    "1.16.2": 499,
++    "1.17": 513
++  },
++  "210": {
++    "legacy": 210,
++    "1.13": 473,
++    "1.13.2": 473,
++    "1.14": 492,
++    "1.15": 492,
++    "1.16": 500,
++    "1.16.2": 500,
++    "1.17": 514
++  },
++  "211": {
++    "legacy": 211,
++    "1.13": 474,
++    "1.13.2": 474,
++    "1.14": 493,
++    "1.15": 493,
++    "1.16": 501,
++    "1.16.2": 501,
++    "1.17": 515
++  },
++  "212": {
++    "legacy": 212,
++    "1.13": 475,
++    "1.13.2": 475,
++    "1.14": 494,
++    "1.15": 494,
++    "1.16": 502,
++    "1.16.2": 502,
++    "1.17": 516
++  },
++  "213": {
++    "legacy": 213,
++    "1.13": 476,
++    "1.13.2": 476,
++    "1.14": 495,
++    "1.15": 495,
++    "1.16": 503,
++    "1.16.2": 503,
++    "1.17": 517
++  },
++  "214": {
++    "legacy": 214,
++    "1.13": 477,
++    "1.13.2": 477,
++    "1.14": 496,
++    "1.15": 496,
++    "1.16": 504,
++    "1.16.2": 504,
++    "1.17": 518
++  },
++  "215": {
++    "legacy": 215,
++    "1.13": 478,
++    "1.13.2": 478,
++    "1.14": 497,
++    "1.15": 497,
++    "1.16": 505,
++    "1.16.2": 505,
++    "1.17": 519
++  },
++  "216": {
++    "legacy": 216,
++    "1.13": 479,
++    "1.13.2": 479,
++    "1.14": 498,
++    "1.15": 498,
++    "1.16": 506,
++    "1.16.2": 506,
++    "1.17": 520
++  },
++  "217": {
++    "legacy": 217,
++    "1.13": 480,
++    "1.13.2": 480,
++    "1.14": 499,
++    "1.15": 499,
++    "1.16": 507,
++    "1.16.2": 507,
++    "1.17": 521
++  },
++  "218": {
++    "legacy": 218,
++    "1.13": 481,
++    "1.13.2": 481,
++    "1.14": 500,
++    "1.15": 500,
++    "1.16": 508,
++    "1.16.2": 508,
++    "1.17": 522
++  },
++  "219": {
++    "legacy": 219,
++    "1.13": 483,
++    "1.13.2": 483,
++    "1.14": 502,
++    "1.15": 502,
++    "1.16": 510,
++    "1.16.2": 510,
++    "1.17": 524
++  },
++  "220": {
++    "legacy": 220,
++    "1.13": 484,
++    "1.13.2": 484,
++    "1.14": 503,
++    "1.15": 503,
++    "1.16": 511,
++    "1.16.2": 511,
++    "1.17": 525
++  },
++  "221": {
++    "legacy": 221,
++    "1.13": 485,
++    "1.13.2": 485,
++    "1.14": 504,
++    "1.15": 504,
++    "1.16": 512,
++    "1.16.2": 512,
++    "1.17": 526
++  },
++  "222": {
++    "legacy": 222,
++    "1.13": 486,
++    "1.13.2": 486,
++    "1.14": 505,
++    "1.15": 505,
++    "1.16": 513,
++    "1.16.2": 513,
++    "1.17": 527
++  },
++  "223": {
++    "legacy": 223,
++    "1.13": 487,
++    "1.13.2": 487,
++    "1.14": 506,
++    "1.15": 506,
++    "1.16": 514,
++    "1.16.2": 514,
++    "1.17": 528
++  },
++  "224": {
++    "legacy": 224,
++    "1.13": 488,
++    "1.13.2": 488,
++    "1.14": 507,
++    "1.15": 507,
++    "1.16": 515,
++    "1.16.2": 515,
++    "1.17": 529
++  },
++  "225": {
++    "legacy": 225,
++    "1.13": 489,
++    "1.13.2": 489,
++    "1.14": 508,
++    "1.15": 508,
++    "1.16": 516,
++    "1.16.2": 516,
++    "1.17": 530
++  },
++  "226": {
++    "legacy": 226,
++    "1.13": 490,
++    "1.13.2": 490,
++    "1.14": 509,
++    "1.15": 509,
++    "1.16": 517,
++    "1.16.2": 517,
++    "1.17": 531
++  },
++  "227": {
++    "legacy": 227,
++    "1.13": 491,
++    "1.13.2": 491,
++    "1.14": 510,
++    "1.15": 510,
++    "1.16": 518,
++    "1.16.2": 518,
++    "1.17": 532
++  },
++  "228": {
++    "legacy": 228,
++    "1.13": 492,
++    "1.13.2": 492,
++    "1.14": 511,
++    "1.15": 511,
++    "1.16": 519,
++    "1.16.2": 519,
++    "1.17": 533
++  },
++  "229": {
++    "legacy": 229,
++    "1.13": 493,
++    "1.13.2": 493,
++    "1.14": 512,
++    "1.15": 512,
++    "1.16": 520,
++    "1.16.2": 520,
++    "1.17": 534
++  },
++  "230": {
++    "legacy": 230,
++    "1.13": 494,
++    "1.13.2": 494,
++    "1.14": 513,
++    "1.15": 513,
++    "1.16": 521,
++    "1.16.2": 521,
++    "1.17": 535
++  },
++  "231": {
++    "legacy": 231,
++    "1.13": 495,
++    "1.13.2": 495,
++    "1.14": 514,
++    "1.15": 514,
++    "1.16": 522,
++    "1.16.2": 522,
++    "1.17": 536
++  },
++  "232": {
++    "legacy": 232,
++    "1.13": 496,
++    "1.13.2": 496,
++    "1.14": 515,
++    "1.15": 515,
++    "1.16": 523,
++    "1.16.2": 523,
++    "1.17": 537
++  },
++  "233": {
++    "legacy": 233,
++    "1.13": 497,
++    "1.13.2": 497,
++    "1.14": 516,
++    "1.15": 516,
++    "1.16": 524,
++    "1.16.2": 524,
++    "1.17": 538
++  },
++  "234": {
++    "legacy": 234,
++    "1.13": 498,
++    "1.13.2": 498,
++    "1.14": 517,
++    "1.15": 517,
++    "1.16": 525,
++    "1.16.2": 525,
++    "1.17": 539
++  },
++  "235": {
++    "legacy": 235,
++    "1.13": 499,
++    "1.13.2": 499,
++    "1.14": 518,
++    "1.15": 518,
++    "1.16": 526,
++    "1.16.2": 526,
++    "1.17": 540
++  },
++  "236": {
++    "legacy": 236,
++    "1.13": 500,
++    "1.13.2": 500,
++    "1.14": 519,
++    "1.15": 519,
++    "1.16": 527,
++    "1.16.2": 527,
++    "1.17": 541
++  },
++  "237": {
++    "legacy": 237,
++    "1.13": 501,
++    "1.13.2": 501,
++    "1.14": 520,
++    "1.15": 520,
++    "1.16": 528,
++    "1.16.2": 528,
++    "1.17": 542
++  },
++  "238": {
++    "legacy": 238,
++    "1.13": 502,
++    "1.13.2": 502,
++    "1.14": 521,
++    "1.15": 521,
++    "1.16": 529,
++    "1.16.2": 529,
++    "1.17": 543
++  },
++  "239": {
++    "legacy": 239,
++    "1.13": 503,
++    "1.13.2": 503,
++    "1.14": 522,
++    "1.15": 522,
++    "1.16": 530,
++    "1.16.2": 530,
++    "1.17": 544
++  },
++  "240": {
++    "legacy": 240,
++    "1.13": 504,
++    "1.13.2": 504,
++    "1.14": 523,
++    "1.15": 523,
++    "1.16": 531,
++    "1.16.2": 531,
++    "1.17": 545
++  },
++  "241": {
++    "legacy": 241,
++    "1.13": 505,
++    "1.13.2": 505,
++    "1.14": 524,
++    "1.15": 524,
++    "1.16": 532,
++    "1.16.2": 532,
++    "1.17": 546
++  },
++  "242": {
++    "legacy": 242,
++    "1.13": 506,
++    "1.13.2": 506,
++    "1.14": 525,
++    "1.15": 525,
++    "1.16": 533,
++    "1.16.2": 533,
++    "1.17": 547
++  },
++  "243": {
++    "legacy": 243,
++    "1.13": 507,
++    "1.13.2": 507,
++    "1.14": 526,
++    "1.15": 526,
++    "1.16": 534,
++    "1.16.2": 534,
++    "1.17": 548
++  },
++  "244": {
++    "legacy": 244,
++    "1.13": 508,
++    "1.13.2": 508,
++    "1.14": 527,
++    "1.15": 527,
++    "1.16": 535,
++    "1.16.2": 535,
++    "1.17": 549
++  },
++  "245": {
++    "legacy": 245,
++    "1.13": 509,
++    "1.13.2": 509,
++    "1.14": 528,
++    "1.15": 528,
++    "1.16": 536,
++    "1.16.2": 536,
++    "1.17": 550
++  },
++  "246": {
++    "legacy": 246,
++    "1.13": 510,
++    "1.13.2": 510,
++    "1.14": 529,
++    "1.15": 529,
++    "1.16": 537,
++    "1.16.2": 537,
++    "1.17": 551
++  },
++  "247": {
++    "legacy": 247,
++    "1.13": 511,
++    "1.13.2": 511,
++    "1.14": 530,
++    "1.15": 530,
++    "1.16": 538,
++    "1.16.2": 538,
++    "1.17": 552
++  },
++  "248": {
++    "legacy": 248,
++    "1.13": 512,
++    "1.13.2": 512,
++    "1.14": 531,
++    "1.15": 531,
++    "1.16": 539,
++    "1.16.2": 539,
++    "1.17": 553
++  },
++  "249": {
++    "legacy": 249,
++    "1.13": 513,
++    "1.13.2": 513,
++    "1.14": 532,
++    "1.15": 532,
++    "1.16": 540,
++    "1.16.2": 540,
++    "1.17": 554
++  },
++  "250": {
++    "legacy": 250,
++    "1.13": 514,
++    "1.13.2": 514,
++    "1.14": 533,
++    "1.15": 533,
++    "1.16": 541,
++    "1.16.2": 541,
++    "1.17": 555
++  },
++  "251": {
++    "legacy": 251,
++    "1.13": 522,
++    "1.13.2": 522,
++    "1.14": 541,
++    "1.15": 541,
++    "1.16": 549,
++    "1.16.2": 549,
++    "1.17": 563
++  },
++  "252": {
++    "legacy": 252,
++    "1.13": 538,
++    "1.13.2": 538,
++    "1.14": 557,
++    "1.15": 557,
++    "1.16": 565,
++    "1.16.2": 565,
++    "1.17": 579
++  },
++  "255": {
++    "legacy": 255,
++    "1.13": 592,
++    "1.13.2": 597,
++    "1.14": 673,
++    "1.15": 673,
++    "1.16": 726,
++    "1.16.2": 726,
++    "1.17": 740
++  }
++}
+\ No newline at end of file
 diff --git a/proxy/src/test/java/com/velocitypowered/proxy/util/ratelimit/GuavaCacheRatelimiterTest.java b/proxy/src/test/java/com/velocitypowered/proxy/util/ratelimit/GuavaCacheRatelimiterTest.java
 index 7ed4618e..90508ee0 100644
 --- a/proxy/src/test/java/com/velocitypowered/proxy/util/ratelimit/GuavaCacheRatelimiterTest.java
