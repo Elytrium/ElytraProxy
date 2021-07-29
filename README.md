@@ -2,8 +2,8 @@
 
 # ElytraProxy
 [![Join our Discord](https://img.shields.io/discord/775778822334709780.svg?logo=discord&label=Discord)](https://ely.su/discord)
-[![Proxy Stats](https://img.shields.io/bstats/servers/12233?logo=minecraft&label=ElytraProxy%20Servers)](https://bstats.org/plugin/velocity/ElytraProxy/12233)
-[![Proxy Stats](https://img.shields.io/bstats/players/12233?logo=minecraft&label=Players%20on%20ElytraProxy)](https://bstats.org/plugin/velocity/ElytraProxy/12233)
+[![Proxy Stats](https://img.shields.io/bstats/servers/12271?logo=minecraft&label=ElytraProxy%20Servers)](https://bstats.org/plugin/velocity/ElytraProxy/12271)
+[![Proxy Stats](https://img.shields.io/bstats/players/12271?logo=minecraft&label=Players%20on%20ElytraProxy)](https://bstats.org/plugin/velocity/ElytraProxy/12271)
 
 Really customizable Minecraft proxy server with Auth, AntiBot (aka BotFilter) and some another helpful stuff, based on Velocity. Developed for [Elytrium](https://elytrium.net/), cheap and modern Russian game hosting with powerful AntiBot system.
 
