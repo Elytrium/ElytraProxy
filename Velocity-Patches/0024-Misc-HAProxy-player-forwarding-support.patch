@@ -1,0 +1,83 @@
+From b18086e02cc720a73a2df5aa26ee66f66b2f22a8 Mon Sep 17 00:00:00 2001
+From: Petr Ilin <hevav@hevav.dev>
+Date: Thu, 29 Jul 2021 18:39:44 +0300
+Subject: [PATCH] Misc: HAProxy player forwarding support
+
+
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/config/PlayerInfoForwarding.java b/proxy/src/main/java/com/velocitypowered/proxy/config/PlayerInfoForwarding.java
+index 6adb0655..67798b4e 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/config/PlayerInfoForwarding.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/config/PlayerInfoForwarding.java
+@@ -19,6 +19,7 @@ package com.velocitypowered.proxy.config;
+ 
+ public enum PlayerInfoForwarding {
+   NONE,
++  HAPROXY,
+   LEGACY,
+   BUNGEEGUARD,
+   MODERN
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/backend/VelocityServerConnection.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/backend/VelocityServerConnection.java
+index 9d692eb4..dfdc4c9e 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/connection/backend/VelocityServerConnection.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/backend/VelocityServerConnection.java
+@@ -44,6 +44,11 @@ import com.velocitypowered.proxy.server.VelocityRegisteredServer;
+ import io.netty.buffer.ByteBuf;
+ import io.netty.buffer.Unpooled;
+ import io.netty.channel.ChannelFutureListener;
++import io.netty.handler.codec.haproxy.HAProxyCommand;
++import io.netty.handler.codec.haproxy.HAProxyMessage;
++import io.netty.handler.codec.haproxy.HAProxyMessageEncoder;
++import io.netty.handler.codec.haproxy.HAProxyProtocolVersion;
++import io.netty.handler.codec.haproxy.HAProxyProxiedProtocol;
+ import java.net.InetSocketAddress;
+ import java.nio.charset.StandardCharsets;
+ import java.util.HashMap;
+@@ -95,6 +100,7 @@ public class VelocityServerConnection implements MinecraftConnectionAssociation,
+           if (future.isSuccess()) {
+             connection = new MinecraftConnection(future.channel(), server);
+             connection.setAssociation(VelocityServerConnection.this);
++            future.channel().pipeline().addFirst(HAProxyMessageEncoder.INSTANCE);
+             future.channel().pipeline().addLast(HANDLER, connection);
+ 
+             // Kick off the connection process
+@@ -149,9 +155,24 @@ public class VelocityServerConnection implements MinecraftConnectionAssociation,
+     final MinecraftConnection mc = ensureConnected();
+     PlayerInfoForwarding forwardingMode = server.getConfiguration().getPlayerInfoForwardingMode();
+ 
+-    // Initiate the handshake.
++    InetSocketAddress remoteAddress = (InetSocketAddress) proxyPlayer.getConnection().getChannel().remoteAddress();
+     InetSocketAddress destAddress = registeredServer.getServerInfo().getAddress();
+     ProtocolVersion protocolVersion = proxyPlayer.getConnection().getProtocolVersion();
++
++    // Initiate HAProxy protocol if needed
++    if (forwardingMode == PlayerInfoForwarding.HAPROXY) {
++      mc.delayedWrite(new HAProxyMessage(
++          HAProxyProtocolVersion.V2,
++          HAProxyCommand.PROXY,
++          HAProxyProxiedProtocol.TCP4,
++          remoteAddress.getAddress().getHostAddress(),
++          destAddress.getAddress().getHostAddress(),
++          remoteAddress.getPort(),
++          destAddress.getPort()
++      ));
++    }
++
++    // Initiate the handshake.
+     Handshake handshake = new Handshake();
+     handshake.setNextStatus(StateRegistry.LOGIN_ID);
+     handshake.setProtocolVersion(protocolVersion);
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
+index 7ad943c2..f8ba68e1 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/LoginSessionHandler.java
+@@ -186,6 +186,7 @@ public class LoginSessionHandler implements MinecraftSessionHandler {
+     if (login == null) {
+       throw new IllegalStateException("No ServerLogin packet received yet.");
+     }
++
+     PreLoginEvent event = new PreLoginEvent(inbound, login.getUsername());
+     server.getEventManager().fire(event)
+         .thenRunAsync(() -> {
+-- 
+2.32.0
+

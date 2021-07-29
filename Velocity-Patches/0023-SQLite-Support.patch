@@ -1,4 +1,4 @@
-From bce05d9075ec3c4de15aabafe3a64fd125ea5b70 Mon Sep 17 00:00:00 2001
+From bc843fec9b90a698243907c35292e847ad5a99e0 Mon Sep 17 00:00:00 2001
 From: Petr Ilin <hevav@hevav.dev>
 Date: Wed, 28 Jul 2021 01:28:22 +0300
 Subject: [PATCH] SQLite Support
@@ -17,8 +17,21 @@ index 3916c990..5fd92cc8 100644
  
      // Note: we depend on the API twice, first the main sourceset, and then the annotation processor.
      implementation project(/*':velocity-api'*/':elytraproxy-api')
+diff --git a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
+index dab1866b..a1c14df1 100644
+--- a/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
++++ b/proxy/src/main/java/com/velocitypowered/proxy/VelocityServer.java
+@@ -487,6 +487,8 @@ public class VelocityServer implements ProxyServer, ForwardingAudience {
+       // done first to refuse new connections
+       cm.shutdown();
+ 
++      elytraProxy.shutdown();
++
+       ImmutableList<ConnectedPlayer> players = ImmutableList.copyOf(connectionsByUuid.values());
+       for (ConnectedPlayer player : players) {
+         player.disconnect(reason);
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/ElytraProxy.java b/proxy/src/main/java/net/elytrium/elytraproxy/ElytraProxy.java
-index 819823c2..8ca825f5 100644
+index 819823c2..f38cadd6 100644
 --- a/proxy/src/main/java/net/elytrium/elytraproxy/ElytraProxy.java
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/ElytraProxy.java
 @@ -60,6 +60,7 @@ import net.elytrium.elytraproxy.commands.UnregisterCommand;
@@ -29,7 +42,7 @@ index 819823c2..8ca825f5 100644
  import net.elytrium.elytraproxy.stats.Statistics;
  import net.elytrium.elytraproxy.virtual.protocol.VirtualProtocol;
  import net.elytrium.elytraproxy.virtual.server.VirtualServer;
-@@ -139,12 +140,25 @@ public class ElytraProxy {
+@@ -139,12 +140,29 @@ public class ElytraProxy {
     */
  
    public void initDatabase(VelocityServer server) {
@@ -40,6 +53,10 @@ index 819823c2..8ca825f5 100644
 +
        try {
 -        database = new MySqlDatabase(config.HOSTNAME, config.DATABASE, config.USER, config.PASSWORD);
++        if (database != null) {
++          database.close();
++        }
++
 +        switch (config.STORAGE_TYPE) {
 +          case "sqlite":
 +            Class.forName("org.sqlite.JDBC");
@@ -59,7 +76,7 @@ index 819823c2..8ca825f5 100644
          logger.error(e);
          logger.error(Settings.IMP.MESSAGES.ELYTRAPROXY.DB_FAILURE);
          server.shutdown();
-@@ -152,6 +166,10 @@ public class ElytraProxy {
+@@ -152,6 +170,10 @@ public class ElytraProxy {
      }
    }
  
@@ -70,6 +87,19 @@ index 819823c2..8ca825f5 100644
    /**
     * Initializes ElytraProxy commands.
     * Инициализирует команды ElytraProxy.
+@@ -269,6 +291,12 @@ public class ElytraProxy {
+         .prepareGet("https://api.mojang.com/users/profiles/minecraft/" + nickname);
+   }
+ 
++  public void shutdown() {
++    if (checkDatabaseEnabled() && database != null) {
++      database.close();
++    }
++  }
++
+   private void checkCache(Map<String, CachedUser> userMap, long time) {
+     userMap.entrySet().stream()
+         .filter(u -> u.getValue().getCheckTime() + time <= System.currentTimeMillis())
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java b/proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java
 index ee65cc1a..d594f198 100644
 --- a/proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java
@@ -91,8 +121,19 @@ index ee65cc1a..d594f198 100644
      public String HOSTNAME = "127.0.0.1:3306";
      public String USER = "user";
      public String PASSWORD = "password";
+diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/database/Database.java b/proxy/src/main/java/net/elytrium/elytraproxy/database/Database.java
+index a04b2e34..35536cb5 100644
+--- a/proxy/src/main/java/net/elytrium/elytraproxy/database/Database.java
++++ b/proxy/src/main/java/net/elytrium/elytraproxy/database/Database.java
+@@ -49,4 +49,6 @@ public abstract class Database {
+   public abstract <T> T queryResult(String query, Class<T> type);
+ 
+   public abstract <T> List<T> queryResultList(String query, Class<T> type);
++
++  public abstract void close();
+ }
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/database/MySqlDatabase.java b/proxy/src/main/java/net/elytrium/elytraproxy/database/MySqlDatabase.java
-index e8844c94..09903666 100644
+index e8844c94..c615d99d 100644
 --- a/proxy/src/main/java/net/elytrium/elytraproxy/database/MySqlDatabase.java
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/database/MySqlDatabase.java
 @@ -52,6 +52,10 @@ public class MySqlDatabase extends Database {
@@ -106,7 +147,23 @@ index e8844c94..09903666 100644
    @Override
    @SuppressFBWarnings(value = "OBL_UNSATISFIED_OBLIGATION_EXCEPTION_EDGE",
        justification = "We don't need completion of query here")
-@@ -211,13 +215,13 @@ public class MySqlDatabase extends Database {
+@@ -179,6 +183,15 @@ public class MySqlDatabase extends Database {
+     return null;
+   }
+ 
++  @Override
++  public void close() {
++    try {
++      connection.close();
++    } catch (SQLException e) {
++      e.printStackTrace();
++    }
++  }
++
+   private <T> Map<String, Object> serializeToMap(T from, Class<T> type)
+       throws NoSuchMethodException, IllegalAccessException,
+       InvocationTargetException, InstantiationException, SQLException {
+@@ -211,13 +224,13 @@ public class MySqlDatabase extends Database {
      return result;
    }
  

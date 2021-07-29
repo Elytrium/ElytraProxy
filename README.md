@@ -17,7 +17,7 @@ Test server: [``ely.su``](https://hotmc.ru/minecraft-server-203216)
 - 1.7 - 1.17.1 is supported
 - The most powerful bot protection on market (see below) via Falling Check, Captcha and ClientSettings + MC|Brand packets decryption.
 - Customizable Captcha - change font, backplate or alphabet of captcha
-- MySQL + BCrypt Auth System with IP Limit (by default: 3 accounts on 1 IP during 6 hours), "Online Mode (aka Premium) accounts skip auth" mode is supported, 2FA TOTP (aka Google Authenticator)
+- SQLite/MySQL + BCrypt Auth System with IP Limit (by default: 3 accounts on 1 IP during 6 hours), "Online Mode (aka Premium) accounts skip auth" mode is supported, 2FA TOTP (aka Google Authenticator)
 - Change dimension of VirtualServer
 - BungeeCord common commands(/find, /send, /alert)
 - Hostnames Manager(blocklist or allowlist)
