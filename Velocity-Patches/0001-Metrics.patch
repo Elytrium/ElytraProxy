@@ -1,4 +1,4 @@
-From 1633767d0e89011e1544bec9bb2e305f260b3c0a Mon Sep 17 00:00:00 2001
+From 6eab85f648f85a29f4b78f595d70fc678f46e95b Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Sun, 9 May 2021 08:48:45 +0900
 Subject: [PATCH] Metrics
@@ -6,7 +6,7 @@ Subject: [PATCH] Metrics
 Signed-off-by: Petr Ilin <hevav@hevav.dev>
 
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/Metrics.java b/proxy/src/main/java/com/velocitypowered/proxy/Metrics.java
-index 64addd7a..29339b8b 100644
+index 64addd7a..4bfa12f6 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/Metrics.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/Metrics.java
 @@ -18,7 +18,6 @@
@@ -30,7 +30,7 @@ index 64addd7a..29339b8b 100644
  
      static void startMetrics(VelocityServer server, VelocityConfiguration.Metrics metricsConfig) {
 -      Metrics metrics = new Metrics(logger, 4752, metricsConfig.isEnabled());
-+      Metrics metrics = new Metrics(logger, 12233, metricsConfig.isEnabled());
++      Metrics metrics = new Metrics(logger, 12271, metricsConfig.isEnabled());
  
        metrics.addCustomChart(
            new SingleLineChart("players", server::getPlayerCount)
