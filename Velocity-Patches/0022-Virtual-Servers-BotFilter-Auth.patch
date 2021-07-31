@@ -1,4 +1,4 @@
-From 8627d49102262bf77a120bec3f084945283acd33 Mon Sep 17 00:00:00 2001
+From f4e0f91616de63448f2283d585e5ea230fd15a82 Mon Sep 17 00:00:00 2001
 From: Petr Ilin <hevav@hevav.dev>
 Date: Thu, 24 Jun 2021 15:01:38 +0900
 Subject: [PATCH] Virtual Servers, BotFilter, Auth
@@ -5014,7 +5014,7 @@ index 00000000..7e77910b
 +}
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/handler/BotFilterSessionHandler.java b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/handler/BotFilterSessionHandler.java
 new file mode 100644
-index 00000000..7d80ea5f
+index 00000000..bd098798
 --- /dev/null
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/botfilter/handler/BotFilterSessionHandler.java
 @@ -0,0 +1,358 @@
@@ -5095,7 +5095,7 @@ index 00000000..7d80ea5f
 +    this.logger = virtualServer.getElytraProxy().getLogger();
 +    this.packets = virtualServer.getPackets();
 +    this.connection = player.getConnection();
-+    this.fallingCheckPos = packets.createPlayerPosAndLookPacket(validX, validY, validZ);
++    this.fallingCheckPos = packets.createPlayerPosAndLookPacket(validX, validY, validZ, 0, 0);
 +    this.fallingCheckChunk = packets.createChunkDataPacket(
 +        new SimpleChunk(Math.floorDiv(validX, 16), Math.floorDiv(validZ, 16)), validY);
 +    this.fallingCheckView = packets.createUpdateViewPosition(validX, validZ);
@@ -7823,7 +7823,7 @@ index 9b5cedfd..871941bb 100644
              }
              return null;
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java b/proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java
-index 2751d0bc..28a62399 100644
+index 2751d0bc..353da1a9 100644
 --- a/proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java
 @@ -27,7 +27,7 @@ public class Settings extends Config {
@@ -7980,7 +7980,7 @@ index 2751d0bc..28a62399 100644
      @Comment({
          "If the player's nickname contains something from this list, hes connection will be rejected",
          "In lowercase"
-@@ -197,16 +212,152 @@ public class Settings extends Config {
+@@ -197,16 +212,156 @@ public class Settings extends Config {
      public List<String> BANNED_NICK_PATTERNS = Arrays.asList(
          "dropbot", "mcspam", "mcdrop", "mcrage", "mcstorm", "extremebot", "cipher", "biboran"
      );
@@ -8048,9 +8048,11 @@ index 2751d0bc..28a62399 100644
 +    public ANTIBOT.CAPTCHA_COORDS CAPTCHA_COORDS;
 +
 +    public static class CAPTCHA_COORDS {
-+      public int X = 0;
-+      public int Y = 0;
-+      public int Z = 0;
++      public double X = 0;
++      public double Y = 0;
++      public double Z = 0;
++      public float YAW = 0;
++      public float PITCH = 0;
 +    }
    }
  
@@ -8108,9 +8110,11 @@ index 2751d0bc..28a62399 100644
 +    public AUTH.AUTH_COORDS AUTH_COORDS;
 +
 +    public static class AUTH_COORDS {
-+      public int X = 0;
-+      public int Y = 0;
-+      public int Z = 0;
++      public double X = 0;
++      public double Y = 0;
++      public double Z = 0;
++      public float YAW = 0;
++      public float PITCH = 0;
 +    }
 +  }
 +
@@ -8135,7 +8139,7 @@ index 2751d0bc..28a62399 100644
    }
  
    @Create
-@@ -214,16 +365,14 @@ public class Settings extends Config {
+@@ -214,16 +369,14 @@ public class Settings extends Config {
  
    @Comment("Database settings")
    public static class DATABASE {
@@ -10245,10 +10249,10 @@ index 596c987c..896a5bdb 100644
  import java.util.Arrays;
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/virtual/server/ServerPackets.java b/proxy/src/main/java/net/elytrium/elytraproxy/virtual/server/ServerPackets.java
 new file mode 100644
-index 00000000..a00bec56
+index 00000000..bb572e0d
 --- /dev/null
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/virtual/server/ServerPackets.java
-@@ -0,0 +1,284 @@
+@@ -0,0 +1,294 @@
 +/*
 + * This file is part of Velocity-BotFilter, licensed under the AGPLv3 License (AGPLv3).
 + *
@@ -10353,17 +10357,17 @@ index 00000000..a00bec56
 +    Settings.AUTH.AUTH_COORDS authCoords = Settings.IMP.AUTH.AUTH_COORDS;
 +    // TODO: Проверять валид ли ид
 +    dimension = new DimensionData(key, dimensionId, true,
-+            0.0f, false, false, false, true,
-+            true, true, false, false, 256,
-+            "minecraft:infiniburn_nether",
-+            0L, false, 1.0, key, 0, 256);
++        0.0f, false, false, false, true,
++        true, true, false, false, 256,
++        "minecraft:infiniburn_nether",
++        0L, false, 1.0, key, 0, 256);
 +    legacyDimension = new DimensionData(key, legacyDimensionId, true,
-+            0.0f, false, false, false, true,
-+            true, true, false, false, 256,
-+            "minecraft:infiniburn_nether",
-+            0L, false, 1.0, key, 0, 256);
++        0.0f, false, false, false, true,
++        true, true, false, false, 256,
++        "minecraft:infiniburn_nether",
++        0L, false, 1.0, key, 0, 256);
 +    this.virtualWorld = new VirtualWorld(dimension,
-+        new DimensionInfo(key, key, true, false), captchaCoords.X, captchaCoords.Y);
++        new DimensionInfo(key, key, true, false), (int) captchaCoords.X, (int) captchaCoords.Y);
 +
 +    if (Settings.IMP.VIRTUAL.LOAD_WORLD) {
 +      try {
@@ -10372,7 +10376,7 @@ index 00000000..a00bec56
 +        switch (Settings.IMP.VIRTUAL.WORLD_FILE_TYPE) {
 +          case "schematic":
 +          default:
-+              file = new SchematicFile(path);
++            file = new SchematicFile(path);
 +            break;
 +        }
 +
@@ -10385,11 +10389,13 @@ index 00000000..a00bec56
 +
 +    experience = createExpPackets();
 +    captchaPosition = new PreparedPacket()
-+        .prepare(createPlayerPosAndLookPacket(captchaCoords.X, captchaCoords.Y, captchaCoords.Z))
-+        .prepare(createUpdateViewPosition(captchaCoords.X, captchaCoords.Z), ProtocolVersion.MINECRAFT_1_14);
++        .prepare(createPlayerPosAndLookPacket(
++            captchaCoords.X, captchaCoords.Y, captchaCoords.Z, captchaCoords.YAW, captchaCoords.PITCH))
++        .prepare(createUpdateViewPosition((int) captchaCoords.X, (int) captchaCoords.Z), ProtocolVersion.MINECRAFT_1_14);
 +    authPosition = new PreparedPacket()
-+        .prepare(createPlayerPosAndLookPacket(authCoords.X, authCoords.Y, authCoords.Z))
-+        .prepare(createUpdateViewPosition(authCoords.X, authCoords.Z), ProtocolVersion.MINECRAFT_1_14);
++        .prepare(createPlayerPosAndLookPacket(
++            authCoords.X, authCoords.Y, authCoords.Z, authCoords.YAW, authCoords.PITCH))
++        .prepare(createUpdateViewPosition((int) authCoords.X, (int) authCoords.Z), ProtocolVersion.MINECRAFT_1_14);
 +
 +    joinPacket = new PreparedPacket()
 +        .prepare(createLegacyJoinGamePacket(), ProtocolVersion.MINIMUM_VERSION, ProtocolVersion.MINECRAFT_1_15_2)
@@ -10404,17 +10410,17 @@ index 00000000..a00bec56
 +    fallingCheckFailed = prepare(createDisconnectPacket(Settings.IMP.ANTIBOT.STRINGS.FALLING_CHECK_FAILED));
 +    setSlot = prepare(createSetSlotPacket(0, 36, 358, 1, 0));
 +    resetSlot = prepare(createSetSlotPacket(0, 36, -1, 0, 0));
-+    checkingChat = prepare(createChatPacket(Settings.IMP.ANTIBOT.STRINGS.CHECKING));
-+    checkingCaptchaChat = prepare(createChatPacket(Settings.IMP.ANTIBOT.STRINGS.CHECKING_CAPTCHA));
-+    loginChat = prepare(createChatPacket(Settings.IMP.AUTH.STRINGS.LOGIN));
-+    totpChat = prepare(createChatPacket(Settings.IMP.AUTH.STRINGS.TOTP));
-+    registerChat = prepare(createChatPacket(Settings.IMP.AUTH.STRINGS.REGISTER));
-+    wrongPasswordChat = prepare(createChatPacket(Settings.IMP.AUTH.STRINGS.PASSWORD_WRONG));
++    checkingChat = createChatPacket(Settings.IMP.ANTIBOT.STRINGS.CHECKING);
++    checkingCaptchaChat = createChatPacket(Settings.IMP.ANTIBOT.STRINGS.CHECKING_CAPTCHA);
++    loginChat = createChatPacket(Settings.IMP.AUTH.STRINGS.LOGIN);
++    totpChat = createChatPacket(Settings.IMP.AUTH.STRINGS.TOTP);
++    registerChat = createChatPacket(Settings.IMP.AUTH.STRINGS.REGISTER);
++    wrongPasswordChat = createChatPacket(Settings.IMP.AUTH.STRINGS.PASSWORD_WRONG);
 +    wrongPassword = prepare(createDisconnectPacket(Settings.IMP.AUTH.STRINGS.PASSWORD_WRONG));
 +    wrongNicknameCase = prepare(createDisconnectPacket(Settings.IMP.AUTH.STRINGS.WRONG_NICKNAME_CASE));
 +    nicknamePremium = prepare(createDisconnectPacket(Settings.IMP.AUTH.STRINGS.NICKNAME_PREMIUM));
 +    nicknameInvalid = prepare(createDisconnectPacket(Settings.IMP.AUTH.STRINGS.NICKNAME_INVALID));
-+    successfulBotFilterChat = prepare(createChatPacket(Settings.IMP.ANTIBOT.STRINGS.SUCCESSFUL_CRACKED));
++    successfulBotFilterChat = createChatPacket(Settings.IMP.ANTIBOT.STRINGS.SUCCESSFUL_CRACKED);
 +    successfulBotFilterDisconnect = prepare(createDisconnectPacket(Settings.IMP.ANTIBOT.STRINGS.SUCCESSFUL_PREMIUM));
 +    ipLimit = prepare(createDisconnectPacket(Settings.IMP.AUTH.STRINGS.IP_LIMIT));
 +    antiBotBrand = prepare(() -> createBrandPacket(createBrandBuf(hardcodedBrandString)));
@@ -10452,8 +10458,8 @@ index 00000000..a00bec56
 +    return joinGame;
 +  }
 +
-+  public PlayerPositionAndLook createPlayerPosAndLookPacket(double x, double y, double z) {
-+    return new PlayerPositionAndLook(x, y, z, 0f, 0f, -133, false, true);
++  public PlayerPositionAndLook createPlayerPosAndLookPacket(double x, double y, double z, float yaw, float pitch) {
++    return new PlayerPositionAndLook(x, y, z, yaw, pitch, -133, false, true);
 +  }
 +
 +  private List<ChunkData> createChunksPackets(int skyLightY) {
@@ -10518,14 +10524,22 @@ index 00000000..a00bec56
 +    return brandBuf;
 +  }
 +
-+  private Chat createChatPacket(String text) {
-+    return new Chat(
-+      ProtocolUtils.getJsonChatSerializer(ProtocolVersion.MINIMUM_VERSION).serialize(
-+        LegacyComponentSerializer
-+          .legacyAmpersand()
-+          .deserialize(text)
-+      ), Chat.CHAT_TYPE, null
-+    );
++  private PreparedPacket createChatPacket(String text) {
++    return new PreparedPacket()
++        .prepare(new Chat(
++            ProtocolUtils.getJsonChatSerializer(ProtocolVersion.MINIMUM_VERSION).serialize(
++                LegacyComponentSerializer
++                    .legacyAmpersand()
++                    .deserialize(text)
++            ), Chat.CHAT_TYPE, null
++        ), ProtocolVersion.MINIMUM_VERSION, ProtocolVersion.MINECRAFT_1_15_2)
++        .prepare(new Chat(
++            ProtocolUtils.getJsonChatSerializer(ProtocolVersion.MINECRAFT_1_16).serialize(
++                LegacyComponentSerializer
++                    .legacyAmpersand()
++                    .deserialize(text)
++            ), Chat.CHAT_TYPE, null
++        ), ProtocolVersion.MINECRAFT_1_16);
 +  }
 +
 +  private Disconnect createDisconnectPacket(String message) {

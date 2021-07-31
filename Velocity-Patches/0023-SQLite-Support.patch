@@ -1,4 +1,4 @@
-From a0ccb2093ebe0f926a87bfe17cd21b7ee6225d0d Mon Sep 17 00:00:00 2001
+From 92555aa1553004003921c6a5fd4608a878700430 Mon Sep 17 00:00:00 2001
 From: Petr Ilin <hevav@hevav.dev>
 Date: Wed, 28 Jul 2021 01:28:22 +0300
 Subject: [PATCH] SQLite Support
@@ -101,10 +101,10 @@ index 819823c2..f38cadd6 100644
      userMap.entrySet().stream()
          .filter(u -> u.getValue().getCheckTime() + time <= System.currentTimeMillis())
 diff --git a/proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java b/proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java
-index 28a62399..f8062a91 100644
+index 353da1a9..999a69e3 100644
 --- a/proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java
 +++ b/proxy/src/main/java/net/elytrium/elytraproxy/config/Settings.java
-@@ -365,9 +365,13 @@ public class Settings extends Config {
+@@ -369,9 +369,13 @@ public class Settings extends Config {
  
    @Comment("Database settings")
    public static class DATABASE {
