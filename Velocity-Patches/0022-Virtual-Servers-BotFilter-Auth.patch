@@ -1,4 +1,4 @@
-From 4d556a75dae1c2c1f3f8a5bdb3074a211e285e44 Mon Sep 17 00:00:00 2001
+From a91756ba92df9021800b315c6d9aac9ccc591ed7 Mon Sep 17 00:00:00 2001
 From: Petr Ilin <hevav@hevav.dev>
 Date: Thu, 24 Jun 2021 15:01:38 +0900
 Subject: [PATCH] Virtual Servers, BotFilter, Auth
@@ -19,7 +19,7 @@ index 2ffb4fd0..fbdf3cea 100644
  ### Natives stuff ###
  native/mbedtls
 diff --git a/api/build.gradle b/api/build.gradle
-index 368004ab..b074ecce 100644
+index 5335d118..87756b9b 100644
 --- a/api/build.gradle
 +++ b/api/build.gradle
 @@ -37,11 +37,12 @@ dependencies {
@@ -1200,7 +1200,7 @@ index 62be4a34..9d692eb4 100644
     */
    public boolean sendPluginMessage(ChannelIdentifier identifier, ByteBuf data) {
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
-index 67b46aca..7244c29e 100644
+index 180d4aa0..3d55ea41 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
 @@ -68,7 +68,6 @@ import java.util.UUID;
@@ -1449,7 +1449,7 @@ index 67b46aca..7244c29e 100644
    }
  
    @Override
-@@ -723,7 +610,7 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+@@ -726,7 +613,7 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
          }, player.getConnection().eventLoop())
          .exceptionally((ex) -> {
            logger.error(
@@ -1459,7 +1459,7 @@ index 67b46aca..7244c29e 100644
            return null;
          });
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
-index c40d7c3c..925da793 100644
+index 7cb9bcf0..f45798e6 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
 @@ -67,7 +67,6 @@ import com.velocitypowered.proxy.protocol.packet.title.GenericTitlePacket;
@@ -1470,14 +1470,7 @@ index c40d7c3c..925da793 100644
  import com.velocitypowered.proxy.util.DurationUtils;
  import com.velocitypowered.proxy.util.collect.CappedSet;
  import io.netty.buffer.ByteBufUtil;
-@@ -78,13 +77,14 @@ import java.util.Collection;
- import java.util.Collections;
- import java.util.List;
- import java.util.Locale;
--import java.util.Objects;
- import java.util.Optional;
- import java.util.Queue;
- import java.util.UUID;
+@@ -84,6 +83,8 @@ import java.util.UUID;
  import java.util.concurrent.CompletableFuture;
  import java.util.concurrent.CompletionException;
  import java.util.concurrent.ThreadLocalRandom;
@@ -1486,18 +1479,7 @@ index c40d7c3c..925da793 100644
  import net.elytrium.elytraproxy.config.Settings;
  import net.kyori.adventure.audience.MessageType;
  import net.kyori.adventure.bossbar.BossBar;
-@@ -94,10 +94,6 @@ import net.kyori.adventure.pointer.Pointers;
- import net.kyori.adventure.text.Component;
- import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
- import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
--import net.kyori.adventure.text.serializer.plain.PlainComponentSerializer;
--import net.kyori.adventure.title.Title;
--import net.kyori.adventure.title.Title.Times;
--import net.kyori.adventure.translation.GlobalTranslator;
- import org.apache.logging.log4j.LogManager;
- import org.apache.logging.log4j.Logger;
- import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
-@@ -108,6 +104,11 @@ import org.jetbrains.annotations.NotNull;
+@@ -105,6 +106,11 @@ import org.jetbrains.annotations.NotNull;
  public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
  
    private static final int MAX_PLUGIN_CHANNELS = 1024;
@@ -1509,25 +1491,17 @@ index c40d7c3c..925da793 100644
    static final PermissionProvider DEFAULT_PERMISSIONS = s -> PermissionFunction.ALWAYS_UNDEFINED;
  
    private static final Logger logger = LogManager.getLogger(ConnectedPlayer.class);
-@@ -140,11 +141,13 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
-   private @Nullable ResourcePackInfo pendingResourcePack;
-   private @Nullable ResourcePackInfo appliedResourcePack;
-   private final @NotNull Pointers pointers = Player.super.pointers().toBuilder()
--          .withDynamic(Identity.UUID, this::getUniqueId)
--          .withDynamic(Identity.NAME, this::getUsername)
--          .withStatic(PermissionChecker.POINTER, getPermissionChecker())
--          .build();
-+      .withDynamic(Identity.UUID, this::getUniqueId)
-+      .withDynamic(Identity.NAME, this::getUsername)
-+      .withStatic(PermissionChecker.POINTER, getPermissionChecker())
-+      .build();
-   private @Nullable String clientBrand;
+@@ -145,6 +151,9 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
+   // ElytraProxy: Removed as unnecessary
+   //private @Nullable Locale effectiveLocale;
+ 
 +  // ElytraProxy: Virtual Server Joined (need to handle JoinGame packet)
 +  @Getter @Setter private boolean virtualServerJoined = false;
- 
++
    ConnectedPlayer(VelocityServer server, GameProfile profile, MinecraftConnection connection,
        @Nullable InetSocketAddress virtualHost, boolean onlineMode) {
-@@ -264,22 +267,23 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
+     this.server = server;
+@@ -279,23 +288,23 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
      return connection.getProtocolVersion();
    }
  
@@ -1539,7 +1513,8 @@ index c40d7c3c..925da793 100644
 -   */
 -  public Component translateMessage(Component message) {
 -    Locale locale = ClosestLocaleMatcher.INSTANCE
--        .lookupClosest(this.settings == null ? Locale.getDefault() : this.settings.getLocale());
+-        // ElytraProxy: Removed as unnecessary
+-        .lookupClosest(/*getEffectiveLocale()*/this.settings == null ? Locale.getDefault() : /*getEffectiveLocale()*/this.settings.getLocale());
 -    return GlobalTranslator.render(message, locale);
 -  }
 +  //ElytraProxy Start: Removed as unnecessary
@@ -1564,7 +1539,7 @@ index c40d7c3c..925da793 100644
    }
  
    @Override
-@@ -288,30 +292,30 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
+@@ -304,30 +313,30 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
      Preconditions.checkNotNull(message, "message");
      Preconditions.checkNotNull(type, "type");
  
@@ -1601,7 +1576,7 @@ index c40d7c3c..925da793 100644
        Chat chat = new Chat();
        chat.setMessage(object.toString());
        chat.setType(Chat.GAME_INFO_TYPE);
-@@ -341,10 +345,12 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
+@@ -357,10 +366,12 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
  
    @Override
    public void sendPlayerListHeaderAndFooter(final Component header, final Component footer) {
@@ -1616,7 +1591,7 @@ index c40d7c3c..925da793 100644
      if (this.getProtocolVersion().compareTo(ProtocolVersion.MINECRAFT_1_8) >= 0) {
        this.connection.write(HeaderAndFooter.create(header, footer, this.getProtocolVersion()));
      }
-@@ -357,17 +363,17 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
+@@ -373,17 +384,17 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
            .getProtocolVersion());
  
        GenericTitlePacket titlePkt = GenericTitlePacket.constructTitlePacket(
@@ -1639,30 +1614,7 @@ index c40d7c3c..925da793 100644
        net.kyori.adventure.title.Title.Times times = title.times();
        if (times != null) {
          timesPkt.setFadeIn((int) DurationUtils.toTicks(times.fadeIn()));
-@@ -384,7 +390,7 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
-   public void clearTitle() {
-     if (this.getProtocolVersion().compareTo(ProtocolVersion.MINECRAFT_1_8) >= 0) {
-       connection.write(GenericTitlePacket.constructTitlePacket(
--              GenericTitlePacket.ActionType.HIDE, this.getProtocolVersion()));
-+          GenericTitlePacket.ActionType.HIDE, this.getProtocolVersion()));
-     }
-   }
- 
-@@ -392,7 +398,7 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
-   public void resetTitle() {
-     if (this.getProtocolVersion().compareTo(ProtocolVersion.MINECRAFT_1_8) >= 0) {
-       connection.write(GenericTitlePacket.constructTitlePacket(
--                      GenericTitlePacket.ActionType.RESET, this.getProtocolVersion()));
-+          GenericTitlePacket.ActionType.RESET, this.getProtocolVersion()));
-     }
-   }
- 
-@@ -446,16 +452,17 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
- 
-   /**
-    * Disconnects the player from the proxy.
--   * @param reason the reason for disconnecting the player
-+   * @param reason      the reason for disconnecting the player
+@@ -466,12 +477,13 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
     * @param duringLogin whether the disconnect happened during login
     */
    public void disconnect0(Component reason, boolean duringLogin) {
@@ -1679,19 +1631,7 @@ index c40d7c3c..925da793 100644
  
    public @Nullable VelocityServerConnection getConnectedServer() {
      return connectedServer;
-@@ -471,9 +478,9 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
- 
-   /**
-    * Handles unexpected disconnects.
--   * @param server the server we disconnected from
-+   * @param server    the server we disconnected from
-    * @param throwable the exception
--   * @param safe whether or not we can safely reconnect to a new server
-+   * @param safe      whether or not we can safely reconnect to a new server
-    */
-   public void handleConnectionException(RegisteredServer server, Throwable throwable,
-       boolean safe) {
-@@ -496,32 +503,34 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
+@@ -512,23 +524,25 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
  
      Component friendlyError;
      if (connectedServer != null && connectedServer.getServerInfo().equals(server.getServerInfo())) {
@@ -1723,18 +1663,7 @@ index c40d7c3c..925da793 100644
      }
      handleConnectionException(server, null, friendlyError, safe);
    }
- 
-   /**
-    * Handles unexpected disconnects.
--   * @param server the server we disconnected from
-+   * @param server     the server we disconnected from
-    * @param disconnect the disconnect packet
--   * @param safe whether or not we can safely reconnect to a new server
-+   * @param safe       whether or not we can safely reconnect to a new server
-    */
-   public void handleConnectionException(RegisteredServer server, Disconnect disconnect,
-       boolean safe) {
-@@ -531,40 +540,38 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
+@@ -547,40 +561,38 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
      }
  
      Component disconnectReason = GsonComponentSerializer.gson().deserialize(disconnect.getReason());
@@ -1788,100 +1717,6 @@ index c40d7c3c..925da793 100644
      }
    }
  
-@@ -637,7 +644,7 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
-                     // Impossible/nonsensical cases
-                     case ALREADY_CONNECTED:
-                     case CONNECTION_IN_PROGRESS:
--                    // Fatal case
-+                      // Fatal case
-                     case CONNECTION_CANCELLED:
-                       Component fallbackMsg = res.getMessageComponent();
-                       if (fallbackMsg == null) {
-@@ -652,19 +659,22 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
-                           getProtocolVersion()), ((Impl) status).isSafe());
-                       break;
-                     case SUCCESS:
--                      // ElytraProxy
--                      sendMessage(Identity.nil(),
--                          LegacyComponentSerializer
--                              .legacyAmpersand()
--                              .deserialize(Settings.IMP.MESSAGES.VELOCITY.ERROR.MOVED_TO_NEW_SERVER
--                                  .replace("{NL}", "\n")
--                                  .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
--                                  .replace("{0}", originalEvent
--                                      .getServer().getServerInfo().getName())
--                                  .replace("{1}", LegacyComponentSerializer
--                                      .legacySection()
--                                      .serialize(friendlyReason))
--                              ));
-+                      Component requestedMessage = res.getMessageComponent();
-+                      if (requestedMessage == null) {
-+                        // ElytraProxy Start
-+                        requestedMessage = /*Component.translatable("velocity.error.moved-to-new-server",
-+                            NamedTextColor.RED,
-+                            Component.text(originalEvent.getServer().getServerInfo().getName()),
-+                            friendlyReason);*/
-+                            LegacyComponentSerializer
-+                                .legacyAmpersand()
-+                                .deserialize(Settings.IMP.MESSAGES.VELOCITY.ERROR.MOVED_TO_NEW_SERVER
-+                                    .replace("{0}", originalEvent.getServer().getServerInfo().getName())
-+                                    .replace("{1}", LegacyComponentSerializer.legacySection().serialize(friendlyReason))
-+                                );
-+                        // ElytraProxy End
-+                      }
-+                      sendMessage(requestedMessage);
-                       break;
-                     default:
-                       // The only remaining value is successful (no need to do anything!)
-@@ -882,7 +892,7 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
-         while (!outstandingResourcePacks.isEmpty()) {
-           queued = outstandingResourcePacks.peek();
-           if (queued.getShouldForce() && getProtocolVersion()
--                  .compareTo(ProtocolVersion.MINECRAFT_1_17) >= 0) {
-+              .compareTo(ProtocolVersion.MINECRAFT_1_17) >= 0) {
-             break;
-           }
-           onResourcePackResponse(PlayerResourcePackStatusEvent.Status.DECLINED);
-@@ -924,19 +934,19 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
-   public boolean onResourcePackResponse(PlayerResourcePackStatusEvent.Status status) {
-     final boolean peek = status == PlayerResourcePackStatusEvent.Status.ACCEPTED;
-     final ResourcePackInfo queued = peek
--            ? outstandingResourcePacks.peek() : outstandingResourcePacks.poll();
-+        ? outstandingResourcePacks.peek() : outstandingResourcePacks.poll();
- 
-     server.getEventManager().fire(new PlayerResourcePackStatusEvent(this, status, queued))
--            .thenAcceptAsync(event -> {
--              if (event.getStatus() == PlayerResourcePackStatusEvent.Status.DECLINED
--                      && event.getPackInfo() != null && event.getPackInfo().getShouldForce()
--                      && (!event.isOverwriteKick() || event.getPlayer()
--                              .getProtocolVersion().compareTo(ProtocolVersion.MINECRAFT_1_17) >= 0)
--              ) {
--                event.getPlayer().disconnect(Component
--                        .translatable("multiplayer.requiredTexturePrompt.disconnect"));
--              }
--            });
-+        .thenAcceptAsync(event -> {
-+          if (event.getStatus() == PlayerResourcePackStatusEvent.Status.DECLINED
-+              && event.getPackInfo() != null && event.getPackInfo().getShouldForce()
-+              && (!event.isOverwriteKick() || event.getPlayer()
-+              .getProtocolVersion().compareTo(ProtocolVersion.MINECRAFT_1_17) >= 0)
-+          ) {
-+            event.getPlayer().disconnect(Component
-+                .translatable("multiplayer.requiredTexturePrompt.disconnect"));
-+          }
-+        });
- 
-     switch (status) {
-       case ACCEPTED:
-@@ -1033,7 +1043,7 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
-         return Optional.of(ConnectionRequestBuilder.Status.CONNECTION_IN_PROGRESS);
-       }
-       if (connectedServer != null
--              && connectedServer.getServer().getServerInfo().equals(server.getServerInfo())) {
-+          && connectedServer.getServer().getServerInfo().equals(server.getServerInfo())) {
-         return Optional.of(ALREADY_CONNECTED);
-       }
-       return Optional.empty();
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/HandshakeSessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/HandshakeSessionHandler.java
 index 0f398877..b14d7298 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/HandshakeSessionHandler.java
@@ -13954,5 +13789,5 @@ index 7ed4618e..90508ee0 100644
  
  }
 -- 
-2.32.0
+2.24.1.windows.2
 

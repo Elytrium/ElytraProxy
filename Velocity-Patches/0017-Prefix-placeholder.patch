@@ -1,4 +1,4 @@
-From f836b555fb2b4c16091155397a02cd10201358fa Mon Sep 17 00:00:00 2001
+From 3c92fa6298d043088e1ac2779015530e3bd72a27 Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Fri, 18 Jun 2021 06:16:26 +0900
 Subject: [PATCH] Prefix placeholder
@@ -278,7 +278,7 @@ index 298552e3..56767d04 100644
  
    private final VelocityServer server;
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
-index f69cf6b7..3a61616b 100644
+index c9b18041..14cef57b 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
 @@ -66,7 +66,6 @@ import java.util.Optional;
@@ -489,10 +489,10 @@ index f69cf6b7..3a61616b 100644
    }
  
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
-index 78e5bc63..88a80dde 100644
+index 2f537859..d9c7403a 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
-@@ -499,20 +499,20 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
+@@ -515,20 +515,20 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
      if (connectedServer != null && connectedServer.getServerInfo().equals(server.getServerInfo())) {
        friendlyError = LegacyComponentSerializer
            .legacyAmpersand()
@@ -521,7 +521,7 @@ index 78e5bc63..88a80dde 100644
            );
      }
      handleConnectionException(server, null, friendlyError, safe);
-@@ -536,43 +536,35 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
+@@ -552,43 +552,35 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
        logger.info("{}: kicked from server {}: {}", this, server.getServerInfo().getName(),
            LegacyComponentSerializer
                .legacySection()
@@ -581,33 +581,6 @@ index 78e5bc63..88a80dde 100644
                ), safe);
      }
    }
-@@ -664,18 +656,14 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
-                       sendMessage(Identity.nil(),
-                           LegacyComponentSerializer
-                               .legacyAmpersand()
--                              .deserialize((
--                                  Settings.IMP.MESSAGES.VELOCITY.ERROR.MOVED_TO_NEW_SERVER)
--                                      .replace("%nl%","\n")
--                                      .replace("{0}", originalEvent
--                                                                          .getServer()
--                                                                              .getServerInfo()
--                                                                                      .getName())
--                                      .replace("{1}",
--                                          LegacyComponentSerializer
--                                              .legacySection()
--                                              .serialize(
--                                                  friendlyReason))
-+                              .deserialize(Settings.IMP.MESSAGES.VELOCITY.ERROR.MOVED_TO_NEW_SERVER
-+                                  .replace("{NL}", "\n")
-+                                  .replace("{PRFX}", Settings.IMP.MESSAGES.ELYTRAPROXY.PREFIX)
-+                                  .replace("{0}", originalEvent
-+                                      .getServer().getServerInfo().getName())
-+                                  .replace("{1}", LegacyComponentSerializer
-+                                      .legacySection()
-+                                      .serialize(friendlyReason))
-                               ));
-                       break;
-                     default:
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/HandshakeSessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/HandshakeSessionHandler.java
 index 5914c277..f1445de5 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/HandshakeSessionHandler.java

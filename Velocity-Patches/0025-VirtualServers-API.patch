@@ -1,11 +1,11 @@
-From 64072d12c5ce59fe89f65247c7e677469aa57ffc Mon Sep 17 00:00:00 2001
+From 095430bd740f82bee4f9c6b3782488938c5ad400 Mon Sep 17 00:00:00 2001
 From: Petr Ilin <hevav@hevav.dev>
 Date: Fri, 13 Aug 2021 01:44:38 +0300
-Subject: [PATCH] VirtualServer: Fix yaw and Pitch on Captcha and Auth coords
+Subject: [PATCH] VirtualServers API
 
 
 diff --git a/api/build.gradle b/api/build.gradle
-index b074ecce..64ab18fd 100644
+index 87756b9b..bc3373aa 100644
 --- a/api/build.gradle
 +++ b/api/build.gradle
 @@ -33,6 +33,7 @@ dependencies {
@@ -17,10 +17,10 @@ index b074ecce..64ab18fd 100644
      api("net.kyori:adventure-text-serializer-legacy")
      api("net.kyori:adventure-text-serializer-plain")
 diff --git a/api/src/main/java/com/velocitypowered/api/proxy/Player.java b/api/src/main/java/com/velocitypowered/api/proxy/Player.java
-index f4207477..613f26f2 100644
+index bad86d0a..03954049 100644
 --- a/api/src/main/java/com/velocitypowered/api/proxy/Player.java
 +++ b/api/src/main/java/com/velocitypowered/api/proxy/Player.java
-@@ -22,8 +22,9 @@ import java.util.List;
+@@ -23,8 +23,9 @@ import java.util.Locale;
  import java.util.Optional;
  import java.util.UUID;
  import java.util.function.UnaryOperator;
@@ -31,7 +31,7 @@ index f4207477..613f26f2 100644
  import net.kyori.adventure.key.Key;
  import net.kyori.adventure.key.Keyed;
  import net.kyori.adventure.text.Component;
-@@ -96,6 +97,13 @@ public interface Player extends CommandSource, Identified, InboundConnection,
+@@ -117,6 +118,13 @@ public interface Player extends CommandSource, Identified, InboundConnection,
     */
    ConnectionRequestBuilder createConnectionRequest(RegisteredServer server);
  
@@ -1584,7 +1584,7 @@ index a1c14df1..34be1dd3 100644
  
    @Override
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
-index 7244c29e..f93ffbfa 100644
+index 3d55ea41..bfad30f4 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
 @@ -68,6 +68,7 @@ import java.util.UUID;
@@ -1682,7 +1682,7 @@ index 7244c29e..f93ffbfa 100644
      MinecraftConnection smc = serverConnection.getConnection();
      if (smc != null && !smc.isClosed() && serverConnection.getPhase().consideredComplete()) {
        smc.write(buf.retain());
-@@ -383,6 +436,29 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+@@ -386,6 +439,29 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
    public void handleBackendJoinGame(JoinGame joinGame, VelocityServerConnection destination) {
      final MinecraftConnection serverMc = destination.ensureConnected();
  
@@ -1712,7 +1712,7 @@ index 7244c29e..f93ffbfa 100644
      if (!spawned) {
        // The player wasn't spawned in yet, so we don't need to do anything special. Just send
        // JoinGame.
-@@ -397,14 +473,14 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+@@ -400,14 +476,14 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
        // The player is switching from a server already, so we need to tell the client to change
        // entity IDs and send new dimension information.
        if (player.getConnection().getType() == ConnectionTypes.LEGACY_FORGE) {
@@ -1731,7 +1731,7 @@ index 7244c29e..f93ffbfa 100644
      // Remove previous boss bars. These don't get cleared when sending JoinGame, thus the need to
      // track them.
      for (UUID serverBossBar : serverBossBars) {
-@@ -415,31 +491,15 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+@@ -418,31 +494,15 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
      }
      serverBossBars.clear();
  
@@ -1764,7 +1764,7 @@ index 7244c29e..f93ffbfa 100644
      // In order to handle switching to another server, you will need to send two packets:
      //
      // - The join game packet from the backend server, with a different dimension
-@@ -448,44 +508,50 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+@@ -451,44 +511,50 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
      // Most notably, by having the client accept the join game packet, we can work around the need
      // to perform entity ID rewrites, eliminating potential issues from rewriting packets and
      // improving compatibility with mods.
@@ -1822,7 +1822,7 @@ index 7244c29e..f93ffbfa 100644
    }
  
    public List<UUID> getServerBossBars() {
-@@ -595,6 +661,27 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+@@ -598,6 +664,27 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
          });
    }
  
@@ -1851,7 +1851,7 @@ index 7244c29e..f93ffbfa 100644
      List<String> offers = new ArrayList<>();
      for (Offer offer : response.getOffers()) {
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
-index 925da793..11f3c1ae 100644
+index f45798e6..35873645 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
 @@ -85,7 +85,10 @@ import java.util.concurrent.CompletionException;
@@ -1865,7 +1865,7 @@ index 925da793..11f3c1ae 100644
  import net.kyori.adventure.audience.MessageType;
  import net.kyori.adventure.bossbar.BossBar;
  import net.kyori.adventure.identity.Identity;
-@@ -421,6 +424,11 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
+@@ -442,6 +445,11 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
      return new ConnectionRequestBuilderImpl(server);
    }
  
@@ -9713,5 +9713,5 @@ index 00000000..a3c7ec5e
 +}
 \ No newline at end of file
 -- 
-2.32.0
+2.24.1.windows.2
 

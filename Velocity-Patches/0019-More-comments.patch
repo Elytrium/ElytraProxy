@@ -1,4 +1,4 @@
-From 4158b9eff5013021753d97bbe304712f55f1a7d2 Mon Sep 17 00:00:00 2001
+From 7cb8e916e02465af01d4960fb66f53750dc6091c Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Sat, 19 Jun 2021 09:39:46 +0900
 Subject: [PATCH] More comments
@@ -160,7 +160,7 @@ index f5a781ef..d9358c9e 100644
      return version.compareTo(ProtocolVersion.MINECRAFT_1_16) >= 0 ? POST_1_16_PING_SERIALIZER
          : PRE_1_16_PING_SERIALIZER;
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
-index 250803f8..5ca58bff 100644
+index ccf22c39..5fb5f712 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
 @@ -84,6 +84,7 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
@@ -227,18 +227,6 @@ index 250803f8..5ca58bff 100644
      player.disconnect(
          LegacyComponentSerializer
              .legacyAmpersand()
-diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
-index 3f980661..c40d7c3c 100644
---- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
-+++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
-@@ -652,6 +652,7 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
-                           getProtocolVersion()), ((Impl) status).isSafe());
-                       break;
-                     case SUCCESS:
-+                      // ElytraProxy
-                       sendMessage(Identity.nil(),
-                           LegacyComponentSerializer
-                               .legacyAmpersand()
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/HandshakeSessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/HandshakeSessionHandler.java
 index 3dc5a545..0f398877 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/HandshakeSessionHandler.java
@@ -386,5 +374,5 @@ index d1fc82cb..eb4614c7 100644
              ? ping -> CompletableFuture.completedFuture(new ProxyPingEvent(inbound, ping))
              : ping -> server.getEventManager().fire(new ProxyPingEvent(inbound, ping)))
 -- 
-2.32.0
+2.24.1.windows.2
 

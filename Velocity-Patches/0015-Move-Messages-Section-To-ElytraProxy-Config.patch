@@ -1,9 +1,56 @@
-From 66b37b548fa8648cbba843508a225998ba6cbebb Mon Sep 17 00:00:00 2001
+From 28e877fad8d693efbaac1074bbfe767e8f788faf Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Mon, 7 Jun 2021 04:45:40 +0900
 Subject: [PATCH] Move Messages Section To ElytraProxy Config
 
 
+diff --git a/api/src/main/java/com/velocitypowered/api/proxy/Player.java b/api/src/main/java/com/velocitypowered/api/proxy/Player.java
+index 76278f90..bad86d0a 100644
+--- a/api/src/main/java/com/velocitypowered/api/proxy/Player.java
++++ b/api/src/main/java/com/velocitypowered/api/proxy/Player.java
+@@ -46,22 +46,26 @@ public interface Player extends CommandSource, Identified, InboundConnection,
+    */
+   String getUsername();
+ 
+-  /**
+-   * Returns the locale the proxy will use to send messages translated via the Adventure global translator.
+-   * By default, the value of {@link PlayerSettings#getLocale()} is used.
+-   *
+-   * <p>This can be {@code null} when the client has not yet connected to any server.</p>
+-   *
+-   * @return the locale.
+-   */
+-  @Nullable Locale getEffectiveLocale();
+-
+-  /**
+-   * Change the locale the proxy will be translating its messages to.
+-   *
+-   * @param locale the locale to translate to
+-   */
+-  void setEffectiveLocale(Locale locale);
++  // ElytraProxy Start: Removed as unnecessary
++
++  ///**
++  // * Returns the locale the proxy will use to send messages translated via the Adventure global translator.
++  // * By default, the value of {@link PlayerSettings#getLocale()} is used.
++  // *
++  // * <p>This can be {@code null} when the client has not yet connected to any server.</p>
++  // *
++  // * @return the locale.
++  // */
++  //@Nullable Locale getEffectiveLocale();
++
++  ///**
++  // * Change the locale the proxy will be translating its messages to.
++  // *
++  // * @param locale the locale to translate to
++  // */
++  //void setEffectiveLocale(Locale locale);
++
++  // ElytraProxy End
+ 
+   /**
+    * Returns the player's UUID.
 diff --git a/config/checkstyle/checkstyle.xml b/config/checkstyle/checkstyle.xml
 index 083337a8..76a9665e 100644
 --- a/config/checkstyle/checkstyle.xml
@@ -370,7 +417,7 @@ index 9f408310..227ea644 100644
    private final VelocityServer server;
    private final VelocityServerConnection serverConn;
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
-index c07ac639..0ebf62e5 100644
+index 2d2c7908..81cf1a4b 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
 @@ -69,8 +69,6 @@ import java.util.Queue;
@@ -447,7 +494,7 @@ index c07ac639..0ebf62e5 100644
    }
  
    @Override
-@@ -597,7 +613,7 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
+@@ -600,7 +616,7 @@ public class ClientPlaySessionHandler implements MinecraftSessionHandler {
          }, player.getConnection().eventLoop())
          .exceptionally((ex) -> {
            logger.error(
@@ -457,18 +504,10 @@ index c07ac639..0ebf62e5 100644
            return null;
          });
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
-index 10d05c8b..68ac3abb 100644
+index 24d203b1..59bd0fab 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
-@@ -48,7 +48,6 @@ import com.velocitypowered.api.proxy.server.RegisteredServer;
- import com.velocitypowered.api.util.GameProfile;
- import com.velocitypowered.api.util.ModInfo;
- import com.velocitypowered.proxy.VelocityServer;
--import com.velocitypowered.proxy.config.VelocityConfiguration;
- import com.velocitypowered.proxy.connection.MinecraftConnection;
- import com.velocitypowered.proxy.connection.MinecraftConnectionAssociation;
- import com.velocitypowered.proxy.connection.backend.VelocityServerConnection;
-@@ -93,7 +92,6 @@ import net.kyori.adventure.permission.PermissionChecker;
+@@ -91,7 +91,6 @@ import net.kyori.adventure.permission.PermissionChecker;
  import net.kyori.adventure.pointer.Pointers;
  import net.kyori.adventure.text.Component;
  import net.kyori.adventure.text.TranslatableComponent;
@@ -476,7 +515,7 @@ index 10d05c8b..68ac3abb 100644
  import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
  import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
  import net.kyori.adventure.text.serializer.plain.PlainComponentSerializer;
-@@ -106,12 +104,11 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
+@@ -102,12 +101,11 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
  import org.checkerframework.checker.nullness.qual.NonNull;
  import org.checkerframework.checker.nullness.qual.Nullable;
  import org.jetbrains.annotations.NotNull;
@@ -490,7 +529,44 @@ index 10d05c8b..68ac3abb 100644
    static final PermissionProvider DEFAULT_PERMISSIONS = s -> PermissionFunction.ALWAYS_UNDEFINED;
  
    private static final Logger logger = LogManager.getLogger(ConnectedPlayer.class);
-@@ -500,15 +497,23 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
+@@ -145,7 +143,8 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
+           .withStatic(PermissionChecker.POINTER, getPermissionChecker())
+           .build();
+   private @Nullable String clientBrand;
+-  private @Nullable Locale effectiveLocale;
++  // ElytraProxy: Removed as unnecessary
++  //private @Nullable Locale effectiveLocale;
+ 
+   ConnectedPlayer(VelocityServer server, GameProfile profile, MinecraftConnection connection,
+       @Nullable InetSocketAddress virtualHost, boolean onlineMode) {
+@@ -175,6 +174,8 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
+     return profile.getName();
+   }
+ 
++  // ElytraProxy: Removed as unnecessary
++  /*
+   @Override
+   public Locale getEffectiveLocale() {
+     if (effectiveLocale == null && settings != null) {
+@@ -187,6 +188,7 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
+   public void setEffectiveLocale(Locale locale) {
+     effectiveLocale = locale;
+   }
++  */
+ 
+   @Override
+   public UUID getUniqueId() {
+@@ -286,7 +288,8 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
+    */
+   public Component translateMessage(Component message) {
+     Locale locale = ClosestLocaleMatcher.INSTANCE
+-        .lookupClosest(getEffectiveLocale() == null ? Locale.getDefault() : getEffectiveLocale());
++        // ElytraProxy: Removed as unnecessary
++        .lookupClosest(/*getEffectiveLocale()*/this.settings == null ? Locale.getDefault() : /*getEffectiveLocale()*/this.settings.getLocale());
+     return GlobalTranslator.render(message, locale);
+   }
+ 
+@@ -510,15 +513,23 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
  
      Component friendlyError;
      if (connectedServer != null && connectedServer.getServerInfo().equals(server.getServerInfo())) {
@@ -519,7 +595,7 @@ index 10d05c8b..68ac3abb 100644
    }
  
    /**
-@@ -525,21 +530,42 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
+@@ -535,21 +546,42 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
      }
  
      Component disconnectReason = GsonComponentSerializer.gson().deserialize(disconnect.getReason());
@@ -571,34 +647,6 @@ index 10d05c8b..68ac3abb 100644
      }
    }
  
-@@ -627,14 +653,19 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
-                           getProtocolVersion()), ((Impl) status).isSafe());
-                       break;
-                     case SUCCESS:
--                      Component requestedMessage = res.getMessageComponent();
--                      if (requestedMessage == null) {
--                        requestedMessage = Component.translatable("velocity.error.moved-to-new-server",
--                            NamedTextColor.RED,
--                            Component.text(originalEvent.getServer().getServerInfo().getName()),
--                            friendlyReason);
--                      }
--                      sendMessage(requestedMessage);
-+                      sendMessage(Identity.nil(),
-+                            LegacyComponentSerializer
-+                                  .legacyAmpersand()
-+                                  .deserialize((
-+                                        Settings.IMP.MESSAGES.VELOCITY.ERROR.MOVED_TO_NEW_SERVER)
-+                                              .replace("%nl%","\n")
-+                                              .replace("{0}", originalEvent.getServer()
-+                                                            .getServerInfo().getName())
-+                                              .replace("{1}",
-+                                                      LegacyComponentSerializer
-+                                                              .legacySection()
-+                                                              .serialize(
-+                                                                      friendlyReason))));
-                       break;
-                     default:
-                       // The only remaining value is successful (no need to do anything!)
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/HandshakeSessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/HandshakeSessionHandler.java
 index 12b6f38f..ed8765e1 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/HandshakeSessionHandler.java

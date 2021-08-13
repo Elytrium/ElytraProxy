@@ -1,4 +1,4 @@
-From 5d16213609b4620b7d082d1bb538da6d3d3f0538 Mon Sep 17 00:00:00 2001
+From 0cee0df0babf85dfaff5920a2189cb26ca0d2e0d Mon Sep 17 00:00:00 2001
 From: mdxd44 <mdxd44@ely.su>
 Date: Thu, 17 Jun 2021 04:09:51 +0900
 Subject: [PATCH] Merge botfilter upstream, checkstyle fixes, settings and
@@ -6,7 +6,7 @@ Subject: [PATCH] Merge botfilter upstream, checkstyle fixes, settings and
 
 
 diff --git a/api/build.gradle b/api/build.gradle
-index 88036f3a..c4f10d2c 100644
+index 6fc5999b..34832fdc 100644
 --- a/api/build.gradle
 +++ b/api/build.gradle
 @@ -37,6 +37,11 @@ dependencies {
@@ -21,7 +21,7 @@ index 88036f3a..c4f10d2c 100644
      api "org.slf4j:slf4j-api:${slf4jVersion}"
      api 'com.google.inject:guice:5.0.1'
      api "org.checkerframework:checker-qual:${checkerFrameworkVersion}"
-@@ -83,7 +88,7 @@ javadoc {
+@@ -86,7 +91,7 @@ javadoc {
              'http://www.slf4j.org/apidocs/',
              'https://google.github.io/guava/releases/25.1-jre/api/docs/',
              'https://google.github.io/guice/api-docs/5.0.1/javadoc/',
@@ -386,7 +386,7 @@ index 227ea644..298552e3 100644
    private final VelocityServer server;
    private final VelocityServerConnection serverConn;
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
-index db97ab23..f69cf6b7 100644
+index 81cf1a4b..c9b18041 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ClientPlaySessionHandler.java
 @@ -27,13 +27,11 @@ import com.velocitypowered.api.event.command.CommandExecuteEvent.CommandResult;
@@ -634,10 +634,10 @@ index db97ab23..f69cf6b7 100644
  
    @Override
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
-index 68ac3abb..78e5bc63 100644
+index 59bd0fab..2f537859 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
 +++ b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/ConnectedPlayer.java
-@@ -498,20 +498,22 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
+@@ -514,20 +514,22 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
      Component friendlyError;
      if (connectedServer != null && connectedServer.getServerInfo().equals(server.getServerInfo())) {
        friendlyError = LegacyComponentSerializer
@@ -670,7 +670,7 @@ index 68ac3abb..78e5bc63 100644
      }
      handleConnectionException(server, null, friendlyError, safe);
    }
-@@ -532,40 +534,46 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
+@@ -548,40 +550,46 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
      Component disconnectReason = GsonComponentSerializer.gson().deserialize(disconnect.getReason());
      if (connectedServer != null && connectedServer.getServerInfo().equals(server.getServerInfo())) {
        logger.info("{}: kicked from server {}: {}", this, server.getServerInfo().getName(),
@@ -744,40 +744,6 @@ index 68ac3abb..78e5bc63 100644
      }
    }
  
-@@ -654,18 +662,21 @@ public class ConnectedPlayer implements MinecraftConnectionAssociation, Player {
-                       break;
-                     case SUCCESS:
-                       sendMessage(Identity.nil(),
--                            LegacyComponentSerializer
--                                  .legacyAmpersand()
--                                  .deserialize((
--                                        Settings.IMP.MESSAGES.VELOCITY.ERROR.MOVED_TO_NEW_SERVER)
--                                              .replace("%nl%","\n")
--                                              .replace("{0}", originalEvent.getServer()
--                                                            .getServerInfo().getName())
--                                              .replace("{1}",
--                                                      LegacyComponentSerializer
--                                                              .legacySection()
--                                                              .serialize(
--                                                                      friendlyReason))));
-+                          LegacyComponentSerializer
-+                              .legacyAmpersand()
-+                              .deserialize((
-+                                  Settings.IMP.MESSAGES.VELOCITY.ERROR.MOVED_TO_NEW_SERVER)
-+                                      .replace("%nl%","\n")
-+                                      .replace("{0}", originalEvent
-+                                                                          .getServer()
-+                                                                              .getServerInfo()
-+                                                                                      .getName())
-+                                      .replace("{1}",
-+                                          LegacyComponentSerializer
-+                                              .legacySection()
-+                                              .serialize(
-+                                                  friendlyReason))
-+                              ));
-                       break;
-                     default:
-                       // The only remaining value is successful (no need to do anything!)
 diff --git a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/HandshakeSessionHandler.java b/proxy/src/main/java/com/velocitypowered/proxy/connection/client/HandshakeSessionHandler.java
 index ed8765e1..5914c277 100644
 --- a/proxy/src/main/java/com/velocitypowered/proxy/connection/client/HandshakeSessionHandler.java
