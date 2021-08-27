@@ -1,5 +1,8 @@
 <img src="https://elytrium.net/src/img/elytrium.webp" alt="Elytrium" align="right">
 
+# Deprecated: go back i want to be <s>monke</s> plugin
+ElytraProxy's Virtual Server, Auth, and BotFilter features are now available in simple Velocity plugins: [LimboAPI, LimboAuth and LimboFilter](https://github.com/Elytrium/LimboAPI) 🥳
+
 # ElytraProxy
 [![Join our Discord](https://img.shields.io/discord/775778822334709780.svg?logo=discord&label=Discord)](https://ely.su/discord)
 [![Proxy Stats](https://img.shields.io/bstats/servers/12271?logo=minecraft&label=ElytraProxy%20Servers)](https://bstats.org/plugin/velocity/ElytraProxy/12271)
